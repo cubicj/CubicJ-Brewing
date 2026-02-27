@@ -18,6 +18,8 @@ export class AcaiaService extends EventEmitter {
   private packetBuffer = new PacketBuffer();
   private writeQueue: Buffer[] = [];
   private writing = false;
+  private scaleTimerRunning = false;
+  private lastDataHadTimer = false;
 
   get state(): AcaiaState {
     return this._state;
@@ -114,6 +116,10 @@ export class AcaiaService extends EventEmitter {
     await this.enqueueWrite(encodeTare());
   }
 
+  async sendNotificationRequest(weightArg?: number): Promise<void> {
+    await this.enqueueWrite(encodeNotificationRequest(weightArg));
+  }
+
   async startTimer(): Promise<void> {
     if (this._state !== 'connected') return;
     await this.enqueueWrite(encodeTimerControl('start'));
@@ -148,6 +154,8 @@ export class AcaiaService extends EventEmitter {
     this.notifyChar = null;
     this.noble = null;
     this._state = 'idle';
+    this.scaleTimerRunning = false;
+    this.lastDataHadTimer = false;
   }
 
   private loadNoble(): any {
@@ -197,49 +205,74 @@ export class AcaiaService extends EventEmitter {
 
     const cmd = packet[2];
 
-    if (cmd === 12 && packet.length > 4) {
-      const innerType = packet[4];
-      if (innerType === 5 && packet.length >= 11) {
-        this.emit('weight', decodeWeight(packet, 5));
-      } else if (innerType === 7 && packet.length >= 8) {
-        this.emit('timer', decodeTimer(packet, 5));
-      } else if (innerType === 8 && packet.length >= 7) {
-        this.handleButtonEvent(packet);
+    if ((cmd === 12 || cmd === 11) && packet.length > 4) {
+      const totalPayloadLen = packet[3];
+      const payloadEnd = 3 + totalPayloadLen;
+      let offset = 4;
+      let hasTimer = false;
+
+      while (offset < payloadEnd) {
+        const innerType = packet[offset];
+
+        if (innerType === 5 && offset + 7 <= packet.length) {
+          this.emit('weight', decodeWeight(packet, offset + 1));
+          offset += 7;
+        } else if (innerType === 7 && offset + 4 <= packet.length) {
+          hasTimer = true;
+          this.emit('timer', decodeTimer(packet, offset + 1));
+          offset += 4;
+        } else if (innerType === 8 && offset + 3 <= packet.length) {
+          this.handleButtonEvent(packet, offset);
+          break;
+        } else {
+          break;
+        }
       }
+
+      if (this.lastDataHadTimer && !hasTimer && this.scaleTimerRunning) {
+        this.scaleTimerRunning = false;
+        this.emit('button', { type: 'timer_stop' });
+      } else if (!this.lastDataHadTimer && hasTimer && !this.scaleTimerRunning) {
+        this.scaleTimerRunning = true;
+        this.emit('button', { type: 'timer_start' });
+      }
+      this.lastDataHadTimer = hasTimer;
     } else if (cmd === 8 && packet.length >= 10) {
       const settings = decodeSettings(packet, 3);
       this.emit('battery', settings.battery);
-    } else if (cmd === 11 && packet.length > 5) {
-      if (packet[4] === 5 && packet.length >= 9) {
-        this.emit('weight', decodeWeight(packet, 5));
-      } else if (packet[4] === 7 && packet.length >= 8) {
-        this.emit('timer', decodeTimer(packet, 5));
+      if (settings.timerRunning !== this.scaleTimerRunning) {
+        this.scaleTimerRunning = settings.timerRunning;
+        if (settings.timerRunning) {
+          this.emit('button', { type: 'timer_start' });
+        } else {
+          this.emit('button', { type: 'timer_stop' });
+        }
       }
     }
   }
 
-  private handleButtonEvent(packet: Buffer): void {
-    const p0 = packet[5];
-    const p1 = packet[6];
+  private handleButtonEvent(packet: Buffer, typeOffset: number): void {
+    const p0 = packet[typeOffset + 1];
+    const p1 = packet[typeOffset + 2];
     let event: ButtonEvent | null = null;
 
     if (p0 === 0 && p1 === 5) {
       event = { type: 'tare' };
-      if (packet.length >= 13) event.weight = decodeWeight(packet, 7);
+      if (typeOffset + 9 <= packet.length) event.weight = decodeWeight(packet, typeOffset + 3);
     } else if (p0 === 8) {
       event = { type: 'timer_start' };
-      if (p1 === 5 && packet.length >= 13) event.weight = decodeWeight(packet, 7);
+      if (p1 === 5 && typeOffset + 9 <= packet.length) event.weight = decodeWeight(packet, typeOffset + 3);
     } else if (p0 === 10) {
       event = { type: 'timer_stop' };
-      if (p1 === 7 && packet.length >= 13) {
-        event.timer = decodeTimer(packet, 7);
-        if (packet.length >= 16) event.weight = decodeWeight(packet, 11);
+      if (p1 === 7 && typeOffset + 7 <= packet.length) {
+        event.timer = decodeTimer(packet, typeOffset + 3);
+        if (typeOffset + 13 <= packet.length) event.weight = decodeWeight(packet, typeOffset + 7);
       }
     } else if (p0 === 9) {
       event = { type: 'timer_reset' };
-      if (p1 === 7 && packet.length >= 13) {
-        event.timer = decodeTimer(packet, 7);
-        if (packet.length >= 16) event.weight = decodeWeight(packet, 11);
+      if (p1 === 7 && typeOffset + 7 <= packet.length) {
+        event.timer = decodeTimer(packet, typeOffset + 3);
+        if (typeOffset + 13 <= packet.length) event.weight = decodeWeight(packet, typeOffset + 7);
       }
     }
 
@@ -261,7 +294,7 @@ export class AcaiaService extends EventEmitter {
       await this.enqueueWrite(encodeHeartbeat());
 
       settingsCounter++;
-      if (settingsCounter >= 30) {
+      if (settingsCounter >= 3) {
         await this.enqueueWrite(encodeGetSettings());
         settingsCounter = 0;
       }
@@ -277,6 +310,8 @@ export class AcaiaService extends EventEmitter {
     this.stopTimers();
     this.packetBuffer.reset();
     this.writeQueue = [];
+    this.scaleTimerRunning = false;
+    this.lastDataHadTimer = false;
     if (this.notifyChar) {
       this.notifyChar.removeAllListeners('data');
     }

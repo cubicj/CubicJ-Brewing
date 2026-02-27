@@ -16,7 +16,8 @@ export function encode(msgType: number, payload: number[]): Buffer {
 }
 
 const IDENTIFY_PAYLOAD = [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30, 0x31, 0x32, 0x33, 0x34];
-const NOTIF_PAYLOAD = [9, 0, 1, 1, 2, 2, 5, 3, 4];
+const DEFAULT_WEIGHT_ARG = 1;
+const NOTIF_BASE = [9, 0, /* weightArg */ 1, 1, 2, 2, 5, 3, 4];
 
 export function encodeIdentify(): Buffer {
   return encode(11, IDENTIFY_PAYLOAD);
@@ -26,8 +27,10 @@ export function encodeHeartbeat(): Buffer {
   return encode(0, [2, 0]);
 }
 
-export function encodeNotificationRequest(): Buffer {
-  return encode(12, NOTIF_PAYLOAD);
+export function encodeNotificationRequest(weightArg: number = DEFAULT_WEIGHT_ARG): Buffer {
+  const payload = [...NOTIF_BASE];
+  payload[2] = weightArg;
+  return encode(12, payload);
 }
 
 export function encodeTare(): Buffer {
@@ -62,6 +65,7 @@ export interface ScaleSettings {
   units: 'grams' | 'ounces';
   autoOffMinutes: number;
   beep: boolean;
+  timerRunning: boolean;
 }
 
 export function decodeSettings(data: Buffer, offset: number): ScaleSettings {
@@ -70,38 +74,63 @@ export function decodeSettings(data: Buffer, offset: number): ScaleSettings {
     units: (data[offset + 2] & 0xff) === 5 ? 'ounces' : 'grams',
     autoOffMinutes: (data[offset + 4] & 0xff) * 5,
     beep: (data[offset + 6] & 0xff) === 1,
+    timerRunning: (data[offset + 2] & 0xff) === 1,
   };
 }
 
 export class PacketBuffer {
   onPacket: ((packet: Buffer) => void) | null = null;
-  private buffer: number[] = [];
+  private buf: number[] = [];
 
   push(data: Buffer): void {
-    if (data[0] === 0xef && data[1] === 0xdd) {
-      if (this.buffer.length > 0) {
-        this.emitBuffer();
-      }
-      this.buffer = [...data];
-    } else {
-      this.buffer.push(...data);
+    for (let i = 0; i < data.length; i++) {
+      this.buf.push(data[i]);
     }
+    this.drain();
   }
 
   flush(): void {
-    if (this.buffer.length > 0) {
-      this.emitBuffer();
+    if (this.buf.length >= 5 && this.buf[0] === 0xef && this.buf[1] === 0xdd) {
+      if (this.onPacket) this.onPacket(Buffer.from(this.buf));
     }
+    this.buf = [];
   }
 
   reset(): void {
-    this.buffer = [];
+    this.buf = [];
   }
 
-  private emitBuffer(): void {
-    if (this.onPacket && this.buffer.length >= 3) {
-      this.onPacket(Buffer.from(this.buffer));
+  private drain(): void {
+    while (this.buf.length >= 5) {
+      const hdr = this.findHeader(0);
+      if (hdr === -1) {
+        this.buf = [];
+        return;
+      }
+      if (hdr > 0) {
+        this.buf.splice(0, hdr);
+      }
+
+      if (this.buf.length < 4) return;
+
+      const payloadLen = this.buf[3];
+      if (payloadLen < 1 || payloadLen > 64) {
+        this.buf.splice(0, 2);
+        continue;
+      }
+
+      const packetLen = 5 + payloadLen;
+      if (this.buf.length < packetLen) return;
+
+      const packet = this.buf.splice(0, packetLen);
+      if (this.onPacket) this.onPacket(Buffer.from(packet));
     }
-    this.buffer = [];
+  }
+
+  private findHeader(from: number): number {
+    for (let i = from; i < this.buf.length - 1; i++) {
+      if (this.buf[i] === 0xef && this.buf[i + 1] === 0xdd) return i;
+    }
+    return -1;
   }
 }

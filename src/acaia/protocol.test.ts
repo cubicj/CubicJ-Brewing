@@ -110,20 +110,18 @@ describe('decodeSettings', () => {
 });
 
 describe('PacketBuffer', () => {
-  it('emits buffered packet on flush', () => {
+  it('emits complete packet immediately on push', () => {
     const buf = new PacketBuffer();
     const packets: Buffer[] = [];
     buf.onPacket = (p) => packets.push(p);
 
     buf.push(Buffer.from([0xef, 0xdd, 0x0c, 0x07, 0x05, 0xdf, 0x06, 0x00, 0x00, 0x01, 0x00, 0x10, 0x20]));
-    expect(packets.length).toBe(0);
-
-    buf.flush();
     expect(packets.length).toBe(1);
     expect(packets[0][2]).toBe(0x0c);
+    expect(packets[0].length).toBe(12);
   });
 
-  it('reassembles fragmented packets', () => {
+  it('reassembles fragmented packets across pushes', () => {
     const buf = new PacketBuffer();
     const packets: Buffer[] = [];
     buf.onPacket = (p) => packets.push(p);
@@ -132,29 +130,73 @@ describe('PacketBuffer', () => {
     expect(packets.length).toBe(0);
 
     buf.push(Buffer.from([0x07, 0x05, 0xdf, 0x06, 0x00, 0x00, 0x01, 0x00, 0x10, 0x20]));
+    expect(packets.length).toBe(1);
+    expect(packets[0][0]).toBe(0xef);
+    expect(packets[0][1]).toBe(0xdd);
+    expect(packets[0].length).toBe(12);
+  });
+
+  it('extracts multiple packets from single push', () => {
+    const buf = new PacketBuffer();
+    const packets: Buffer[] = [];
+    buf.onPacket = (p) => packets.push(p);
+
+    buf.push(Buffer.from([
+      0xef, 0xdd, 0x0c, 0x01, 0x05, 0xaa,
+      0xef, 0xdd, 0x00, 0x02, 0x00, 0x02, 0x00
+    ]));
+    expect(packets.length).toBe(2);
+    expect(packets[0][2]).toBe(0x0c);
+    expect(packets[1][2]).toBe(0x00);
+  });
+
+  it('handles split header across pushes', () => {
+    const buf = new PacketBuffer();
+    const packets: Buffer[] = [];
+    buf.onPacket = (p) => packets.push(p);
+
+    buf.push(Buffer.from([0xef]));
     expect(packets.length).toBe(0);
 
-    buf.flush();
+    buf.push(Buffer.from([0xdd, 0x0c, 0x07, 0x05, 0xdf, 0x06, 0x00, 0x00, 0x01, 0x00, 0x10, 0x20]));
     expect(packets.length).toBe(1);
     expect(packets[0][0]).toBe(0xef);
     expect(packets[0][1]).toBe(0xdd);
   });
 
-  it('flushes previous packet when new header arrives', () => {
+  it('discards garbage before first header', () => {
     const buf = new PacketBuffer();
     const packets: Buffer[] = [];
     buf.onPacket = (p) => packets.push(p);
 
-    buf.push(Buffer.from([0xef, 0xdd, 0x0c, 0x01, 0x05, 0xaa, 0xbb]));
-    expect(packets.length).toBe(0);
+    buf.push(Buffer.from([0xaa, 0xbb, 0xef, 0xdd, 0x0c, 0x01, 0x05, 0xaa]));
+    expect(packets.length).toBe(1);
+    expect(packets[0][0]).toBe(0xef);
+  });
 
-    buf.push(Buffer.from([0xef, 0xdd, 0x00, 0x02, 0x00, 0x02, 0x00]));
+  it('skips invalid payloadLen and recovers', () => {
+    const buf = new PacketBuffer();
+    const packets: Buffer[] = [];
+    buf.onPacket = (p) => packets.push(p);
+
+    buf.push(Buffer.from([
+      0xef, 0xdd, 0xff, 0xff, 0x00,
+      0xef, 0xdd, 0x0c, 0x01, 0x05, 0xaa
+    ]));
     expect(packets.length).toBe(1);
     expect(packets[0][2]).toBe(0x0c);
+  });
+
+  it('flush emits incomplete buffered data', () => {
+    const buf = new PacketBuffer();
+    const packets: Buffer[] = [];
+    buf.onPacket = (p) => packets.push(p);
+
+    buf.push(Buffer.from([0xef, 0xdd, 0x0c, 0x07, 0x05, 0xdf]));
+    expect(packets.length).toBe(0);
 
     buf.flush();
-    expect(packets.length).toBe(2);
-    expect(packets[1][2]).toBe(0x00);
+    expect(packets.length).toBe(1);
   });
 
   it('reset clears buffer', () => {
