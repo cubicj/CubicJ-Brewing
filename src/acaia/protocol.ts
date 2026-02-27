@@ -71,10 +71,10 @@ export interface ScaleSettings {
 export function decodeSettings(data: Buffer, offset: number): ScaleSettings {
   return {
     battery: data[offset + 1] & 0x7f,
-    units: (data[offset + 2] & 0xff) === 5 ? 'ounces' : 'grams',
-    autoOffMinutes: (data[offset + 4] & 0xff) * 5,
-    beep: (data[offset + 6] & 0xff) === 1,
     timerRunning: (data[offset + 2] & 0xff) === 1,
+    units: (data[offset + 3] & 0xff) === 5 ? 'ounces' : 'grams',
+    autoOffMinutes: (data[offset + 5] & 0xff) * 5,
+    beep: (data[offset + 9] & 0xff) === 1,
   };
 }
 
