@@ -1,21 +1,57 @@
+.cubicj-brewing-view .brewing-scale-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  font-size: var(--font-ui-smaller);
+}
+
+.cubicj-brewing-view .brewing-scale-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+}
+
+.cubicj-brewing-view .brewing-scale-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.cubicj-brewing-view .brewing-scale-dot.is-connected {
+  background: var(--color-green);
+}
+
+.cubicj-brewing-view .brewing-scale-dot.is-disconnected {
+  background: var(--color-red);
+}
+
+.cubicj-brewing-view .brewing-scale-dot.is-busy {
+  background: var(--color-yellow);
+  animation: brewing-pulse 1s ease-in-out infinite;
+}
+
+@keyframes brewing-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.cubicj-brewing-view .brewing-scale-connect-btn {
+  font-size: var(--font-ui-smaller);
+  padding: 2px 10px;
+}
+
+.cubicj-brewing-view .brewing-content-area {
+  flex: 1;
+  overflow-y: auto;
+}
+
 .cubicj-brewing-view .brewing-section {
   padding: 8px 0;
-}
-
-.cubicj-brewing-view .brewing-connection {
-  border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.cubicj-brewing-view .brewing-connect-btn {
-  width: 100%;
-  margin-bottom: 6px;
-}
-
-.cubicj-brewing-view .brewing-status-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
 }
 
 .cubicj-brewing-view .brewing-data {
@@ -53,4 +89,217 @@
 
 .cubicj-brewing-view .brewing-ctrl-btn {
   flex: 1;
+}
+
+/* Brew flow */
+
+.cubicj-brewing-view .brew-flow-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  font-size: var(--font-ui-smaller);
+}
+
+.cubicj-brewing-view .brew-flow-chip {
+  background: var(--background-modifier-hover);
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cubicj-brewing-view .brew-flow-chip:hover {
+  background: var(--background-modifier-border);
+}
+
+.cubicj-brewing-view .brew-flow-cancel {
+  margin-left: auto;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 2px 6px;
+}
+
+.cubicj-brewing-view .brew-flow-cancel:hover {
+  color: var(--text-error);
+}
+
+.cubicj-brewing-view .brew-flow-start-btn {
+  width: 100%;
+  margin: 8px 0;
+}
+
+.cubicj-brewing-view .brew-flow-last-record {
+  background: var(--background-secondary);
+  padding: 8px;
+  border-radius: 4px;
+  margin-top: 8px;
+  font-size: var(--font-ui-smaller);
+}
+
+.cubicj-brewing-view .brew-flow-last-record-title {
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.cubicj-brewing-view .brew-flow-last-record-meta {
+  color: var(--text-muted);
+}
+
+.cubicj-brewing-view .brew-flow-method h4,
+.cubicj-brewing-view .brew-flow-bean h4 {
+  margin: 8px 0 4px;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.cubicj-brewing-view .brew-flow-toggle-group {
+  display: flex;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.cubicj-brewing-view .brew-flow-toggle {
+  flex: 1;
+  text-align: center;
+  padding: 6px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+}
+
+.cubicj-brewing-view .brew-flow-toggle:hover {
+  background: var(--background-modifier-hover);
+}
+
+.cubicj-brewing-view .brew-flow-toggle.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+
+.cubicj-brewing-view .brew-flow-bean-item {
+  padding: 8px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  cursor: pointer;
+}
+
+.cubicj-brewing-view .brew-flow-bean-item:hover {
+  background: var(--background-modifier-hover);
+}
+
+.cubicj-brewing-view .brew-flow-bean-meta {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.cubicj-brewing-view .brew-flow-empty {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  padding: 16px 0;
+  text-align: center;
+}
+
+/* Configure */
+
+.cubicj-brewing-view .brew-flow-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.cubicj-brewing-view .brew-flow-form label {
+  display: block;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.cubicj-brewing-view .brew-flow-form input,
+.cubicj-brewing-view .brew-flow-form select {
+  width: 100%;
+}
+
+.cubicj-brewing-view .brew-flow-recipe-select {
+  margin: 8px 0;
+}
+
+.cubicj-brewing-view .brew-flow-recipe-select label {
+  display: block;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.cubicj-brewing-view .brew-flow-recipe-select select {
+  width: 100%;
+}
+
+/* Brewing active */
+
+.cubicj-brewing-view .brew-flow-notice {
+  text-align: center;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  padding: 4px 0;
+}
+
+.cubicj-brewing-view .brew-flow-recipe-steps {
+  margin: 8px 0;
+  font-size: var(--font-ui-smaller);
+}
+
+.cubicj-brewing-view .brew-flow-recipe-steps h4 {
+  margin: 4px 0;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.cubicj-brewing-view .brew-flow-recipe-step {
+  padding: 4px 8px;
+  border-left: 2px solid transparent;
+}
+
+.cubicj-brewing-view .brew-flow-recipe-step.is-current {
+  border-left-color: var(--interactive-accent);
+  background: var(--background-modifier-hover);
+}
+
+.cubicj-brewing-view .brew-flow-recipe-step.is-done {
+  color: var(--text-muted);
+}
+
+.cubicj-brewing-view .brew-flow-stop-btn {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+/* Saving */
+
+.cubicj-brewing-view .brew-flow-result {
+  text-align: center;
+  font-size: 1.4em;
+  font-weight: 600;
+  padding: 12px 0;
+}
+
+.cubicj-brewing-view .brew-flow-section-label {
+  margin: 8px 0 4px;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.cubicj-brewing-view .brew-flow-note {
+  width: 100%;
+  min-height: 60px;
+  resize: vertical;
+  margin-bottom: 8px;
+}
+
+.cubicj-brewing-view .brew-flow-save-btn {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
 }
