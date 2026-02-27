@@ -99,13 +99,25 @@ describe('decodeTimer', () => {
 });
 
 describe('decodeSettings', () => {
-  it('extracts battery, units, auto-off, beep', () => {
-    const payload = Buffer.from([0x00, 0x55, 0x02, 0x00, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00]);
+  it('extracts battery, timerRunning, units, auto-off from Pearl S packet', () => {
+    const payload = Buffer.from([
+      0x1f, 0x64, 0x00, 0x02, 0x02, 0x03, 0x00, 0x00, 0x00, 0x01,
+      0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+    ]);
     const result = decodeSettings(payload, 0);
-    expect(result.battery).toBe(85);
+    expect(result.battery).toBe(100);
+    expect(result.timerRunning).toBe(false);
     expect(result.units).toBe('grams');
     expect(result.autoOffMinutes).toBe(15);
     expect(result.beep).toBe(true);
+  });
+
+  it('detects timerRunning=true', () => {
+    const payload = Buffer.from([
+      0x1f, 0x64, 0x01, 0x02, 0x02, 0x03, 0x00, 0x00, 0x00, 0x01,
+    ]);
+    const result = decodeSettings(payload, 0);
+    expect(result.timerRunning).toBe(true);
   });
 });
 

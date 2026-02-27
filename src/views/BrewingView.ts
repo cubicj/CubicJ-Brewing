@@ -7,7 +7,7 @@ import type { BrewMethod, BrewTemp, EspressoDrink } from '../brew/types';
 export const VIEW_TYPE_BREWING = 'cubicj-brewing';
 
 const METHOD_LABELS: Record<BrewMethod, string> = { brewing: '브루잉', espresso: '에스프레소' };
-const TEMP_LABELS: Record<BrewTemp, string> = { hot: '핫', iced: '아이스' };
+const TEMP_LABELS: Record<BrewTemp, string> = { hot: 'Hot', iced: 'Ice' };
 const DRINK_LABELS: Record<EspressoDrink, string> = { shot: '샷', americano: '아메리카노', latte: '라떼' };
 
 type FlowStep = 'method' | 'bean' | 'configure' | 'brewing' | 'saving';
@@ -15,9 +15,9 @@ type FlowStep = 'method' | 'bean' | 'configure' | 'brewing' | 'saving';
 const STEP_CONFIG: Array<{ step: FlowStep; label: string }> = [
 	{ step: 'method', label: '추출 방식' },
 	{ step: 'bean', label: '원두 선택' },
-	{ step: 'configure', label: '변수 설정' },
+	{ step: 'configure', label: '추출 변수 설정' },
 	{ step: 'brewing', label: '브루잉' },
-	{ step: 'saving', label: '저장' },
+	{ step: 'saving', label: '메모' },
 ];
 
 export class BrewingView extends ItemView {
@@ -32,6 +32,8 @@ export class BrewingView extends ItemView {
 	private scaleConnectBtn!: HTMLButtonElement;
 	private scaleDataEl!: HTMLElement;
 	private contentArea!: HTMLElement;
+	private accordionPanels: Array<{ panel: HTMLElement; header: HTMLElement; indicator: HTMLElement; titleArea: HTMLElement; body: HTMLElement }> = [];
+	private expandedSteps = new Set<number>();
 
 	private weightEl!: HTMLElement;
 	private timerEl!: HTMLElement;
@@ -140,118 +142,165 @@ export class BrewingView extends ItemView {
 		}
 	}
 
-	private buildAccordionPanel(
-		container: HTMLElement,
-		config: { step: FlowStep; label: string },
-		state: 'completed' | 'current' | 'future'
-	): HTMLElement {
-		const panel = container.createDiv({ cls: 'brew-accordion-panel' });
+	private buildAccordionPanels(): void {
+		this.contentArea.empty();
+		this.accordionPanels = [];
+		this.expandedSteps.clear();
 
-		const header = panel.createDiv({ cls: `brew-accordion-header is-${state}` });
-		const icon = state === 'completed' ? '✓' : state === 'current' ? '▼' : '○';
-		header.createSpan({ cls: 'brew-accordion-icon', text: icon });
-		header.createSpan({ cls: 'brew-accordion-title', text: config.label });
+		for (let i = 0; i < STEP_CONFIG.length; i++) {
+			const panel = this.contentArea.createDiv({ cls: 'brew-accordion-panel' });
 
-		if (state === 'completed') {
-			const summary = this.getStepSummary(config.step);
-			if (summary) {
-				header.createSpan({ cls: 'brew-accordion-summary', text: summary });
-			}
-			header.addEventListener('click', () => {
-				this.flowState.goToStep(config.step);
-				this.renderContent();
-			});
+			const header = panel.createDiv({ cls: 'brew-accordion-header' });
+			header.addEventListener('click', () => this.togglePanel(i));
+
+			const indicator = header.createDiv({ cls: 'brew-accordion-indicator' });
+			indicator.createSpan({ text: String(i + 1) });
+
+			const titleArea = header.createDiv({ cls: 'brew-accordion-title-area' });
+			titleArea.createSpan({ cls: 'brew-accordion-title', text: STEP_CONFIG[i].label });
+
+			const body = panel.createDiv({ cls: 'brew-accordion-body' });
+
+			this.accordionPanels.push({ panel, header, indicator, titleArea, body });
 		}
-
-		const body = panel.createDiv({ cls: 'brew-accordion-body' });
-		if (state === 'current') body.addClass('is-open');
-
-		return body;
 	}
 
-	private renderContent(): void {
-		this.contentArea.empty();
-
-		if (this.flowState.step === 'idle') {
-			this.renderIdle(this.contentArea);
-			return;
+	private togglePanel(index: number): void {
+		if (this.expandedSteps.has(index)) {
+			this.expandedSteps.delete(index);
+		} else {
+			this.expandedSteps.add(index);
 		}
+		this.updateAccordion();
+	}
 
+	private updateAccordion(): void {
 		const currentStep = this.flowState.step;
 		const stepOrder: FlowStep[] = ['method', 'bean', 'configure', 'brewing', 'saving'];
 		const currentIdx = stepOrder.indexOf(currentStep as FlowStep);
 
-		for (const config of STEP_CONFIG) {
+		for (let i = 0; i < STEP_CONFIG.length; i++) {
+			const config = STEP_CONFIG[i];
+			const { panel, header, indicator, titleArea, body } = this.accordionPanels[i];
 			const idx = stepOrder.indexOf(config.step);
-			let state: 'completed' | 'current' | 'future';
-			if (idx < currentIdx) state = 'completed';
-			else if (idx === currentIdx) state = 'current';
-			else state = 'future';
+			const hasData = !!this.getStepSummary(config.step);
+			const isExpanded = this.expandedSteps.has(i);
+			const wasOpen = body.classList.contains('is-open');
 
-			const body = this.buildAccordionPanel(this.contentArea, config, state);
+			panel.className = 'brew-accordion-panel';
+			header.className = 'brew-accordion-header';
 
-			if (state === 'current') {
+			indicator.empty();
+			if (hasData) {
+				indicator.addClass('is-done');
+				indicator.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7l3 3 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+			} else {
+				indicator.removeClass('is-done');
+				indicator.createSpan({ text: String(i + 1) });
+			}
+
+			const existingSummary = titleArea.querySelector('.brew-accordion-summary');
+			if (existingSummary) existingSummary.remove();
+
+			if (hasData && !isExpanded) {
+				const summary = this.getStepSummary(config.step);
+				if (summary) {
+					titleArea.createSpan({ cls: 'brew-accordion-summary', text: summary });
+				}
+			}
+
+			if (isExpanded) {
+				body.empty();
+				const inner = body.createDiv({ cls: 'brew-accordion-body-inner' });
 				switch (config.step) {
-					case 'method': this.renderMethod(body); break;
-					case 'bean': this.renderBean(body); break;
-					case 'configure': this.renderConfigure(body); break;
-					case 'brewing': this.renderBrewing(body); break;
-					case 'saving': this.renderSaving(body); break;
+					case 'method': this.renderMethod(inner); break;
+					case 'bean': this.renderBean(inner); break;
+					case 'configure': this.renderConfigure(inner); break;
+					case 'brewing': this.renderBrewing(inner); break;
+					case 'saving': this.renderSaving(inner); break;
+				}
+				if (!wasOpen) {
+					body.classList.add('is-open');
+					const h = body.scrollHeight;
+					body.style.maxHeight = '0px';
+					requestAnimationFrame(() => {
+						body.style.maxHeight = h + 'px';
+					});
+				} else {
+					body.style.maxHeight = body.scrollHeight + 'px';
+				}
+			} else {
+				if (wasOpen) {
+					body.style.maxHeight = body.scrollHeight + 'px';
+					requestAnimationFrame(() => {
+						body.classList.remove('is-open');
+						body.style.maxHeight = '0px';
+					});
+					const ref = body;
+					const onEnd = (e: TransitionEvent) => {
+						if (e.propertyName === 'max-height') {
+							ref.empty();
+							ref.style.maxHeight = '';
+							ref.removeEventListener('transitionend', onEnd);
+						}
+					};
+					ref.addEventListener('transitionend', onEnd);
 				}
 			}
 		}
 	}
 
-	private renderIdle(container: HTMLElement): void {
-		const section = container.createDiv({ cls: 'brewing-section brew-flow-idle' });
-
-		const btn = section.createEl('button', { text: '새 브루잉', cls: 'brew-flow-start-btn' });
-		btn.addEventListener('click', () => {
+	private renderContent(): void {
+		if (this.flowState.step === 'idle') {
 			this.flowState.startBrew();
-			this.renderContent();
-		});
-
-		this.renderLastBrewSummary(section);
-	}
-
-	private async renderLastBrewSummary(container: HTMLElement): Promise<void> {
-		const records = await this.plugin.recordService.getAll();
-		if (records.length === 0) return;
-
-		const last = [...records].sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0];
-		const card = container.createDiv({ cls: 'brew-flow-last-record' });
-		const date = new Date(last.timestamp);
-		const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
-
-		card.createDiv({ cls: 'brew-flow-last-record-title', text: `마지막: ${last.bean}` });
-		const meta = card.createDiv({ cls: 'brew-flow-last-record-meta' });
-		const parts = [dateStr, `${last.grindSize}`, `${last.dose}g`];
-		if (last.time) {
-			const min = Math.floor(last.time / 60);
-			const sec = Math.floor(last.time % 60);
-			parts.push(`${min}:${sec.toString().padStart(2, '0')}`);
 		}
-		if (last.yield) parts.push(`${last.yield}g`);
-		meta.textContent = parts.join(' · ');
+
+		const isInitial = this.accordionPanels.length === 0;
+		if (isInitial) {
+			this.buildAccordionPanels();
+		} else {
+			const stepOrder: FlowStep[] = ['method', 'bean', 'configure', 'brewing', 'saving'];
+			const currentIdx = stepOrder.indexOf(this.flowState.step as FlowStep);
+			this.expandedSteps.clear();
+			this.expandedSteps.add(currentIdx);
+		}
+
+		this.updateAccordion();
 	}
+
+	
 
 	private renderMethod(container: HTMLElement): void {
 		container.addClass('brew-flow-method');
 
-		let selectedMethod: BrewMethod | null = null;
-		let selectedTemp: BrewTemp | null = null;
-		let selectedDrink: EspressoDrink | null = null;
+		const sel = this.flowState.selection;
+		let selectedMethod: BrewMethod | null = sel.method ?? null;
+		let selectedTemp: BrewTemp | null = sel.temp ?? null;
+		let selectedDrink: EspressoDrink | null = sel.drink ?? null;
+
+		const syncSelection = () => {
+			sel.method = selectedMethod ?? undefined;
+			sel.temp = selectedTemp ?? undefined;
+			sel.drink = selectedDrink ?? undefined;
+		};
 
 		const methodGroup = container.createDiv({ cls: 'brew-flow-toggle-group' });
 		const methods: BrewMethod[] = ['brewing', 'espresso'];
 		const methodBtns = methods.map(m => {
 			const btn = methodGroup.createDiv({ cls: 'brew-flow-toggle', text: METHOD_LABELS[m] });
+			if (m === selectedMethod) btn.addClass('is-active');
 			btn.addEventListener('click', () => {
-				selectedMethod = m;
-				methodBtns.forEach(b => b.removeClass('is-active'));
-				btn.addClass('is-active');
-				drinkRow.style.display = m === 'espresso' ? '' : 'none';
-				if (m === 'brewing') selectedDrink = null;
+				if (selectedMethod === m) {
+					selectedMethod = null;
+					btn.removeClass('is-active');
+				} else {
+					selectedMethod = m;
+					methodBtns.forEach(b => b.removeClass('is-active'));
+					btn.addClass('is-active');
+				}
+				drinkRow.style.display = selectedMethod === 'espresso' ? '' : 'none';
+				if (selectedMethod !== 'espresso') selectedDrink = null;
+				syncSelection();
 				tryAdvance();
 			});
 			return btn;
@@ -262,26 +311,40 @@ export class BrewingView extends ItemView {
 		const temps: BrewTemp[] = ['hot', 'iced'];
 		const tempBtns = temps.map(t => {
 			const btn = tempGroup.createDiv({ cls: 'brew-flow-toggle', text: TEMP_LABELS[t] });
+			if (t === selectedTemp) btn.addClass('is-active');
 			btn.addEventListener('click', () => {
-				selectedTemp = t;
-				tempBtns.forEach(b => b.removeClass('is-active'));
-				btn.addClass('is-active');
+				if (selectedTemp === t) {
+					selectedTemp = null;
+					btn.removeClass('is-active');
+				} else {
+					selectedTemp = t;
+					tempBtns.forEach(b => b.removeClass('is-active'));
+					btn.addClass('is-active');
+				}
+				syncSelection();
 				tryAdvance();
 			});
 			return btn;
 		});
 
 		const drinkRow = container.createDiv({ cls: 'brew-flow-drink-row' });
-		drinkRow.style.display = 'none';
+		drinkRow.style.display = selectedMethod === 'espresso' ? '' : 'none';
 		drinkRow.createEl('h4', { text: '음료' });
 		const drinkGroup = drinkRow.createDiv({ cls: 'brew-flow-toggle-group' });
 		const drinks: EspressoDrink[] = ['shot', 'americano', 'latte'];
 		const drinkBtns = drinks.map(d => {
 			const btn = drinkGroup.createDiv({ cls: 'brew-flow-toggle', text: DRINK_LABELS[d] });
+			if (d === selectedDrink) btn.addClass('is-active');
 			btn.addEventListener('click', () => {
-				selectedDrink = d;
-				drinkBtns.forEach(b => b.removeClass('is-active'));
-				btn.addClass('is-active');
+				if (selectedDrink === d) {
+					selectedDrink = null;
+					btn.removeClass('is-active');
+				} else {
+					selectedDrink = d;
+					drinkBtns.forEach(b => b.removeClass('is-active'));
+					btn.addClass('is-active');
+				}
+				syncSelection();
 				tryAdvance();
 			});
 			return btn;
@@ -712,7 +775,7 @@ export class BrewingView extends ItemView {
 	private handleScaleButton(event: { type: string; weight?: number; timer?: number }): void {
 		switch (event.type) {
 			case 'timer_start':
-				if (this.timerState === 'idle') {
+				if (this.timerState === 'idle' || this.timerState === 'stopped') {
 					this.timerStartedAt = Date.now();
 					this.timerElapsedAtStop = 0;
 					this.startLocalTimer();
@@ -722,13 +785,12 @@ export class BrewingView extends ItemView {
 				break;
 			case 'timer_stop':
 				if (this.timerState === 'running') {
-					const elapsed = this.getElapsedSeconds();
-					this.stopLocalTimer();
-					this.timerEl.textContent = this.formatTimer(elapsed);
-					this.timerElapsedAtStop = 0;
+					this.timerElapsedAtStop = this.getElapsedSeconds();
+					this.timerState = 'stopped';
 					this.timerStartedAt = 0;
-					this.timerBtn.textContent = '\u23FB';
-					this.timerState = 'idle';
+					this.stopLocalTimer();
+					this.updateTimerDisplay();
+					this.timerBtn.textContent = '\u21BA';
 				}
 				break;
 			case 'timer_reset':

@@ -19,7 +19,6 @@ export class AcaiaService extends EventEmitter {
   private writeQueue: Buffer[] = [];
   private writing = false;
   private scaleTimerRunning = false;
-  private lastDataHadTimer = false;
 
   get state(): AcaiaState {
     return this._state;
@@ -155,7 +154,6 @@ export class AcaiaService extends EventEmitter {
     this.noble = null;
     this._state = 'idle';
     this.scaleTimerRunning = false;
-    this.lastDataHadTimer = false;
   }
 
   private loadNoble(): any {
@@ -209,7 +207,6 @@ export class AcaiaService extends EventEmitter {
       const totalPayloadLen = packet[3];
       const payloadEnd = 3 + totalPayloadLen;
       let offset = 4;
-      let hasTimer = false;
 
       while (offset < payloadEnd) {
         const innerType = packet[offset];
@@ -218,7 +215,6 @@ export class AcaiaService extends EventEmitter {
           this.emit('weight', decodeWeight(packet, offset + 1));
           offset += 7;
         } else if (innerType === 7 && offset + 4 <= packet.length) {
-          hasTimer = true;
           this.emit('timer', decodeTimer(packet, offset + 1));
           offset += 4;
         } else if (innerType === 8 && offset + 3 <= packet.length) {
@@ -228,15 +224,6 @@ export class AcaiaService extends EventEmitter {
           break;
         }
       }
-
-      if (this.lastDataHadTimer && !hasTimer && this.scaleTimerRunning) {
-        this.scaleTimerRunning = false;
-        this.emit('button', { type: 'timer_stop' });
-      } else if (!this.lastDataHadTimer && hasTimer && !this.scaleTimerRunning) {
-        this.scaleTimerRunning = true;
-        this.emit('button', { type: 'timer_start' });
-      }
-      this.lastDataHadTimer = hasTimer;
     } else if (cmd === 8 && packet.length >= 10) {
       const settings = decodeSettings(packet, 3);
       this.emit('battery', settings.battery);
@@ -280,8 +267,6 @@ export class AcaiaService extends EventEmitter {
   }
 
   private startHeartbeat(): void {
-    let settingsCounter = 0;
-
     this.heartbeatTimer = setInterval(async () => {
       if (this._state !== 'connected') return;
 
@@ -292,13 +277,12 @@ export class AcaiaService extends EventEmitter {
 
       await this.enqueueWrite(encodeIdentify());
       await this.enqueueWrite(encodeHeartbeat());
-
-      settingsCounter++;
-      if (settingsCounter >= 3) {
-        await this.enqueueWrite(encodeGetSettings());
-        settingsCounter = 0;
-      }
     }, 1000);
+
+    this.settingsTimer = setInterval(async () => {
+      if (this._state !== 'connected') return;
+      await this.enqueueWrite(encodeGetSettings());
+    }, 400);
   }
 
   private stopTimers(): void {
@@ -311,7 +295,6 @@ export class AcaiaService extends EventEmitter {
     this.packetBuffer.reset();
     this.writeQueue = [];
     this.scaleTimerRunning = false;
-    this.lastDataHadTimer = false;
     if (this.notifyChar) {
       this.notifyChar.removeAllListeners('data');
     }
