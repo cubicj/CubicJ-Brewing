@@ -603,7 +603,7 @@ export class BrewingView extends ItemView {
 		});
 
 		this.listen('battery', (percent: number) => {
-			this.scaleBatteryEl.textContent = `${percent}%`;
+			this.scaleBatteryEl.textContent = `Battery: ${percent}%`;
 		});
 
 		this.listen('error', (err: Error) => {
@@ -624,6 +624,8 @@ export class BrewingView extends ItemView {
 		else if (state === 'disconnected') this.scaleDotEl.addClass('is-disconnected');
 		else if (state === 'scanning' || state === 'connecting') this.scaleDotEl.addClass('is-busy');
 
+		this.scaleStatusEl.removeClass('brewing-error');
+
 		switch (state) {
 			case 'idle':
 				this.scaleStatusEl.textContent = '';
@@ -633,10 +635,12 @@ export class BrewingView extends ItemView {
 			case 'scanning':
 				this.scaleStatusEl.textContent = '스캔 중';
 				this.scaleConnectBtn.textContent = '취소';
+				this.scaleBatteryEl.textContent = '';
 				break;
 			case 'connecting':
 				this.scaleStatusEl.textContent = '연결 중';
 				this.scaleConnectBtn.textContent = '취소';
+				this.scaleBatteryEl.textContent = '';
 				break;
 			case 'connected':
 				this.scaleStatusEl.textContent = '연결됨';
@@ -691,7 +695,9 @@ export class BrewingView extends ItemView {
 
 	private async handleConnectClick(): Promise<void> {
 		const service = this.plugin.acaiaService;
-		if (service.state === 'connected') {
+		if (service.state === 'scanning' || service.state === 'connecting') {
+			await service.cancelConnect();
+		} else if (service.state === 'connected') {
 			await service.disconnect();
 		} else {
 			await service.connect();

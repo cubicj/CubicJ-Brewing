@@ -19,58 +19,68 @@ export class AcaiaService extends EventEmitter {
   private writeQueue: Buffer[] = [];
   private writing = false;
   private scaleTimerRunning = false;
+  private connecting = false;
+  private connectAborted = false;
 
   get state(): AcaiaState {
     return this._state;
   }
 
   async connect(): Promise<void> {
+    if (this.connecting) return;
     if (this._state !== 'idle' && this._state !== 'disconnected') return;
 
-    this.noble = this.loadNoble();
-    if (!this.noble) {
-      this.emitError('Failed to load noble BLE library');
-      return;
-    }
-
-    this.setState('scanning');
-
-    if (this.noble.state !== 'poweredOn') {
-      const ready = await this.waitForPoweredOn();
-      if (!ready) {
-        this.emitError('BLE adapter not ready');
-        this.setState('idle');
-        return;
-      }
-    }
+    this.connecting = true;
+    this.connectAborted = false;
 
     try {
+      this.noble = this.loadNoble();
+      if (!this.noble) {
+        this.emitError('Failed to load noble BLE library');
+        return;
+      }
+
+      this.setState('scanning');
+
+      if (this.noble.state !== 'poweredOn') {
+        const ready = await this.waitForPoweredOn();
+        if (!ready || this.connectAborted) {
+          if (!this.connectAborted) this.emitError('BLE adapter not ready');
+          this.setState('idle');
+          return;
+        }
+      }
+
       const peripheral = await this.scanForScale();
-      if (!peripheral) {
-        this.emitError('No scale found (10s timeout)');
-        this.setState('idle');
+      if (!peripheral || this.connectAborted) {
+        if (!this.connectAborted) this.emitError('No scale found (10s timeout)');
+        if (!this.connectAborted) this.setState('idle');
         return;
       }
 
       this.peripheral = peripheral;
       this.setState('connecting');
 
-      await peripheral.connectAsync();
+      await this.withTimeout(peripheral.connectAsync(), 10000, 'BLE connect');
+      if (this.connectAborted) return;
 
       peripheral.once('disconnect', () => {
         this.handleDisconnect();
       });
 
-      const { characteristics } = await peripheral.discoverSomeServicesAndCharacteristicsAsync(
-        [], [WRITE_UUID, NOTIFY_UUID]
+      const { characteristics } = await this.withTimeout(
+        peripheral.discoverSomeServicesAndCharacteristicsAsync([], [WRITE_UUID, NOTIFY_UUID]),
+        10000, 'Service discovery'
       );
+      if (this.connectAborted) return;
 
       this.writeChar = characteristics.find((c: any) => c.uuid === WRITE_UUID);
       this.notifyChar = characteristics.find((c: any) => c.uuid === NOTIFY_UUID);
 
       if (!this.writeChar || !this.notifyChar) {
         this.emitError('Required BLE characteristics not found');
-        await peripheral.disconnectAsync();
+        try { await peripheral.disconnectAsync(); } catch {}
+        this.cleanupConnection();
         this.setState('idle');
         return;
       }
@@ -80,7 +90,8 @@ export class AcaiaService extends EventEmitter {
         this.lastPacketTime = Date.now();
         this.packetBuffer.push(data);
       });
-      await this.notifyChar.subscribeAsync();
+      await this.withTimeout(this.notifyChar.subscribeAsync(), 5000, 'Notify subscribe');
+      if (this.connectAborted) return;
 
       await this.enqueueWrite(encodeIdentify());
       await this.enqueueWrite(encodeNotificationRequest());
@@ -89,23 +100,37 @@ export class AcaiaService extends EventEmitter {
       this.startHeartbeat();
       this.setState('connected');
     } catch (err: any) {
-      this.emitError(err.message || 'Connection failed');
-      this.setState('idle');
+      if (!this.connectAborted) {
+        this.emitError(err.message || 'Connection failed');
+      }
+      this.cleanupConnection();
+      if (this.peripheral) {
+        try { await this.peripheral.disconnectAsync(); } catch {}
+        this.peripheral = null;
+      }
+      if (!this.connectAborted) this.setState('idle');
+    } finally {
+      this.connecting = false;
     }
   }
 
-  async disconnect(): Promise<void> {
-    this.stopTimers();
-    this.packetBuffer.reset();
-    this.writeQueue = [];
-    if (this.notifyChar) {
-      this.notifyChar.removeAllListeners('data');
-      this.notifyChar = null;
+  async cancelConnect(): Promise<void> {
+    this.connectAborted = true;
+    this.connecting = false;
+    try { if (this.noble) this.noble.stopScanning(); } catch {}
+    const peripheral = this.peripheral;
+    this.cleanupConnection();
+    if (peripheral) {
+      try { await peripheral.disconnectAsync(); } catch {}
     }
-    this.writeChar = null;
-    if (this.peripheral) {
-      try { await this.peripheral.disconnectAsync(); } catch {}
-      this.peripheral = null;
+    this.setState('idle');
+  }
+
+  disconnect(): void {
+    const peripheral = this.peripheral;
+    this.cleanupConnection();
+    if (peripheral) {
+      try { peripheral.disconnect(); } catch {}
     }
     this.setState('idle');
   }
@@ -135,29 +160,28 @@ export class AcaiaService extends EventEmitter {
   }
 
   destroy(): void {
-    this.stopTimers();
-    this.packetBuffer.reset();
-    this.writeQueue = [];
-    if (this.notifyChar) {
-      this.notifyChar.removeAllListeners('data');
-    }
-    if (this.peripheral) {
-      try { this.peripheral.disconnectAsync(); } catch {}
+    this.connectAborted = true;
+    const peripheral = this.peripheral;
+    this.cleanupConnection();
+    if (peripheral) {
+      try { peripheral.disconnect(); } catch {}
     }
     if (this.noble) {
+      try { this.noble.stopScanning(); } catch {}
       this.noble.removeAllListeners();
+      this.noble = null;
     }
     this.removeAllListeners();
-    this.peripheral = null;
-    this.writeChar = null;
-    this.notifyChar = null;
-    this.noble = null;
     this._state = 'idle';
-    this.scaleTimerRunning = false;
   }
 
   private loadNoble(): any {
-    try { return require(NOBLE_PATH); }
+    try {
+      const noble = require(NOBLE_PATH);
+      noble.removeAllListeners();
+      try { noble.stopScanning(); } catch {}
+      return noble;
+    }
     catch { return null; }
   }
 
@@ -291,17 +315,34 @@ export class AcaiaService extends EventEmitter {
   }
 
   private handleDisconnect(): void {
+    this.cleanupConnection();
+    this.setState('disconnected');
+  }
+
+  private withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+    return Promise.race([
+      promise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`${label} timed out (${ms}ms)`)), ms)
+      ),
+    ]);
+  }
+
+  private cleanupConnection(): void {
     this.stopTimers();
     this.packetBuffer.reset();
     this.writeQueue = [];
+    this.writing = false;
     this.scaleTimerRunning = false;
     if (this.notifyChar) {
       this.notifyChar.removeAllListeners('data');
+      this.notifyChar = null;
     }
     this.writeChar = null;
-    this.notifyChar = null;
-    this.peripheral = null;
-    this.setState('disconnected');
+    if (this.peripheral) {
+      this.peripheral.removeAllListeners('disconnect');
+      this.peripheral = null;
+    }
   }
 
   private async enqueueWrite(data: Buffer): Promise<void> {
