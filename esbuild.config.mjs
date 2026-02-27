@@ -15,6 +15,9 @@ const copyToVault = {
       copyFileSync("main.js", `${VAULT_PLUGIN_DIR}/main.js`);
       copyFileSync("manifest.json", `${VAULT_PLUGIN_DIR}/manifest.json`);
       copyFileSync("styles.css", `${VAULT_PLUGIN_DIR}/styles.css`);
+      for (const f of ["MatrixSansScreen-Regular.woff2", "MatrixSansPrint-Regular.woff2"]) {
+        copyFileSync(`fonts/${f}`, `${VAULT_PLUGIN_DIR}/${f}`);
+      }
     });
   },
 };

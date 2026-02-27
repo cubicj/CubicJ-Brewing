@@ -10,6 +10,16 @@ const METHOD_LABELS: Record<BrewMethod, string> = { brewing: '브루잉', espres
 const TEMP_LABELS: Record<BrewTemp, string> = { hot: '핫', iced: '아이스' };
 const DRINK_LABELS: Record<EspressoDrink, string> = { shot: '샷', americano: '아메리카노', latte: '라떼' };
 
+type FlowStep = 'method' | 'bean' | 'configure' | 'brewing' | 'saving';
+
+const STEP_CONFIG: Array<{ step: FlowStep; label: string }> = [
+	{ step: 'method', label: '추출 방식' },
+	{ step: 'bean', label: '원두 선택' },
+	{ step: 'configure', label: '변수 설정' },
+	{ step: 'brewing', label: '브루잉' },
+	{ step: 'saving', label: '저장' },
+];
+
 export class BrewingView extends ItemView {
 	private plugin: CubicJBrewingPlugin;
 	private listeners: Array<{ event: string; fn: (...args: any[]) => void }> = [];
@@ -20,6 +30,7 @@ export class BrewingView extends ItemView {
 	private scaleStatusEl!: HTMLElement;
 	private scaleBatteryEl!: HTMLElement;
 	private scaleConnectBtn!: HTMLButtonElement;
+	private scaleDataEl!: HTMLElement;
 	private contentArea!: HTMLElement;
 
 	private weightEl!: HTMLElement;
@@ -27,6 +38,9 @@ export class BrewingView extends ItemView {
 	private tareBtn!: HTMLButtonElement;
 	private timerBtn!: HTMLButtonElement;
 	private timerState: 'idle' | 'running' | 'stopped' = 'idle';
+	private timerStartedAt = 0;
+	private timerElapsedAtStop = 0;
+	private localTimerInterval: ReturnType<typeof setInterval> | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: CubicJBrewingPlugin) {
 		super(leaf);
@@ -43,6 +57,8 @@ export class BrewingView extends ItemView {
 		container.addClass('cubicj-brewing-view');
 
 		this.buildScaleHeader(container);
+		this.scaleDataEl = container.createDiv({ cls: 'brewing-scale-data' });
+		this.buildScaleData();
 		this.contentArea = container.createDiv({ cls: 'brewing-content-area' });
 		this.bindServiceEvents();
 		this.updateScaleHeader(this.plugin.acaiaService.state);
@@ -50,6 +66,7 @@ export class BrewingView extends ItemView {
 	}
 
 	async onClose(): Promise<void> {
+		this.stopLocalTimer();
 		const service = this.plugin.acaiaService;
 		for (const { event, fn } of this.listeners) {
 			service.removeListener(event, fn);
@@ -71,58 +88,118 @@ export class BrewingView extends ItemView {
 		this.scaleConnectBtn.addEventListener('click', () => this.handleConnectClick());
 	}
 
-	private renderContent(): void {
-		this.contentArea.empty();
-		this.renderSummaryStack(this.contentArea);
-		switch (this.flowState.step) {
-			case 'idle': this.renderIdle(this.contentArea); break;
-			case 'method': this.renderMethod(this.contentArea); break;
-			case 'bean': this.renderBean(this.contentArea); break;
-			case 'configure': this.renderConfigure(this.contentArea); break;
-			case 'brewing': this.renderBrewing(this.contentArea); break;
-			case 'saving': this.renderSaving(this.contentArea); break;
+	private buildScaleData(): void {
+		const dataSection = this.scaleDataEl.createDiv({ cls: 'brewing-data' });
+		this.timerEl = dataSection.createDiv({ cls: 'brewing-timer', text: '0:00' });
+		this.weightEl = dataSection.createDiv({ cls: 'brewing-weight', text: '--' });
+
+		const controls = this.scaleDataEl.createDiv({ cls: 'brewing-controls brewing-scale-controls' });
+		this.timerBtn = controls.createEl('button', { text: '\u23FB', cls: 'brewing-ctrl-btn brewing-btn-icon' });
+		this.timerState = 'idle';
+		this.timerBtn.addEventListener('click', () => this.handleTimerClick());
+
+		this.tareBtn = controls.createEl('button', { text: 'T', cls: 'brewing-ctrl-btn brewing-btn-icon' });
+		this.tareBtn.addEventListener('click', () => this.plugin.acaiaService.tare());
+
+		const connected = this.plugin.acaiaService.state === 'connected';
+		this.scaleDataEl.style.display = connected ? '' : 'none';
+		this.tareBtn.disabled = !connected;
+		this.timerBtn.disabled = !connected;
+		if (connected) {
+			this.weightEl.textContent = '0.0';
 		}
 	}
 
-	private renderSummaryStack(container: HTMLElement): void {
-		if (this.flowState.step === 'idle') return;
-
-		const stack = container.createDiv({ cls: 'brew-flow-summary' });
+	private getStepSummary(step: FlowStep): string {
 		const sel = this.flowState.selection;
+		switch (step) {
+			case 'method': {
+				if (!sel.method) return '';
+				const parts = [METHOD_LABELS[sel.method], TEMP_LABELS[sel.temp!]];
+				if (sel.drink) parts.push(DRINK_LABELS[sel.drink]);
+				return parts.join(' · ');
+			}
+			case 'bean':
+				return sel.bean ? sel.bean.name : '';
+			case 'configure': {
+				if (sel.grindSize == null) return '';
+				const parts = [`${sel.grindSize}`, `${sel.dose}g`];
+				if (sel.method === 'brewing' && sel.waterTemp) parts.push(`${sel.waterTemp}°`);
+				if (sel.method === 'brewing' && sel.filter) parts.push(sel.filter);
+				if (sel.method === 'espresso' && sel.basket) parts.push(sel.basket);
+				return parts.join(' · ');
+			}
+			case 'brewing': {
+				const parts: string[] = [];
+				if (sel.time) parts.push(this.formatTimer(sel.time));
+				if (sel.yield) parts.push(`${sel.yield}g`);
+				return parts.join(' / ');
+			}
+			case 'saving':
+				return '';
+		}
+	}
 
-		if (sel.method) {
-			const label = `${METHOD_LABELS[sel.method]} · ${TEMP_LABELS[sel.temp!]}`;
-			const chip = stack.createSpan({ cls: 'brew-flow-chip', text: label });
-			if (sel.drink) chip.textContent += ` · ${DRINK_LABELS[sel.drink]}`;
-			chip.addEventListener('click', () => {
-				this.flowState.goToStep('method');
+	private buildAccordionPanel(
+		container: HTMLElement,
+		config: { step: FlowStep; label: string },
+		state: 'completed' | 'current' | 'future'
+	): HTMLElement {
+		const panel = container.createDiv({ cls: 'brew-accordion-panel' });
+
+		const header = panel.createDiv({ cls: `brew-accordion-header is-${state}` });
+		const icon = state === 'completed' ? '✓' : state === 'current' ? '▼' : '○';
+		header.createSpan({ cls: 'brew-accordion-icon', text: icon });
+		header.createSpan({ cls: 'brew-accordion-title', text: config.label });
+
+		if (state === 'completed') {
+			const summary = this.getStepSummary(config.step);
+			if (summary) {
+				header.createSpan({ cls: 'brew-accordion-summary', text: summary });
+			}
+			header.addEventListener('click', () => {
+				this.flowState.goToStep(config.step);
 				this.renderContent();
 			});
 		}
 
-		if (sel.bean) {
-			const chip = stack.createSpan({ cls: 'brew-flow-chip', text: sel.bean.name });
-			chip.addEventListener('click', () => {
-				this.flowState.goToStep('bean');
-				this.renderContent();
-			});
+		const body = panel.createDiv({ cls: 'brew-accordion-body' });
+		if (state === 'current') body.addClass('is-open');
+
+		return body;
+	}
+
+	private renderContent(): void {
+		this.contentArea.empty();
+
+		if (this.flowState.step === 'idle') {
+			this.renderIdle(this.contentArea);
+			return;
 		}
 
-		if (sel.grindSize != null && this.flowState.step !== 'configure') {
-			const parts = [`${sel.grindSize}`, `${sel.dose}g`];
-			if (sel.method === 'brewing' && sel.waterTemp) parts.push(`${sel.waterTemp}°`);
-			const chip = stack.createSpan({ cls: 'brew-flow-chip', text: parts.join(' · ') });
-			chip.addEventListener('click', () => {
-				this.flowState.goToStep('configure');
-				this.renderContent();
-			});
-		}
+		const currentStep = this.flowState.step;
+		const stepOrder: FlowStep[] = ['method', 'bean', 'configure', 'brewing', 'saving'];
+		const currentIdx = stepOrder.indexOf(currentStep as FlowStep);
 
-		const cancel = stack.createSpan({ cls: 'brew-flow-cancel', text: '✕' });
-		cancel.addEventListener('click', () => {
-			this.flowState.cancel();
-			this.renderContent();
-		});
+		for (const config of STEP_CONFIG) {
+			const idx = stepOrder.indexOf(config.step);
+			let state: 'completed' | 'current' | 'future';
+			if (idx < currentIdx) state = 'completed';
+			else if (idx === currentIdx) state = 'current';
+			else state = 'future';
+
+			const body = this.buildAccordionPanel(this.contentArea, config, state);
+
+			if (state === 'current') {
+				switch (config.step) {
+					case 'method': this.renderMethod(body); break;
+					case 'bean': this.renderBean(body); break;
+					case 'configure': this.renderConfigure(body); break;
+					case 'brewing': this.renderBrewing(body); break;
+					case 'saving': this.renderSaving(body); break;
+				}
+			}
+		}
 	}
 
 	private renderIdle(container: HTMLElement): void {
@@ -159,14 +236,13 @@ export class BrewingView extends ItemView {
 	}
 
 	private renderMethod(container: HTMLElement): void {
-		const section = container.createDiv({ cls: 'brewing-section brew-flow-method' });
-		section.createEl('h4', { text: '추출 방식' });
+		container.addClass('brew-flow-method');
 
 		let selectedMethod: BrewMethod | null = null;
 		let selectedTemp: BrewTemp | null = null;
 		let selectedDrink: EspressoDrink | null = null;
 
-		const methodGroup = section.createDiv({ cls: 'brew-flow-toggle-group' });
+		const methodGroup = container.createDiv({ cls: 'brew-flow-toggle-group' });
 		const methods: BrewMethod[] = ['brewing', 'espresso'];
 		const methodBtns = methods.map(m => {
 			const btn = methodGroup.createDiv({ cls: 'brew-flow-toggle', text: METHOD_LABELS[m] });
@@ -181,8 +257,8 @@ export class BrewingView extends ItemView {
 			return btn;
 		});
 
-		section.createEl('h4', { text: '온도' });
-		const tempGroup = section.createDiv({ cls: 'brew-flow-toggle-group' });
+		container.createEl('h4', { text: '온도' });
+		const tempGroup = container.createDiv({ cls: 'brew-flow-toggle-group' });
 		const temps: BrewTemp[] = ['hot', 'iced'];
 		const tempBtns = temps.map(t => {
 			const btn = tempGroup.createDiv({ cls: 'brew-flow-toggle', text: TEMP_LABELS[t] });
@@ -195,7 +271,7 @@ export class BrewingView extends ItemView {
 			return btn;
 		});
 
-		const drinkRow = section.createDiv({ cls: 'brew-flow-drink-row' });
+		const drinkRow = container.createDiv({ cls: 'brew-flow-drink-row' });
 		drinkRow.style.display = 'none';
 		drinkRow.createEl('h4', { text: '음료' });
 		const drinkGroup = drinkRow.createDiv({ cls: 'brew-flow-toggle-group' });
@@ -222,18 +298,17 @@ export class BrewingView extends ItemView {
 	}
 
 	private async renderBean(container: HTMLElement): Promise<void> {
-		const section = container.createDiv({ cls: 'brewing-section brew-flow-bean' });
-		section.createEl('h4', { text: '원두 선택' });
+		container.addClass('brew-flow-bean');
 
 		const beans = this.plugin.vaultData.getActiveBeans();
 
 		if (beans.length === 0) {
-			section.createDiv({ cls: 'brew-flow-empty', text: 'type: bean frontmatter가 있는 노트가 없어요' });
+			container.createDiv({ cls: 'brew-flow-empty', text: 'type: bean frontmatter가 있는 노트가 없어요' });
 			return;
 		}
 
 		for (const bean of beans) {
-			const item = section.createDiv({ cls: 'brew-flow-bean-item' });
+			const item = container.createDiv({ cls: 'brew-flow-bean-item' });
 			item.createDiv({ text: bean.name });
 
 			const days = this.plugin.vaultData.getDaysSinceRoast(bean);
@@ -253,12 +328,12 @@ export class BrewingView extends ItemView {
 	}
 
 	private renderConfigure(container: HTMLElement): void {
-		const section = container.createDiv({ cls: 'brewing-section brew-flow-configure' });
+		container.addClass('brew-flow-configure');
 		const sel = this.flowState.selection;
 		const isBrewing = sel.method === 'brewing';
 
 		if (sel.lastRecord) {
-			const card = section.createDiv({ cls: 'brew-flow-last-record' });
+			const card = container.createDiv({ cls: 'brew-flow-last-record' });
 			card.createDiv({ cls: 'brew-flow-last-record-title', text: '이전 기록' });
 			const r = sel.lastRecord;
 			const parts = [`분쇄도 ${r.grindSize}`, `${r.dose}g`];
@@ -273,7 +348,7 @@ export class BrewingView extends ItemView {
 			card.createDiv({ cls: 'brew-flow-last-record-meta', text: parts.join(' · ') });
 		}
 
-		const form = section.createDiv({ cls: 'brew-flow-form' });
+		const form = container.createDiv({ cls: 'brew-flow-form' });
 
 		const grindInput = this.createFormField(form, '분쇄도', 'number', String(sel.grindSize ?? ''));
 		const doseInput = this.createFormField(form, '원두량 (g)', 'number', String(sel.dose ?? ''));
@@ -304,7 +379,7 @@ export class BrewingView extends ItemView {
 
 		const recipes = this.plugin.vaultData.getAllRecipes();
 		if (recipes.length > 0) {
-			const recipeGroup = section.createDiv({ cls: 'brew-flow-recipe-select' });
+			const recipeGroup = container.createDiv({ cls: 'brew-flow-recipe-select' });
 			recipeGroup.createEl('label', { text: '레시피' });
 			const recipeSelect = recipeGroup.createEl('select');
 			recipeSelect.createEl('option', { text: '선택 안 함', value: '' });
@@ -317,7 +392,7 @@ export class BrewingView extends ItemView {
 			});
 		}
 
-		const startBtn = section.createEl('button', { text: '브루잉 시작', cls: 'brew-flow-start-btn' });
+		const startBtn = container.createEl('button', { text: '브루잉 시작', cls: 'brew-flow-start-btn' });
 		startBtn.addEventListener('click', () => {
 			const vars: Record<string, any> = {
 				grindSize: parseFloat(grindInput.value) || 0,
@@ -336,21 +411,16 @@ export class BrewingView extends ItemView {
 	}
 
 	private renderBrewing(container: HTMLElement): void {
-		const section = container.createDiv({ cls: 'brewing-section brew-flow-active-brew' });
+		container.addClass('brew-flow-active-brew');
 		const scaleConnected = this.plugin.acaiaService.state === 'connected';
 
-		const dataSection = section.createDiv({ cls: 'brewing-data' });
-		this.weightEl = dataSection.createDiv({ cls: 'brewing-weight', text: scaleConnected ? '0.0 g' : '-- g' });
-		this.timerEl = dataSection.createDiv({ cls: 'brewing-timer', text: '0:00.0' });
-
 		if (!scaleConnected) {
-			this.weightEl.addClass('brewing-dimmed');
-			section.createDiv({ cls: 'brew-flow-notice', text: '저울 미연결 — 수동 입력 가능' });
+			container.createDiv({ cls: 'brew-flow-notice', text: '저울 미연결 — 수동 입력 가능' });
 		}
 
 		const recipe = this.flowState.selection.recipe;
 		if (recipe && recipe.steps.length > 0) {
-			const stepsEl = section.createDiv({ cls: 'brew-flow-recipe-steps' });
+			const stepsEl = container.createDiv({ cls: 'brew-flow-recipe-steps' });
 			stepsEl.createEl('h4', { text: recipe.name });
 			for (const step of recipe.steps) {
 				const stepEl = stepsEl.createDiv({ cls: 'brew-flow-recipe-step' });
@@ -361,31 +431,15 @@ export class BrewingView extends ItemView {
 			}
 		}
 
-		const controls = section.createDiv({ cls: 'brewing-controls' });
-
-		if (scaleConnected) {
-			this.tareBtn = controls.createEl('button', { text: 'Tare', cls: 'brewing-ctrl-btn' });
-			this.tareBtn.addEventListener('click', () => this.plugin.acaiaService.tare());
-
-			this.timerBtn = controls.createEl('button', { text: 'Start', cls: 'brewing-ctrl-btn' });
-			this.timerState = 'idle';
-			this.timerBtn.addEventListener('click', () => this.handleTimerClick());
-		}
+		const controls = container.createDiv({ cls: 'brewing-controls' });
 
 		const stopBtn = controls.createEl('button', { text: '완료', cls: 'brewing-ctrl-btn brew-flow-stop-btn' });
 		stopBtn.addEventListener('click', () => {
 			if (scaleConnected) {
-				const timeText = this.timerEl.textContent || '0:00.0';
-				const timeParts = timeText.split(':');
-				const min = parseInt(timeParts[0]) || 0;
-				const secParts = (timeParts[1] || '0').split('.');
-				const sec = parseInt(secParts[0]) || 0;
-				const ds = parseInt(secParts[1]) || 0;
-				const totalSeconds = min * 60 + sec + ds / 10;
-
+				this.stopLocalTimer();
+				const totalSeconds = this.getElapsedSeconds();
 				const weightText = this.weightEl.textContent || '0';
 				const yieldGrams = parseFloat(weightText) || undefined;
-
 				this.flowState.finishBrewing(totalSeconds || undefined, yieldGrams);
 			} else {
 				this.flowState.finishBrewing(undefined, undefined);
@@ -395,10 +449,10 @@ export class BrewingView extends ItemView {
 	}
 
 	private renderSaving(container: HTMLElement): void {
-		const section = container.createDiv({ cls: 'brewing-section brew-flow-saving' });
+		container.addClass('brew-flow-saving');
 		const sel = this.flowState.selection;
 
-		const resultEl = section.createDiv({ cls: 'brew-flow-result' });
+		const resultEl = container.createDiv({ cls: 'brew-flow-result' });
 		const parts: string[] = [];
 		if (sel.time) {
 			const min = Math.floor(sel.time / 60);
@@ -409,7 +463,7 @@ export class BrewingView extends ItemView {
 		resultEl.textContent = parts.length > 0 ? parts.join(' / ') : '수동 기록';
 
 		if (!sel.time) {
-			const manualForm = section.createDiv({ cls: 'brew-flow-form' });
+			const manualForm = container.createDiv({ cls: 'brew-flow-form' });
 			const timeInput = this.createFormField(manualForm, '시간 (초)', 'number', '');
 			const yieldInput = this.createFormField(manualForm, '추출량 (g)', 'number', '');
 			timeInput.addEventListener('change', () => {
@@ -420,8 +474,8 @@ export class BrewingView extends ItemView {
 			});
 		}
 
-		section.createEl('h4', { text: '마시는 사람', cls: 'brew-flow-section-label' });
-		const drinkerGroup = section.createDiv({ cls: 'brew-flow-toggle-group' });
+		container.createEl('h4', { text: '마시는 사람', cls: 'brew-flow-section-label' });
+		const drinkerGroup = container.createDiv({ cls: 'brew-flow-toggle-group' });
 		let selectedDrinker = this.plugin.settings.defaultDrinker;
 		const drinkerBtns = this.plugin.settings.drinkers.map(d => {
 			const btn = drinkerGroup.createDiv({ cls: 'brew-flow-toggle', text: d });
@@ -434,11 +488,11 @@ export class BrewingView extends ItemView {
 			return btn;
 		});
 
-		section.createEl('h4', { text: '메모', cls: 'brew-flow-section-label' });
-		const noteEl = section.createEl('textarea', { cls: 'brew-flow-note' });
+		container.createEl('h4', { text: '메모', cls: 'brew-flow-section-label' });
+		const noteEl = container.createEl('textarea', { cls: 'brew-flow-note' });
 		noteEl.placeholder = '맛, 변수 조절 메모...';
 
-		const btnRow = section.createDiv({ cls: 'brewing-controls' });
+		const btnRow = container.createDiv({ cls: 'brewing-controls' });
 		const saveBtn = btnRow.createEl('button', { text: '저장', cls: 'brewing-ctrl-btn brew-flow-save-btn' });
 		const cancelBtn = btnRow.createEl('button', { text: '취소', cls: 'brewing-ctrl-btn' });
 
@@ -474,15 +528,15 @@ export class BrewingView extends ItemView {
 		});
 
 		this.listen('weight', (grams: number) => {
-			if (this.weightEl) this.weightEl.textContent = `${grams.toFixed(1)} g`;
+			if (this.weightEl) this.weightEl.textContent = `${grams.toFixed(1)}`;
 		});
 
 		this.listen('timer', (seconds: number) => {
-			if (!this.timerEl) return;
-			const min = Math.floor(seconds / 60);
-			const sec = Math.floor(seconds % 60);
-			const ds = Math.round((seconds % 1) * 10);
-			this.timerEl.textContent = `${min}:${sec.toString().padStart(2, '0')}.${ds}`;
+			this.handleScaleTimer(seconds);
+		});
+
+		this.listen('button', (event: { type: string; weight?: number; timer?: number }) => {
+			this.handleScaleButton(event);
 		});
 
 		this.listen('battery', (percent: number) => {
@@ -537,6 +591,7 @@ export class BrewingView extends ItemView {
 
 	private updateScaleControls(state: AcaiaState): void {
 		const connected = state === 'connected';
+		this.scaleDataEl.style.display = connected ? '' : 'none';
 
 		if (this.tareBtn) this.tareBtn.disabled = !connected;
 		if (this.timerBtn) this.timerBtn.disabled = !connected;
@@ -549,17 +604,25 @@ export class BrewingView extends ItemView {
 		if (state === 'disconnected') {
 			this.weightEl?.addClass('brewing-dimmed');
 			this.timerEl?.addClass('brewing-dimmed');
+			this.stopLocalTimer();
+			this.timerElapsedAtStop = 0;
+			this.timerStartedAt = 0;
 			this.timerState = 'idle';
-			if (this.timerBtn) this.timerBtn.textContent = 'Start';
+			if (this.timerBtn) this.timerBtn.textContent = '\u23FB';
+			this.scaleDataEl.style.display = 'none';
 		}
 
 		if (state === 'idle') {
-			if (this.weightEl) this.weightEl.textContent = '-- g';
-			if (this.timerEl) this.timerEl.textContent = '--:--';
+			if (this.weightEl) this.weightEl.textContent = '--';
+			if (this.timerEl) this.timerEl.textContent = '0:00';
 			this.weightEl?.removeClass('brewing-dimmed');
 			this.timerEl?.removeClass('brewing-dimmed');
+			this.stopLocalTimer();
+			this.timerElapsedAtStop = 0;
+			this.timerStartedAt = 0;
 			this.timerState = 'idle';
-			if (this.timerBtn) this.timerBtn.textContent = 'Start';
+			if (this.timerBtn) this.timerBtn.textContent = '\u23FB';
+			this.scaleDataEl.style.display = 'none';
 		}
 	}
 
@@ -572,22 +635,108 @@ export class BrewingView extends ItemView {
 		}
 	}
 
+	private getElapsedSeconds(): number {
+		if (this.timerState === 'running') {
+			return this.timerElapsedAtStop + (Date.now() - this.timerStartedAt) / 1000;
+		}
+		return this.timerElapsedAtStop;
+	}
+
+	private formatTimer(seconds: number): string {
+		const min = Math.floor(seconds / 60);
+		const sec = Math.floor(seconds % 60);
+		return `${min}:${sec.toString().padStart(2, '0')}`;
+	}
+
+	private updateTimerDisplay(): void {
+		if (!this.timerEl) return;
+		this.timerEl.textContent = this.formatTimer(this.getElapsedSeconds());
+	}
+
+	private startLocalTimer(): void {
+		this.stopLocalTimer();
+		this.localTimerInterval = setInterval(() => this.updateTimerDisplay(), 100);
+	}
+
+	private stopLocalTimer(): void {
+		if (this.localTimerInterval) {
+			clearInterval(this.localTimerInterval);
+			this.localTimerInterval = null;
+		}
+	}
+
 	private async handleTimerClick(): Promise<void> {
 		const service = this.plugin.acaiaService;
 		switch (this.timerState) {
 			case 'idle':
 				await service.startTimer();
-				this.timerBtn.textContent = 'Stop';
+				this.timerStartedAt = Date.now();
+				this.timerElapsedAtStop = 0;
+				this.startLocalTimer();
+				this.timerBtn.textContent = '\u23F9';
 				this.timerState = 'running';
 				break;
 			case 'running':
 				await service.stopTimer();
-				this.timerBtn.textContent = 'Reset';
+				this.timerElapsedAtStop = this.getElapsedSeconds();
 				this.timerState = 'stopped';
+				this.stopLocalTimer();
+				this.updateTimerDisplay();
+				this.timerBtn.textContent = '\u21BA';
 				break;
 			case 'stopped':
 				await service.resetTimer();
-				this.timerBtn.textContent = 'Start';
+				this.timerElapsedAtStop = 0;
+				this.timerStartedAt = 0;
+				this.stopLocalTimer();
+				this.timerEl.textContent = '0:00';
+				this.timerBtn.textContent = '\u23FB';
+				this.timerState = 'idle';
+				break;
+		}
+	}
+
+	private handleScaleTimer(seconds: number): void {
+		if (this.timerState === 'running' && seconds > 0) {
+			this.timerStartedAt = Date.now() - seconds * 1000;
+		} else if (this.timerState === 'stopped' && seconds === 0) {
+			this.timerElapsedAtStop = 0;
+			this.timerStartedAt = 0;
+			this.stopLocalTimer();
+			this.timerEl.textContent = '0:00';
+			this.timerBtn.textContent = '\u23FB';
+			this.timerState = 'idle';
+		}
+	}
+
+	private handleScaleButton(event: { type: string; weight?: number; timer?: number }): void {
+		switch (event.type) {
+			case 'timer_start':
+				if (this.timerState === 'idle') {
+					this.timerStartedAt = Date.now();
+					this.timerElapsedAtStop = 0;
+					this.startLocalTimer();
+					this.timerBtn.textContent = '\u23F9';
+					this.timerState = 'running';
+				}
+				break;
+			case 'timer_stop':
+				if (this.timerState === 'running') {
+					const elapsed = this.getElapsedSeconds();
+					this.stopLocalTimer();
+					this.timerEl.textContent = this.formatTimer(elapsed);
+					this.timerElapsedAtStop = 0;
+					this.timerStartedAt = 0;
+					this.timerBtn.textContent = '\u23FB';
+					this.timerState = 'idle';
+				}
+				break;
+			case 'timer_reset':
+				this.timerElapsedAtStop = 0;
+				this.timerStartedAt = 0;
+				this.stopLocalTimer();
+				this.timerEl.textContent = '0:00';
+				this.timerBtn.textContent = '\u23FB';
 				this.timerState = 'idle';
 				break;
 		}
