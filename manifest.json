@@ -1,0 +1,9 @@
+{
+  "id": "cubicj-brewing",
+  "name": "CubicJ Brewing",
+  "version": "0.1.0",
+  "description": "Brewing assistant with Acaia Pearl S BLE integration",
+  "author": "CubicJ",
+  "minAppVersion": "1.0.0",
+  "isDesktopOnly": true
+}
