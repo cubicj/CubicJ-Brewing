@@ -11,6 +11,7 @@ export default class CubicJBrewingPlugin extends Plugin {
   settings!: BrewingSettings;
   recordService!: BrewRecordService;
   vaultData!: VaultDataService;
+  private beforeUnloadHandler!: () => void;
 
   async onload() {
     await this.loadSettings();
@@ -43,9 +44,13 @@ export default class CubicJBrewingPlugin extends Plugin {
     });
 
     this.app.workspace.onLayoutReady(() => this.activateView());
+
+    this.beforeUnloadHandler = () => { this.acaiaService.destroy(); };
+    window.addEventListener('beforeunload', this.beforeUnloadHandler);
   }
 
   onunload() {
+    window.removeEventListener('beforeunload', this.beforeUnloadHandler);
     this.acaiaService.destroy();
   }
 
