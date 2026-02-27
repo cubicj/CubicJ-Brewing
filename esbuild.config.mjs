@@ -14,6 +14,7 @@ const copyToVault = {
       mkdirSync(VAULT_PLUGIN_DIR, { recursive: true });
       copyFileSync("main.js", `${VAULT_PLUGIN_DIR}/main.js`);
       copyFileSync("manifest.json", `${VAULT_PLUGIN_DIR}/manifest.json`);
+      copyFileSync("styles.css", `${VAULT_PLUGIN_DIR}/styles.css`);
     });
   },
 };
