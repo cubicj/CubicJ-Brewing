@@ -12,5 +12,7 @@
     "obsidian": "latest",
     "typescript": "^5.0.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@stoprocent/noble": "^2.3.16"
+  }
 }
