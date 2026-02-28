@@ -277,7 +277,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 
 	const completeBtn = container.createEl('button', { text: '세팅 완료', cls: 'brew-flow-start-btn' });
 	completeBtn.addEventListener('click', () => {
-		const vars: Record<string, any> = {
+		const vars: Partial<BrewFlowSelection> = {
 			grindSize: parseFloat(grindInput.value) || 0,
 			dose: parseFloat(doseInput.value) || 0,
 		};

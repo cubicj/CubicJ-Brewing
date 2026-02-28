@@ -15,6 +15,42 @@ export interface AcaiaEvents {
   error: (error: Error) => void;
 }
 
+export interface NobleCharacteristic {
+  uuid: string;
+  on(event: 'data', listener: (data: Buffer) => void): this;
+  removeAllListeners(event?: string): this;
+  subscribeAsync(): Promise<void>;
+  writeAsync(data: Buffer, withoutResponse: boolean): Promise<void>;
+}
+
+export interface NoblePeripheral {
+  uuid: string;
+  address: string;
+  state: string;
+  advertisement: { localName?: string };
+  connectAsync(): Promise<void>;
+  disconnectAsync(): Promise<void>;
+  disconnect(): void;
+  discoverSomeServicesAndCharacteristicsAsync(
+    serviceUUIDs: string[],
+    characteristicUUIDs: string[],
+  ): Promise<{ characteristics: NobleCharacteristic[] }>;
+  on(event: 'disconnect', listener: () => void): this;
+  once(event: 'disconnect', listener: () => void): this;
+  removeAllListeners(event?: string): this;
+}
+
+export interface Noble {
+  state: string;
+  on(event: string, listener: (...args: unknown[]) => void): this;
+  removeListener(event: string, listener: (...args: unknown[]) => void): this;
+  removeAllListeners(): this;
+  startScanning(serviceUUIDs: string[], allowDuplicates: boolean): void;
+  startScanningAsync(serviceUUIDs: string[], allowDuplicates: boolean): Promise<void>;
+  stopScanning(): void;
+  stopScanningAsync(): Promise<void>;
+}
+
 export const NOBLE_PATH = '<NOBLE_PATH>';
 export const SCALE_PREFIXES = ['PEARL', 'ACAIA', 'PROCH', 'PYXIS', 'LUNAR'];
 export const WRITE_UUID = '49535343884143f4a8d4ecbe34729bb3';

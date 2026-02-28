@@ -57,31 +57,6 @@
   50% { opacity: 0.3; }
 }
 
-.cubicj-brewing-view .brewing-scale-btn-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.cubicj-brewing-view .brewing-scale-reset-btn {
-  font-size: var(--font-ui-smaller);
-  padding: 2px 8px;
-  cursor: pointer;
-  color: var(--text-muted);
-  background: transparent;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-s);
-}
-
-.cubicj-brewing-view .brewing-scale-reset-btn:hover {
-  color: var(--text-normal);
-  border-color: var(--text-muted);
-}
-
-.cubicj-brewing-view .brewing-scale-connect-btn {
-  font-size: var(--font-ui-smaller);
-  padding: 2px 10px;
-}
 
 .cubicj-brewing-view .brewing-scale-data {
   border-bottom: 1px solid var(--background-modifier-border);
@@ -100,9 +75,6 @@
   padding-top: var(--size-4-2);
 }
 
-.cubicj-brewing-view .brewing-section {
-  padding: 8px 0;
-}
 
 .cubicj-brewing-view .brewing-data {
   display: flex;
@@ -566,10 +538,6 @@
   border-left: 2px solid transparent;
 }
 
-.cubicj-brewing-view .brew-flow-recipe-step.is-current {
-  border-left-color: var(--interactive-accent);
-  background: var(--background-modifier-hover);
-}
 
 .cubicj-brewing-view .brew-flow-recipe-step.is-done {
   color: var(--text-muted);

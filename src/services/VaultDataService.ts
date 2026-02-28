@@ -58,10 +58,10 @@ export class VaultDataService {
 		const cache = this.app.metadataCache.getFileCache(file);
 		const fm = cache?.frontmatter;
 		if (fm?.type !== 'recipe') return null;
-		const steps: RecipeStep[] = (fm.steps ?? []).map((s: any) => ({
+		const steps: RecipeStep[] = (fm.steps ?? []).map((s: Record<string, unknown>) => ({
 			time: String(s.time ?? ''),
 			target: s.target != null ? Number(s.target) : undefined,
-			note: s.note,
+			note: s.note as string | undefined,
 		}));
 		return {
 			path: file.path,

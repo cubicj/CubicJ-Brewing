@@ -1,3 +1,5 @@
+import type { ButtonEvent } from '../acaia/types';
+
 export interface TimerElements {
 	timerEl: HTMLElement;
 	timerBtn: HTMLButtonElement;
@@ -60,7 +62,7 @@ export class TimerController {
 		}
 	}
 
-	handleScaleButton(event: { type: string; weight?: number; timer?: number }): void {
+	handleScaleButton(event: ButtonEvent): void {
 		switch (event.type) {
 			case 'timer_start':
 				if (this.timerState === 'idle' || this.timerState === 'stopped') {

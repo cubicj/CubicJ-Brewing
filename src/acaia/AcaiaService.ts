@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { AcaiaState, AcaiaEvents, ButtonEvent, NOBLE_PATH, SCALE_PREFIXES, WRITE_UUID, NOTIFY_UUID } from './types';
+import { AcaiaState, AcaiaEvents, ButtonEvent, NOBLE_PATH, SCALE_PREFIXES, WRITE_UUID, NOTIFY_UUID, Noble, NoblePeripheral, NobleCharacteristic } from './types';
 import {
   encodeIdentify, encodeHeartbeat, encodeNotificationRequest,
   encodeTare, encodeTimerControl, encodeGetSettings,
@@ -11,17 +11,17 @@ export interface BleLogger {
 }
 
 export interface AcaiaServiceOptions {
-  nobleFactory?: () => any;
+  nobleFactory?: () => Noble | null;
   logger?: BleLogger;
 }
 
 export class AcaiaService extends EventEmitter {
   private _state: AcaiaState = 'idle';
-  private nobleFactory: () => any;
-  private noble: any = null;
-  private peripheral: any = null;
-  private writeChar: any = null;
-  private notifyChar: any = null;
+  private nobleFactory: () => Noble | null;
+  private noble: Noble | null = null;
+  private peripheral: NoblePeripheral | null = null;
+  private writeChar: NobleCharacteristic | null = null;
+  private notifyChar: NobleCharacteristic | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private lastPacketTime = 0;
   private packetBuffer = new PacketBuffer();
@@ -135,17 +135,18 @@ export class AcaiaService extends EventEmitter {
         this.handleDisconnect();
       });
 
-      let characteristics: any[];
+      let characteristics: NobleCharacteristic[];
       for (let discoverAttempt = 0; ; discoverAttempt++) {
         try {
           this.log(`discoverAsync... (attempt ${discoverAttempt + 1})`);
           const result = await this.discoverWithCleanup(peripheral, 10000);
           characteristics = result.characteristics;
           break;
-        } catch (discoverErr: any) {
+        } catch (discoverErr: unknown) {
           if (this.isStale(myId)) { this.log(`stale after discoverAsync (id=${myId})`); return; }
           if (discoverAttempt >= 1) throw discoverErr;
-          this.log(`discover failed (attempt ${discoverAttempt + 1}): ${discoverErr.message} — retrying after reconnect`);
+          const msg = discoverErr instanceof Error ? discoverErr.message : String(discoverErr);
+          this.log(`discover failed (attempt ${discoverAttempt + 1}): ${msg} — retrying after reconnect`);
           try { await peripheral.disconnectAsync(); } catch {}
           await new Promise(r => setTimeout(r, 500));
           if (this.isStale(myId)) return;
@@ -157,8 +158,8 @@ export class AcaiaService extends EventEmitter {
       if (this.isStale(myId)) { this.log(`stale after discoverAsync (id=${myId})`); return; }
       this.log(`discover done — ${characteristics!.length} characteristics`);
 
-      this.writeChar = characteristics.find((c: any) => c.uuid === WRITE_UUID);
-      this.notifyChar = characteristics.find((c: any) => c.uuid === NOTIFY_UUID);
+      this.writeChar = characteristics.find((c) => c.uuid === WRITE_UUID) ?? null;
+      this.notifyChar = characteristics.find((c) => c.uuid === NOTIFY_UUID) ?? null;
 
       if (!this.writeChar || !this.notifyChar) {
         this.log(`chars missing — write=${!!this.writeChar}, notify=${!!this.notifyChar}`);
@@ -190,10 +191,11 @@ export class AcaiaService extends EventEmitter {
       this.userDisconnected = false;
       this.setState('connected');
       this.log('connection complete');
-    } catch (err: any) {
-      if (this.isStale(myId)) { this.log(`stale connect caught (id=${myId}): ${err.message || err}`); return; }
-      this.log(`connect() caught: ${err.message || err}`);
-      this.emitError(err.message || 'Connection failed');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (this.isStale(myId)) { this.log(`stale connect caught (id=${myId}): ${msg}`); return; }
+      this.log(`connect() caught: ${msg}`);
+      this.emitError(msg || 'Connection failed');
       this.cleanupConnection();
       this.setState('idle');
     } finally {
@@ -286,15 +288,15 @@ export class AcaiaService extends EventEmitter {
     });
   }
 
-  private scanForScale(timeoutMs = 10000): Promise<any> {
+  private scanForScale(timeoutMs = 10000): Promise<NoblePeripheral | null> {
     return new Promise((resolve) => {
       const timer = setTimeout(() => {
-        this.noble.stopScanning();
-        this.noble.removeListener('discover', onDiscover);
+        this.noble!.stopScanning();
+        this.noble!.removeListener('discover', onDiscover);
         resolve(null);
       }, timeoutMs);
 
-      const onDiscover = (p: any) => {
+      const onDiscover = (p: NoblePeripheral) => {
         const name = p.advertisement?.localName || '';
         if (SCALE_PREFIXES.includes(name.substring(0, 5).toUpperCase())) {
           clearTimeout(timer);
@@ -449,14 +451,14 @@ export class AcaiaService extends EventEmitter {
     this.reconnectAttempt = 0;
   }
 
-  private connectWithCleanup(peripheral: any, timeoutMs: number): Promise<void> {
+  private connectWithCleanup(peripheral: NoblePeripheral, timeoutMs: number): Promise<void> {
     const timer = setTimeout(() => {
       try { peripheral.disconnect(); } catch {}
     }, timeoutMs);
     return peripheral.connectAsync().finally(() => clearTimeout(timer));
   }
 
-  private discoverWithCleanup(peripheral: any, timeoutMs: number): Promise<any> {
+  private discoverWithCleanup(peripheral: NoblePeripheral, timeoutMs: number): Promise<{ characteristics: NobleCharacteristic[] }> {
     const timer = setTimeout(() => {
       try { peripheral.disconnect(); } catch {}
     }, timeoutMs);
@@ -507,9 +509,10 @@ export class AcaiaService extends EventEmitter {
       try {
         await this.writeChar.writeAsync(data, true);
         this.consecutiveWriteFailures = 0;
-      } catch (err: any) {
+      } catch (err: unknown) {
         this.consecutiveWriteFailures++;
-        this.log(`write fail #${this.consecutiveWriteFailures} — ${err?.message || err}`);
+        const msg = err instanceof Error ? err.message : String(err);
+        this.log(`write fail #${this.consecutiveWriteFailures} — ${msg}`);
         if (this.consecutiveWriteFailures >= AcaiaService.MAX_WRITE_FAILURES) {
           this.log(`write health threshold reached (${AcaiaService.MAX_WRITE_FAILURES}), disconnecting`);
           this.writeQueue = [];
