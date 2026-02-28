@@ -18,6 +18,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: 32px;
   padding: 6px 0;
   border-bottom: 1px solid var(--background-modifier-border);
   font-size: var(--font-ui-smaller);
@@ -96,6 +97,7 @@
 .cubicj-brewing-view .brewing-content-area {
   flex: 1;
   overflow-y: auto;
+  padding-top: var(--size-4-2);
 }
 
 .cubicj-brewing-view .brewing-section {
@@ -157,6 +159,200 @@
 
 .cubicj-brewing-view .brewing-ctrl-btn {
   flex: 1;
+}
+
+/* Toolbar */
+
+.cubicj-brewing-view .brewing-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-3);
+  padding: var(--size-2-3) 0;
+}
+
+.cubicj-brewing-view .brewing-toolbar-right {
+  display: flex;
+  gap: var(--size-2-3);
+  margin-left: auto;
+}
+
+.cubicj-brewing-view .brewing-toolbar-btn {
+  font-size: var(--font-ui-small);
+  padding: var(--size-2-1) var(--size-4-2);
+  border-radius: var(--radius-s);
+  border: var(--border-width) solid var(--background-modifier-border);
+  background: var(--background-primary-alt);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.cubicj-brewing-view .brewing-toolbar-btn:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+/* Data manage modal */
+
+.modal:has(.cubicj-data-manage-modal) {
+  max-width: 560px;
+  padding: 0;
+}
+
+.modal:has(.cubicj-data-manage-modal) .modal-close-button {
+  z-index: 1;
+}
+
+.cubicj-data-manage-modal {
+  padding: var(--size-4-3);
+  padding-top: 0;
+}
+
+.cubicj-data-manage-modal .dm-tab-bar {
+  display: flex;
+  position: relative;
+  border-bottom: var(--border-width) solid var(--background-modifier-border);
+  margin-bottom: var(--size-4-3);
+  padding-top: var(--size-4-6);
+}
+
+.cubicj-data-manage-modal .dm-tab-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: var(--interactive-accent);
+  will-change: transform;
+}
+
+.cubicj-data-manage-modal .dm-tab-btn {
+  flex: 1;
+  padding: var(--size-4-2) var(--size-4-3);
+  background: none;
+  border: none;
+  box-shadow: none;
+  outline: none;
+  border-radius: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-medium);
+  transition: color 0.15s ease;
+}
+
+.cubicj-data-manage-modal .dm-tab-btn:hover {
+  color: var(--text-normal);
+}
+
+.cubicj-data-manage-modal .dm-tab-btn.is-active {
+  color: var(--text-normal);
+}
+
+.cubicj-data-manage-modal .dm-tab-content {
+  padding: 0;
+}
+
+.cubicj-data-manage-modal .dm-bean-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-3);
+}
+
+.cubicj-data-manage-modal .dm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--size-4-2);
+  border-radius: var(--radius-m);
+  border: var(--border-width) solid var(--background-modifier-border);
+  background: var(--background-primary-alt);
+}
+
+.cubicj-data-manage-modal .dm-row.is-finished {
+  opacity: 0.5;
+}
+
+.cubicj-data-manage-modal .dm-row-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.cubicj-data-manage-modal .dm-row-name {
+  font-weight: var(--font-semibold);
+  margin-bottom: 2px;
+}
+
+.cubicj-data-manage-modal .dm-row-meta {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.cubicj-data-manage-modal .dm-row-actions {
+  display: flex;
+  gap: var(--size-2-2);
+  flex-shrink: 0;
+}
+
+.cubicj-data-manage-modal .dm-btn {
+  padding: var(--size-2-1) var(--size-2-3);
+  border-radius: var(--radius-s);
+  border: var(--border-width) solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: var(--font-ui-smaller);
+}
+
+.cubicj-data-manage-modal .dm-btn:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+.cubicj-data-manage-modal .dm-date-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  margin-top: var(--size-2-2);
+  padding-top: var(--size-2-2);
+  border-top: var(--border-width) solid var(--background-modifier-border);
+}
+
+.cubicj-data-manage-modal .dm-date-row input[type="date"] {
+  flex: 1;
+  padding: var(--size-2-1) var(--size-2-2);
+  border-radius: var(--radius-s);
+  border: var(--border-width) solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: var(--font-ui-smaller);
+}
+
+.cubicj-data-manage-modal .dm-add-btn {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+
+.cubicj-data-manage-modal .dm-add-btn:hover {
+  background: var(--interactive-accent-hover);
+  color: var(--text-on-accent);
+}
+
+.cubicj-data-manage-modal .dm-divider {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  padding: var(--size-2-2) 0;
+  border-bottom: var(--border-width) solid var(--background-modifier-border);
+}
+
+.cubicj-data-manage-modal .dm-status-btn {
+  font-size: var(--font-ui-smaller);
+}
+
+.cubicj-data-manage-modal .dm-empty {
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+  text-align: center;
+  padding: var(--size-4-8) var(--size-4-4);
 }
 
 /* Brew flow accordion */

@@ -5,9 +5,31 @@ export class VaultDataService {
 	constructor(private app: App) {}
 
 	getActiveBeans(): BeanInfo[] {
+		return this.getAllBeans().filter(b => b.status === 'active');
+	}
+
+	getAllBeans(): BeanInfo[] {
 		return this.app.vault.getMarkdownFiles()
 			.map(file => this.parseBeanNote(file))
-			.filter((b): b is BeanInfo => b !== null && b.status === 'active');
+			.filter((b): b is BeanInfo => b !== null);
+	}
+
+	async addRoastDate(path: string, date: string): Promise<void> {
+		const file = this.app.vault.getAbstractFileByPath(path);
+		if (!file || !('extension' in file)) return;
+		await this.app.fileManager.processFrontMatter(file as TFile, (fm) => {
+			const dates = Array.isArray(fm.roast_date) ? fm.roast_date : fm.roast_date ? [fm.roast_date] : [];
+			dates.push(date);
+			fm.roast_date = dates;
+		});
+	}
+
+	async setBeanStatus(path: string, status: 'active' | 'finished'): Promise<void> {
+		const file = this.app.vault.getAbstractFileByPath(path);
+		if (!file || !('extension' in file)) return;
+		await this.app.fileManager.processFrontMatter(file as TFile, (fm) => {
+			fm.status = status;
+		});
 	}
 
 	getAllRecipes(): RecipeInfo[] {

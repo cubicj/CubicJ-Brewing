@@ -3,6 +3,7 @@ import type CubicJBrewingPlugin from '../main';
 import type { AcaiaState } from '../acaia/types';
 import { BrewFlowState } from '../brew/BrewFlowState';
 import type { BrewMethod, BrewTemp, EspressoDrink } from '../brew/types';
+import { DataManageModal } from './DataManageModal';
 
 export const VIEW_TYPE_BREWING = 'cubicj-brewing';
 
@@ -43,6 +44,7 @@ export class BrewingView extends ItemView {
 	private timerStartedAt = 0;
 	private timerElapsedAtStop = 0;
 	private localTimerInterval: ReturnType<typeof setInterval> | null = null;
+	private brewingStarted = false;
 
 	constructor(leaf: WorkspaceLeaf, plugin: CubicJBrewingPlugin) {
 		super(leaf);
@@ -58,6 +60,7 @@ export class BrewingView extends ItemView {
 		container.empty();
 		container.addClass('cubicj-brewing-view');
 
+		this.buildToolbar(container);
 		this.buildScaleHeader(container);
 		this.scaleDataEl = container.createDiv({ cls: 'brewing-scale-data' });
 		this.buildScaleData();
@@ -83,23 +86,6 @@ export class BrewingView extends ItemView {
 		this.scaleDotEl = infoRow.createSpan({ cls: 'brewing-scale-dot' });
 		this.scaleStatusEl = infoRow.createSpan({ cls: 'brewing-scale-status' });
 		this.scaleBatteryEl = infoRow.createSpan({ cls: 'brewing-scale-battery' });
-
-		const btnRow = this.scaleHeaderEl.createDiv({ cls: 'brewing-scale-btn-row' });
-
-		const resetBtn = btnRow.createEl('button', {
-			cls: 'brewing-scale-reset-btn',
-			text: '↺',
-		});
-		resetBtn.addEventListener('click', () => {
-			this.flowState.cancel();
-			this.brewingStarted = false;
-			this.renderContent();
-		});
-
-		this.scaleConnectBtn = btnRow.createEl('button', {
-			cls: 'brewing-scale-connect-btn',
-		});
-		this.scaleConnectBtn.addEventListener('click', () => this.handleConnectClick());
 	}
 
 	private buildScaleData(): void {
@@ -122,6 +108,29 @@ export class BrewingView extends ItemView {
 		if (connected) {
 			this.weightEl.textContent = '0.0';
 		}
+	}
+
+	private buildToolbar(container: HTMLElement): void {
+		const toolbar = container.createDiv({ cls: 'brewing-toolbar' });
+
+		this.scaleConnectBtn = toolbar.createEl('button', { text: '저울 연결', cls: 'brewing-toolbar-btn' });
+		this.scaleConnectBtn.addEventListener('click', () => this.handleConnectClick());
+
+		const rightGroup = toolbar.createDiv({ cls: 'brewing-toolbar-right' });
+
+		const resetBtn = rightGroup.createEl('button', { text: '세팅 리셋', cls: 'brewing-toolbar-btn' });
+		resetBtn.addEventListener('click', () => {
+			this.flowState.cancel();
+			this.brewingStarted = false;
+			this.flowState.startBrew();
+			this.expandedSteps.clear();
+			this.updateAccordion();
+		});
+
+		const manageBtn = rightGroup.createEl('button', { text: 'DB 관리', cls: 'brewing-toolbar-btn' });
+		manageBtn.addEventListener('click', () => {
+			new DataManageModal(this.plugin).open();
+		});
 	}
 
 	private getStepSummary(step: FlowStep): string {
@@ -222,6 +231,12 @@ export class BrewingView extends ItemView {
 			}
 
 			if (isExpanded) {
+				const prevOnEnd = (body as any).__accordionOnEnd;
+				if (prevOnEnd) {
+					body.removeEventListener('transitionend', prevOnEnd);
+					(body as any).__accordionOnEnd = null;
+				}
+
 				body.empty();
 				const inner = body.createDiv({ cls: 'brew-accordion-body-inner' });
 				switch (config.step) {
@@ -243,6 +258,11 @@ export class BrewingView extends ItemView {
 				}
 			} else {
 				if (wasOpen) {
+					const prevOnEnd = (body as any).__accordionOnEnd;
+					if (prevOnEnd) {
+						body.removeEventListener('transitionend', prevOnEnd);
+					}
+
 					body.style.maxHeight = body.scrollHeight + 'px';
 					requestAnimationFrame(() => {
 						body.classList.remove('is-open');
@@ -254,8 +274,10 @@ export class BrewingView extends ItemView {
 							ref.empty();
 							ref.style.maxHeight = '';
 							ref.removeEventListener('transitionend', onEnd);
+							(ref as any).__accordionOnEnd = null;
 						}
 					};
+					(body as any).__accordionOnEnd = onEnd;
 					ref.addEventListener('transitionend', onEnd);
 				}
 			}
@@ -364,12 +386,16 @@ export class BrewingView extends ItemView {
 		});
 
 		const tryAdvance = () => {
-			if (!selectedMethod || !selectedTemp) return;
-			if (selectedMethod === 'espresso' && !selectedDrink) return;
-			setTimeout(() => {
-				this.flowState.selectMethod(selectedMethod!, selectedTemp!, selectedDrink ?? undefined);
-				this.renderContent();
-			}, 150);
+			const complete = !!selectedMethod && !!selectedTemp && (selectedMethod !== 'espresso' || !!selectedDrink);
+			if (complete) {
+				setTimeout(() => {
+					this.flowState.selectMethod(selectedMethod!, selectedTemp!, selectedDrink ?? undefined);
+					this.renderContent();
+				}, 150);
+			} else if (this.flowState.step !== 'method') {
+				this.flowState.goToStep('method');
+				this.updateAccordion();
+			}
 		};
 	}
 
@@ -397,9 +423,7 @@ export class BrewingView extends ItemView {
 
 			item.addEventListener('click', async () => {
 				if (isSelected) {
-					this.flowState.selection.bean = undefined;
-					this.flowState.selection.lastRecord = undefined;
-					this.flowState.step = 'bean';
+					this.flowState.deselectBean();
 					this.updateAccordion();
 				} else {
 					const lastRecord = await this.plugin.recordService.getLastRecord(
@@ -492,12 +516,9 @@ export class BrewingView extends ItemView {
 			}
 			this.flowState.updateVariables(vars);
 			this.flowState.startBrewing();
-			this.expandedSteps.add(4);
 			this.renderContent();
 		});
 	}
-
-	private brewingStarted = false;
 
 	private renderBrewing(container: HTMLElement): void {
 		container.addClass('brew-flow-active-brew');
@@ -529,7 +550,7 @@ export class BrewingView extends ItemView {
 				if (scaleConnected) {
 					await this.handleTimerClick();
 				}
-				this.renderContent();
+				this.updateAccordion();
 			});
 		} else {
 			const stopBtn = controls.createEl('button', { text: '완료', cls: 'brewing-ctrl-btn brew-flow-stop-btn' });
@@ -542,6 +563,11 @@ export class BrewingView extends ItemView {
 					const weightText = this.weightEl.textContent || '0';
 					const yieldGrams = parseFloat(weightText) || undefined;
 					this.flowState.finishBrewing(totalSeconds || undefined, yieldGrams);
+					this.timerElapsedAtStop = 0;
+					this.timerStartedAt = 0;
+					this.timerState = 'idle';
+					this.timerEl.textContent = '0:00';
+					this.timerBtn.textContent = '\u23FB';
 				} else {
 					this.flowState.finishBrewing(undefined, undefined);
 				}
@@ -577,41 +603,32 @@ export class BrewingView extends ItemView {
 			});
 		}
 
-		container.createEl('h4', { text: '마시는 사람', cls: 'brew-flow-section-label' });
-		const drinkerGroup = container.createDiv({ cls: 'brew-flow-toggle-group' });
-		let selectedDrinker = this.plugin.settings.defaultDrinker;
-		const drinkerBtns = this.plugin.settings.drinkers.map(d => {
-			const btn = drinkerGroup.createDiv({ cls: 'brew-flow-toggle', text: d });
-			if (d === selectedDrinker) btn.addClass('is-active');
-			btn.addEventListener('click', () => {
-				selectedDrinker = d;
-				drinkerBtns.forEach(b => b.removeClass('is-active'));
-				btn.addClass('is-active');
-			});
-			return btn;
-		});
-
 		container.createEl('h4', { text: '메모', cls: 'brew-flow-section-label' });
 		const noteEl = container.createEl('textarea', { cls: 'brew-flow-note' });
 		noteEl.placeholder = '맛, 변수 조절 메모...';
 
-		const btnRow = container.createDiv({ cls: 'brewing-controls' });
-		const saveBtn = btnRow.createEl('button', { text: '저장', cls: 'brewing-ctrl-btn brew-flow-save-btn' });
-		const cancelBtn = btnRow.createEl('button', { text: '취소', cls: 'brewing-ctrl-btn' });
-
-		saveBtn.addEventListener('click', async () => {
-			const record = this.flowState.buildRecord(
-				selectedDrinker,
-				noteEl.value.trim() || undefined
-			);
-			await this.plugin.recordService.add(record);
-			this.flowState.cancel();
-			this.renderContent();
+		let roReady = false;
+		const ro = new ResizeObserver(() => {
+			if (!roReady) { roReady = true; return; }
+			const body = noteEl.closest('.brew-accordion-body') as HTMLElement | null;
+			if (body?.classList.contains('is-open') && body.style.maxHeight !== '0px') {
+				body.style.transition = 'none';
+				body.style.maxHeight = body.scrollHeight + 'px';
+				body.offsetHeight;
+				body.style.transition = '';
+			}
 		});
+		ro.observe(noteEl);
 
-		cancelBtn.addEventListener('click', () => {
+		const btnRow = container.createDiv({ cls: 'brewing-controls' });
+		const doneBtn = btnRow.createEl('button', { text: '완료', cls: 'brewing-ctrl-btn brew-flow-save-btn' });
+
+		doneBtn.addEventListener('click', () => {
 			this.flowState.cancel();
-			this.renderContent();
+			this.brewingStarted = false;
+			this.flowState.startBrew();
+			this.expandedSteps.clear();
+			this.updateAccordion();
 		});
 	}
 
@@ -669,7 +686,7 @@ export class BrewingView extends ItemView {
 		switch (state) {
 			case 'idle':
 				this.scaleStatusEl.textContent = '';
-				this.scaleConnectBtn.textContent = '연결';
+				this.scaleConnectBtn.textContent = '저울 연결';
 				this.scaleBatteryEl.textContent = '';
 				break;
 			case 'scanning':

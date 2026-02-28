@@ -135,10 +135,27 @@ export class AcaiaService extends EventEmitter {
         this.handleDisconnect();
       });
 
-      this.log('discoverAsync...');
-      const { characteristics } = await this.discoverWithCleanup(peripheral, 10000);
+      let characteristics: any[];
+      for (let discoverAttempt = 0; ; discoverAttempt++) {
+        try {
+          this.log(`discoverAsync... (attempt ${discoverAttempt + 1})`);
+          const result = await this.discoverWithCleanup(peripheral, 10000);
+          characteristics = result.characteristics;
+          break;
+        } catch (discoverErr: any) {
+          if (this.isStale(myId)) { this.log(`stale after discoverAsync (id=${myId})`); return; }
+          if (discoverAttempt >= 1) throw discoverErr;
+          this.log(`discover failed (attempt ${discoverAttempt + 1}): ${discoverErr.message} — retrying after reconnect`);
+          try { await peripheral.disconnectAsync(); } catch {}
+          await new Promise(r => setTimeout(r, 500));
+          if (this.isStale(myId)) return;
+          this.log('reconnecting for discover retry...');
+          await this.connectWithCleanup(peripheral, 10000);
+          if (this.isStale(myId)) return;
+        }
+      }
       if (this.isStale(myId)) { this.log(`stale after discoverAsync (id=${myId})`); return; }
-      this.log(`discover done — ${characteristics.length} characteristics`);
+      this.log(`discover done — ${characteristics!.length} characteristics`);
 
       this.writeChar = characteristics.find((c: any) => c.uuid === WRITE_UUID);
       this.notifyChar = characteristics.find((c: any) => c.uuid === NOTIFY_UUID);
