@@ -6,8 +6,13 @@ import {
   decodeWeight, decodeTimer, decodeSettings, PacketBuffer,
 } from './protocol';
 
+export interface BleLogger {
+  log(message: string): void;
+}
+
 export interface AcaiaServiceOptions {
   nobleFactory?: () => any;
+  logger?: BleLogger;
 }
 
 export class AcaiaService extends EventEmitter {
@@ -35,9 +40,12 @@ export class AcaiaService extends EventEmitter {
   private userDisconnected = false;
   private reconnectAttempt = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private connectId = 0;
+  private logger?: BleLogger;
 
   constructor(options?: AcaiaServiceOptions) {
     super();
+    this.logger = options?.logger;
     this.nobleFactory = options?.nobleFactory ?? (() => {
       try {
         const noble = require(NOBLE_PATH);
@@ -46,6 +54,14 @@ export class AcaiaService extends EventEmitter {
         return noble;
       } catch { return null; }
     });
+  }
+
+  private log(msg: string): void {
+    this.logger?.log(msg);
+  }
+
+  private isStale(id: number): boolean {
+    return id !== this.connectId;
   }
 
   get state(): AcaiaState {
@@ -57,54 +73,78 @@ export class AcaiaService extends EventEmitter {
   }
 
   async connect(): Promise<void> {
-    if (this.connecting) return;
-    if (this._state !== 'idle' && this._state !== 'disconnected' && this._state !== 'reconnecting') return;
+    if (this.connecting) { this.log('connect() skipped — already connecting'); return; }
+    if (this._state !== 'idle' && this._state !== 'disconnected' && this._state !== 'reconnecting') {
+      this.log(`connect() skipped — state=${this._state}`);
+      return;
+    }
 
     this.connecting = true;
     this.connectAborted = false;
+    const myId = ++this.connectId;
+    this.log(`connect() start — id=${myId}, state=${this._state}, reconnectAttempt=${this.reconnectAttempt}`);
 
     try {
       this.noble = this.nobleFactory();
       if (!this.noble) {
+        this.log('noble factory returned null');
         this.emitError('Failed to load noble BLE library');
         return;
       }
 
       this.setState('scanning');
+      this.log(`noble.state=${this.noble.state}`);
 
       if (this.noble.state !== 'poweredOn') {
+        this.log('waiting for poweredOn...');
         const ready = await this.waitForPoweredOn();
-        if (!ready || this.connectAborted) {
-          if (!this.connectAborted) this.emitError('BLE adapter not ready');
-          this.setState('idle');
+        if (!ready || this.isStale(myId)) {
+          this.log(`poweredOn wait done — ready=${ready}, stale=${this.isStale(myId)}`);
+          if (!this.isStale(myId)) this.emitError('BLE adapter not ready');
+          if (!this.isStale(myId)) this.setState('idle');
           return;
         }
+        this.log('poweredOn ready');
       }
 
+      this.log('scanning for scale...');
       const peripheral = await this.scanForScale();
-      if (!peripheral || this.connectAborted) {
-        if (!this.connectAborted) this.emitError('No scale found (10s timeout)');
-        if (!this.connectAborted) this.setState('idle');
+      if (!peripheral || this.isStale(myId)) {
+        if (this.isStale(myId)) { this.log(`scan returned but stale (id=${myId}, current=${this.connectId})`); return; }
+        this.log('scan done — no scale found');
+        this.emitError('No scale found (10s timeout)');
+        this.setState('idle');
         return;
       }
+      this.log(`scale found: ${peripheral.advertisement?.localName} (${peripheral.address})`);
 
       this.peripheral = peripheral;
       this.setState('connecting');
 
+      if (peripheral.state === 'connected') {
+        this.log('peripheral already connected at BLE level, disconnecting first...');
+        try { await peripheral.disconnectAsync(); } catch {}
+      }
+
+      this.log('connectAsync...');
       await this.connectWithCleanup(peripheral, 10000);
-      if (this.connectAborted) return;
+      if (this.isStale(myId)) { this.log(`stale after connectAsync (id=${myId})`); return; }
+      this.log('connectAsync done');
 
       peripheral.once('disconnect', () => {
         this.handleDisconnect();
       });
 
+      this.log('discoverAsync...');
       const { characteristics } = await this.discoverWithCleanup(peripheral, 10000);
-      if (this.connectAborted) return;
+      if (this.isStale(myId)) { this.log(`stale after discoverAsync (id=${myId})`); return; }
+      this.log(`discover done — ${characteristics.length} characteristics`);
 
       this.writeChar = characteristics.find((c: any) => c.uuid === WRITE_UUID);
       this.notifyChar = characteristics.find((c: any) => c.uuid === NOTIFY_UUID);
 
       if (!this.writeChar || !this.notifyChar) {
+        this.log(`chars missing — write=${!!this.writeChar}, notify=${!!this.notifyChar}`);
         this.emitError('Required BLE characteristics not found');
         try { await peripheral.disconnectAsync(); } catch {}
         this.cleanupConnection();
@@ -117,33 +157,37 @@ export class AcaiaService extends EventEmitter {
         this.lastPacketTime = Date.now();
         this.packetBuffer.push(data);
       });
+      this.log('subscribing to notify...');
       await this.withTimeout(this.notifyChar.subscribeAsync(), 5000, 'Notify subscribe');
-      if (this.connectAborted) return;
+      if (this.isStale(myId)) { this.log(`stale after subscribe (id=${myId})`); return; }
+      this.log('notify subscribed');
 
+      this.log('sending handshake (identify + notifReq + getSettings)...');
       await this.enqueueWrite(encodeIdentify());
       await this.enqueueWrite(encodeNotificationRequest());
       await this.enqueueWrite(encodeGetSettings());
+      this.log('handshake sent');
 
       this.startHeartbeat();
       this.reconnectAttempt = 0;
       this.userDisconnected = false;
       this.setState('connected');
+      this.log('connection complete');
     } catch (err: any) {
-      if (!this.connectAborted) {
-        this.emitError(err.message || 'Connection failed');
-      }
+      if (this.isStale(myId)) { this.log(`stale connect caught (id=${myId}): ${err.message || err}`); return; }
+      this.log(`connect() caught: ${err.message || err}`);
+      this.emitError(err.message || 'Connection failed');
       this.cleanupConnection();
-      if (this.peripheral) {
-        try { await this.peripheral.disconnectAsync(); } catch {}
-        this.peripheral = null;
-      }
-      if (!this.connectAborted) this.setState('idle');
+      this.setState('idle');
     } finally {
-      this.connecting = false;
+      if (!this.isStale(myId)) this.connecting = false;
+      this.log(`connect() finally — id=${myId}, current=${this.connectId}, state=${this._state}`);
     }
   }
 
   async cancelConnect(): Promise<void> {
+    this.log(`cancelConnect() — state=${this._state}, connecting=${this.connecting}, id=${this.connectId}`);
+    this.connectId++;
     this.connectAborted = true;
     this.connecting = false;
     this.cancelReconnect();
@@ -157,6 +201,7 @@ export class AcaiaService extends EventEmitter {
   }
 
   disconnect(): void {
+    this.log(`disconnect() — user-initiated, state=${this._state}`);
     this.userDisconnected = true;
     this.cancelReconnect();
     const peripheral = this.peripheral;
@@ -192,6 +237,8 @@ export class AcaiaService extends EventEmitter {
   }
 
   destroy(): void {
+    this.log(`destroy() — state=${this._state}, id=${this.connectId}`);
+    this.connectId++;
     this.connectAborted = true;
     this.cancelReconnect();
     const peripheral = this.peripheral;
@@ -314,15 +361,18 @@ export class AcaiaService extends EventEmitter {
   }
 
   private startHeartbeat(): void {
+    this.log('startHeartbeat()');
     this.heartbeatTimer = setInterval(async () => {
       if (this._state !== 'connected') return;
 
       const silence = Date.now() - this.lastPacketTime;
       if (silence > AcaiaService.SILENCE_DEAD_MS) {
+        this.log(`silence DEAD — ${silence}ms, triggering disconnect`);
         this.handleDisconnect();
         return;
       }
       if (silence > AcaiaService.SILENCE_WARN_MS) {
+        this.log(`silence WARN — ${silence}ms`);
         this.emit('error', new Error('BLE signal weak'));
       }
 
@@ -337,8 +387,12 @@ export class AcaiaService extends EventEmitter {
   }
 
   private handleDisconnect(): void {
-    if (this._state !== 'connected' && this._state !== 'reconnecting') return;
-    if (this.disconnecting) return;
+    this.log(`handleDisconnect() — state=${this._state}, disconnecting=${this.disconnecting}`);
+    if (this._state !== 'connected' && this._state !== 'reconnecting') {
+      this.log('handleDisconnect() skipped — not connected/reconnecting');
+      return;
+    }
+    if (this.disconnecting) { this.log('handleDisconnect() skipped — already disconnecting'); return; }
     this.disconnecting = true;
     this.cleanupConnection();
     this.setState('disconnected');
@@ -347,20 +401,25 @@ export class AcaiaService extends EventEmitter {
   }
 
   private maybeReconnect(): void {
-    if (this.userDisconnected) return;
-    if (this.connectAborted) return;
+    if (this.userDisconnected) { this.log('maybeReconnect() skipped — user disconnected'); return; }
+    if (this.connectAborted) { this.log('maybeReconnect() skipped — connect aborted'); return; }
     if (this.reconnectAttempt >= AcaiaService.MAX_RECONNECT_ATTEMPTS) {
+      this.log(`maybeReconnect() giving up — ${this.reconnectAttempt} attempts exhausted`);
       this.emitError('Reconnect failed after 3 attempts');
       return;
     }
 
-    this.setState('reconnecting');
     const delay = AcaiaService.RECONNECT_BASE_MS * Math.pow(2, this.reconnectAttempt);
     this.reconnectAttempt++;
+    this.log(`maybeReconnect() attempt ${this.reconnectAttempt}/${AcaiaService.MAX_RECONNECT_ATTEMPTS}, delay=${delay}ms`);
+    this.setState('reconnecting');
 
     this.reconnectTimer = setTimeout(async () => {
       this.reconnectTimer = null;
-      if (this.connectAborted || this.userDisconnected) return;
+      if (this.connectAborted || this.userDisconnected) {
+        this.log('reconnect timer fired but aborted/user-disconnected');
+        return;
+      }
       await this.connect();
     }, delay);
   }
@@ -398,6 +457,7 @@ export class AcaiaService extends EventEmitter {
   }
 
   private cleanupConnection(): void {
+    this.log('cleanupConnection()');
     this.stopTimers();
     this.packetBuffer.reset();
     this.writeQueue = [];
@@ -412,6 +472,7 @@ export class AcaiaService extends EventEmitter {
     this.writeChar = null;
     if (this.peripheral) {
       this.peripheral.removeAllListeners('disconnect');
+      try { this.peripheral.disconnect(); } catch {}
       this.peripheral = null;
     }
   }
@@ -429,9 +490,11 @@ export class AcaiaService extends EventEmitter {
       try {
         await this.writeChar.writeAsync(data, true);
         this.consecutiveWriteFailures = 0;
-      } catch {
+      } catch (err: any) {
         this.consecutiveWriteFailures++;
+        this.log(`write fail #${this.consecutiveWriteFailures} — ${err?.message || err}`);
         if (this.consecutiveWriteFailures >= AcaiaService.MAX_WRITE_FAILURES) {
+          this.log(`write health threshold reached (${AcaiaService.MAX_WRITE_FAILURES}), disconnecting`);
           this.writeQueue = [];
           this.handleDisconnect();
           break;
@@ -443,11 +506,14 @@ export class AcaiaService extends EventEmitter {
   }
 
   private setState(state: AcaiaState): void {
+    const prev = this._state;
     this._state = state;
+    this.log(`state: ${prev} → ${state}`);
     this.emit('state', state);
   }
 
   private emitError(message: string): void {
+    this.log(`ERROR: ${message}`);
     this.emit('error', new Error(message));
   }
 }
