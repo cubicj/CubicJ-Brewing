@@ -9,6 +9,7 @@ interface AccordionCallbacks {
 export class AccordionManager {
 	private panels: Array<{ panel: HTMLElement; header: HTMLElement; indicator: HTMLElement; titleArea: HTMLElement; body: HTMLElement }> = [];
 	private expandedSteps = new Set<number>();
+	private accordionEndListeners = new WeakMap<HTMLElement, (e: TransitionEvent) => void>();
 
 	constructor(
 		private contentArea: HTMLElement,
@@ -78,10 +79,10 @@ export class AccordionManager {
 			}
 
 			if (isExpanded) {
-				const prevOnEnd = (body as any).__accordionOnEnd;
+				const prevOnEnd = this.accordionEndListeners.get(body);
 				if (prevOnEnd) {
 					body.removeEventListener('transitionend', prevOnEnd);
-					(body as any).__accordionOnEnd = null;
+					this.accordionEndListeners.delete(body);
 				}
 
 				body.empty();
@@ -99,7 +100,7 @@ export class AccordionManager {
 				}
 			} else {
 				if (wasOpen) {
-					const prevOnEnd = (body as any).__accordionOnEnd;
+					const prevOnEnd = this.accordionEndListeners.get(body);
 					if (prevOnEnd) {
 						body.removeEventListener('transitionend', prevOnEnd);
 					}
@@ -115,10 +116,10 @@ export class AccordionManager {
 							ref.empty();
 							ref.style.maxHeight = '';
 							ref.removeEventListener('transitionend', onEnd);
-							(ref as any).__accordionOnEnd = null;
+							this.accordionEndListeners.delete(ref);
 						}
 					};
-					(body as any).__accordionOnEnd = onEnd;
+					this.accordionEndListeners.set(body, onEnd);
 					ref.addEventListener('transitionend', onEnd);
 				}
 			}

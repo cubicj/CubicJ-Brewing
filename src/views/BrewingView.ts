@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import type CubicJBrewingPlugin from '../main';
-import type { AcaiaState } from '../acaia/types';
+import type { AcaiaState, ButtonEvent } from '../acaia/types';
 import { BrewFlowState } from '../brew/BrewFlowState';
 import { DataManageModal } from './DataManageModal';
 import { TimerController } from './TimerController';
@@ -143,7 +143,7 @@ export class BrewingView extends ItemView {
 			this.timerController.handleScaleTimer(seconds);
 		});
 
-		this.listen('button', (event: { type: string; weight?: number; timer?: number }) => {
+		this.listen('button', (event: ButtonEvent) => {
 			this.timerController.handleScaleButton(event);
 		});
 
