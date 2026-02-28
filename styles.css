@@ -553,6 +553,19 @@
   color: var(--text-on-accent);
 }
 
+/* Brew profile chart */
+
+.cubicj-brewing-view .brew-profile-container {
+  margin: 8px 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.cubicj-brewing-view .brew-profile-canvas {
+  display: block;
+  border-radius: 8px;
+}
+
 /* Saving */
 
 .cubicj-brewing-view .brew-flow-result {

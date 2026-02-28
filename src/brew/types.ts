@@ -28,6 +28,11 @@ export interface RecipeInfo {
 	steps: RecipeStep[];
 }
 
+export interface BrewProfilePoint {
+	t: number;
+	w: number;
+}
+
 interface BrewRecordBase {
 	id: string;
 	timestamp: string;
@@ -42,6 +47,7 @@ interface BrewRecordBase {
 	drinker: string;
 	recipe?: string;
 	note?: string;
+	profile?: BrewProfilePoint[];
 }
 
 export interface FilterRecord extends BrewRecordBase {
@@ -74,4 +80,5 @@ export interface BrewFlowSelection {
 	yield?: number;
 	drinker?: string;
 	note?: string;
+	profile?: BrewProfilePoint[];
 }

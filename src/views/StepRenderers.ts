@@ -3,6 +3,8 @@ import type { BrewFlowState } from '../brew/BrewFlowState';
 import type { BrewMethod, BrewTemp, EspressoDrink, BrewFlowSelection } from '../brew/types';
 import type { TimerController } from './TimerController';
 import { formatTimer } from './TimerController';
+import type { BrewProfileRecorder } from './BrewProfileRecorder';
+import { BrewProfileChart } from './BrewProfileChart';
 
 export type FlowStep = 'method' | 'bean' | 'configure' | 'brewing' | 'saving';
 
@@ -28,6 +30,8 @@ export interface StepRenderContext {
 	brewingStarted: boolean;
 	setBrewingStarted: (v: boolean) => void;
 	resetFlow: () => void;
+	recorder: BrewProfileRecorder;
+	expandStep: (step: FlowStep) => void;
 }
 
 export function renderStep(step: FlowStep, container: HTMLElement, ctx: StepRenderContext): void {
@@ -314,31 +318,48 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 		}
 	}
 
-	const controls = container.createDiv({ cls: 'brewing-controls' });
+	let chart: BrewProfileChart | null = null;
+	const hasProfile = ctx.recorder.getPoints().length > 0;
 
-	if (!ctx.brewingStarted) {
-		const startBtn = controls.createEl('button', { text: '브루잉 시작', cls: 'brewing-ctrl-btn brew-flow-start-btn' });
-		startBtn.addEventListener('click', async () => {
-			ctx.setBrewingStarted(true);
-			if (scaleConnected) {
-				await ctx.timerController.handleTimerClick();
-			}
-			ctx.updateAccordion();
-		});
-	} else {
+	if (ctx.brewingStarted && scaleConnected) {
+		const chartContainer = container.createDiv({ cls: 'brew-profile-container' });
+		chart = new BrewProfileChart(chartContainer);
+		chart.startLive(ctx.recorder);
+	} else if (!ctx.brewingStarted && hasProfile) {
+		const chartContainer = container.createDiv({ cls: 'brew-profile-container' });
+		const staticChart = new BrewProfileChart(chartContainer);
+		staticChart.renderStatic(ctx.recorder.getPoints());
+	}
+
+	if (ctx.brewingStarted) {
+		const controls = container.createDiv({ cls: 'brewing-controls' });
 		const stopBtn = controls.createEl('button', { text: '완료', cls: 'brewing-ctrl-btn brew-flow-stop-btn' });
 		stopBtn.addEventListener('click', async () => {
+			if (chart) chart.stopLive();
 			if (scaleConnected) {
-				await ctx.plugin.acaiaService.stopTimer();
+				ctx.recorder.stop();
+				await ctx.timerController.freeze();
 				const totalSeconds = ctx.timerController.getElapsedSeconds();
 				const yieldGrams = parseFloat(ctx.getWeightText()) || undefined;
-				ctx.flowState.finishBrewing(totalSeconds || undefined, yieldGrams);
-				ctx.timerController.resetToIdle();
+				const profile = ctx.recorder.getDownsampled(5);
+				ctx.flowState.finishBrewing(totalSeconds || undefined, yieldGrams, profile.length > 0 ? profile : undefined);
 			} else {
 				ctx.flowState.finishBrewing(undefined, undefined);
 			}
 			ctx.setBrewingStarted(false);
-			ctx.renderContent();
+			ctx.expandStep('saving');
+			ctx.updateAccordion();
+		});
+	} else if (!hasProfile) {
+		const controls = container.createDiv({ cls: 'brewing-controls' });
+		const startBtn = controls.createEl('button', { text: '브루잉 시작', cls: 'brewing-ctrl-btn brew-flow-start-btn' });
+		startBtn.addEventListener('click', async () => {
+			ctx.setBrewingStarted(true);
+			if (scaleConnected) {
+				ctx.recorder.start();
+				await ctx.timerController.handleTimerClick();
+			}
+			ctx.updateAccordion();
 		});
 	}
 }
@@ -346,16 +367,6 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 	container.addClass('brew-flow-saving');
 	const sel = ctx.flowState.selection;
-
-	const resultEl = container.createDiv({ cls: 'brew-flow-result' });
-	const parts: string[] = [];
-	if (sel.time) {
-		const min = Math.floor(sel.time / 60);
-		const sec = Math.floor(sel.time % 60);
-		parts.push(`${min}:${sec.toString().padStart(2, '0')}`);
-	}
-	if (sel.yield) parts.push(`${sel.yield}g`);
-	if (parts.length > 0) resultEl.textContent = parts.join(' / ');
 
 	if (!sel.time && sel.method === 'espresso') {
 		const manualForm = container.createDiv({ cls: 'brew-flow-form' });
