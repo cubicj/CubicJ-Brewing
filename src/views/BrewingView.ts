@@ -622,7 +622,7 @@ export class BrewingView extends ItemView {
 		this.scaleDotEl.className = 'brewing-scale-dot';
 		if (state === 'connected') this.scaleDotEl.addClass('is-connected');
 		else if (state === 'disconnected') this.scaleDotEl.addClass('is-disconnected');
-		else if (state === 'scanning' || state === 'connecting') this.scaleDotEl.addClass('is-busy');
+		else if (state === 'scanning' || state === 'connecting' || state === 'reconnecting') this.scaleDotEl.addClass('is-busy');
 
 		this.scaleStatusEl.removeClass('brewing-error');
 
@@ -651,6 +651,13 @@ export class BrewingView extends ItemView {
 				this.scaleConnectBtn.textContent = '재연결';
 				this.scaleBatteryEl.textContent = '';
 				break;
+			case 'reconnecting': {
+				const attempt = this.plugin.acaiaService.currentReconnectAttempt;
+				this.scaleStatusEl.textContent = `재연결 중 (${attempt}/3)`;
+				this.scaleConnectBtn.textContent = '취소';
+				this.scaleBatteryEl.textContent = '';
+				break;
+			}
 		}
 
 		this.scaleConnectBtn.disabled = false;
@@ -668,14 +675,16 @@ export class BrewingView extends ItemView {
 			this.timerEl?.removeClass('brewing-dimmed');
 		}
 
-		if (state === 'disconnected') {
+		if (state === 'disconnected' || state === 'reconnecting') {
 			this.weightEl?.addClass('brewing-dimmed');
 			this.timerEl?.addClass('brewing-dimmed');
-			this.stopLocalTimer();
-			this.timerElapsedAtStop = 0;
-			this.timerStartedAt = 0;
-			this.timerState = 'idle';
-			if (this.timerBtn) this.timerBtn.textContent = '\u23FB';
+			if (state === 'disconnected') {
+				this.stopLocalTimer();
+				this.timerElapsedAtStop = 0;
+				this.timerStartedAt = 0;
+				this.timerState = 'idle';
+				if (this.timerBtn) this.timerBtn.textContent = '\u23FB';
+			}
 			this.scaleDataEl.style.display = 'none';
 		}
 
@@ -695,7 +704,7 @@ export class BrewingView extends ItemView {
 
 	private async handleConnectClick(): Promise<void> {
 		const service = this.plugin.acaiaService;
-		if (service.state === 'scanning' || service.state === 'connecting') {
+		if (service.state === 'scanning' || service.state === 'connecting' || service.state === 'reconnecting') {
 			await service.cancelConnect();
 		} else if (service.state === 'connected') {
 			await service.disconnect();

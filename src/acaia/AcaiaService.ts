@@ -6,14 +6,18 @@ import {
   decodeWeight, decodeTimer, decodeSettings, PacketBuffer,
 } from './protocol';
 
+export interface AcaiaServiceOptions {
+  nobleFactory?: () => any;
+}
+
 export class AcaiaService extends EventEmitter {
   private _state: AcaiaState = 'idle';
+  private nobleFactory: () => any;
   private noble: any = null;
   private peripheral: any = null;
   private writeChar: any = null;
   private notifyChar: any = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
-  private settingsTimer: ReturnType<typeof setInterval> | null = null;
   private lastPacketTime = 0;
   private packetBuffer = new PacketBuffer();
   private writeQueue: Buffer[] = [];
@@ -21,20 +25,46 @@ export class AcaiaService extends EventEmitter {
   private scaleTimerRunning = false;
   private connecting = false;
   private connectAborted = false;
+  private disconnecting = false;
+  private consecutiveWriteFailures = 0;
+  private static readonly MAX_WRITE_FAILURES = 3;
+  private static readonly SILENCE_WARN_MS = 5000;
+  private static readonly SILENCE_DEAD_MS = 8000;
+  private static readonly MAX_RECONNECT_ATTEMPTS = 3;
+  private static readonly RECONNECT_BASE_MS = 1000;
+  private userDisconnected = false;
+  private reconnectAttempt = 0;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(options?: AcaiaServiceOptions) {
+    super();
+    this.nobleFactory = options?.nobleFactory ?? (() => {
+      try {
+        const noble = require(NOBLE_PATH);
+        noble.removeAllListeners();
+        try { noble.stopScanning(); } catch {}
+        return noble;
+      } catch { return null; }
+    });
+  }
 
   get state(): AcaiaState {
     return this._state;
   }
 
+  get currentReconnectAttempt(): number {
+    return this.reconnectAttempt;
+  }
+
   async connect(): Promise<void> {
     if (this.connecting) return;
-    if (this._state !== 'idle' && this._state !== 'disconnected') return;
+    if (this._state !== 'idle' && this._state !== 'disconnected' && this._state !== 'reconnecting') return;
 
     this.connecting = true;
     this.connectAborted = false;
 
     try {
-      this.noble = this.loadNoble();
+      this.noble = this.nobleFactory();
       if (!this.noble) {
         this.emitError('Failed to load noble BLE library');
         return;
@@ -61,17 +91,14 @@ export class AcaiaService extends EventEmitter {
       this.peripheral = peripheral;
       this.setState('connecting');
 
-      await this.withTimeout(peripheral.connectAsync(), 10000, 'BLE connect');
+      await this.connectWithCleanup(peripheral, 10000);
       if (this.connectAborted) return;
 
       peripheral.once('disconnect', () => {
         this.handleDisconnect();
       });
 
-      const { characteristics } = await this.withTimeout(
-        peripheral.discoverSomeServicesAndCharacteristicsAsync([], [WRITE_UUID, NOTIFY_UUID]),
-        10000, 'Service discovery'
-      );
+      const { characteristics } = await this.discoverWithCleanup(peripheral, 10000);
       if (this.connectAborted) return;
 
       this.writeChar = characteristics.find((c: any) => c.uuid === WRITE_UUID);
@@ -98,6 +125,8 @@ export class AcaiaService extends EventEmitter {
       await this.enqueueWrite(encodeGetSettings());
 
       this.startHeartbeat();
+      this.reconnectAttempt = 0;
+      this.userDisconnected = false;
       this.setState('connected');
     } catch (err: any) {
       if (!this.connectAborted) {
@@ -117,6 +146,7 @@ export class AcaiaService extends EventEmitter {
   async cancelConnect(): Promise<void> {
     this.connectAborted = true;
     this.connecting = false;
+    this.cancelReconnect();
     try { if (this.noble) this.noble.stopScanning(); } catch {}
     const peripheral = this.peripheral;
     this.cleanupConnection();
@@ -127,6 +157,8 @@ export class AcaiaService extends EventEmitter {
   }
 
   disconnect(): void {
+    this.userDisconnected = true;
+    this.cancelReconnect();
     const peripheral = this.peripheral;
     this.cleanupConnection();
     if (peripheral) {
@@ -161,6 +193,7 @@ export class AcaiaService extends EventEmitter {
 
   destroy(): void {
     this.connectAborted = true;
+    this.cancelReconnect();
     const peripheral = this.peripheral;
     this.cleanupConnection();
     if (peripheral) {
@@ -173,16 +206,6 @@ export class AcaiaService extends EventEmitter {
     }
     this.removeAllListeners();
     this._state = 'idle';
-  }
-
-  private loadNoble(): any {
-    try {
-      const noble = require(NOBLE_PATH);
-      noble.removeAllListeners();
-      try { noble.stopScanning(); } catch {}
-      return noble;
-    }
-    catch { return null; }
   }
 
   private waitForPoweredOn(timeoutMs = 10000): Promise<boolean> {
@@ -294,29 +317,75 @@ export class AcaiaService extends EventEmitter {
     this.heartbeatTimer = setInterval(async () => {
       if (this._state !== 'connected') return;
 
-      if (Date.now() - this.lastPacketTime > 5000) {
+      const silence = Date.now() - this.lastPacketTime;
+      if (silence > AcaiaService.SILENCE_DEAD_MS) {
         this.handleDisconnect();
         return;
+      }
+      if (silence > AcaiaService.SILENCE_WARN_MS) {
+        this.emit('error', new Error('BLE signal weak'));
       }
 
       await this.enqueueWrite(encodeIdentify());
       await this.enqueueWrite(encodeHeartbeat());
-    }, 1000);
-
-    this.settingsTimer = setInterval(async () => {
-      if (this._state !== 'connected') return;
       await this.enqueueWrite(encodeGetSettings());
-    }, 400);
+    }, 1000);
   }
 
   private stopTimers(): void {
     if (this.heartbeatTimer) { clearInterval(this.heartbeatTimer); this.heartbeatTimer = null; }
-    if (this.settingsTimer) { clearInterval(this.settingsTimer); this.settingsTimer = null; }
   }
 
   private handleDisconnect(): void {
+    if (this._state !== 'connected' && this._state !== 'reconnecting') return;
+    if (this.disconnecting) return;
+    this.disconnecting = true;
     this.cleanupConnection();
     this.setState('disconnected');
+    this.disconnecting = false;
+    this.maybeReconnect();
+  }
+
+  private maybeReconnect(): void {
+    if (this.userDisconnected) return;
+    if (this.connectAborted) return;
+    if (this.reconnectAttempt >= AcaiaService.MAX_RECONNECT_ATTEMPTS) {
+      this.emitError('Reconnect failed after 3 attempts');
+      return;
+    }
+
+    this.setState('reconnecting');
+    const delay = AcaiaService.RECONNECT_BASE_MS * Math.pow(2, this.reconnectAttempt);
+    this.reconnectAttempt++;
+
+    this.reconnectTimer = setTimeout(async () => {
+      this.reconnectTimer = null;
+      if (this.connectAborted || this.userDisconnected) return;
+      await this.connect();
+    }, delay);
+  }
+
+  private cancelReconnect(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.reconnectAttempt = 0;
+  }
+
+  private connectWithCleanup(peripheral: any, timeoutMs: number): Promise<void> {
+    const timer = setTimeout(() => {
+      try { peripheral.disconnect(); } catch {}
+    }, timeoutMs);
+    return peripheral.connectAsync().finally(() => clearTimeout(timer));
+  }
+
+  private discoverWithCleanup(peripheral: any, timeoutMs: number): Promise<any> {
+    const timer = setTimeout(() => {
+      try { peripheral.disconnect(); } catch {}
+    }, timeoutMs);
+    return peripheral.discoverSomeServicesAndCharacteristicsAsync([], [WRITE_UUID, NOTIFY_UUID])
+      .finally(() => clearTimeout(timer));
   }
 
   private withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
@@ -334,6 +403,8 @@ export class AcaiaService extends EventEmitter {
     this.writeQueue = [];
     this.writing = false;
     this.scaleTimerRunning = false;
+    this.disconnecting = false;
+    this.consecutiveWriteFailures = 0;
     if (this.notifyChar) {
       this.notifyChar.removeAllListeners('data');
       this.notifyChar = null;
@@ -357,8 +428,16 @@ export class AcaiaService extends EventEmitter {
       if (!this.writeChar) break;
       try {
         await this.writeChar.writeAsync(data, true);
-      } catch {}
-      await new Promise(r => setTimeout(r, 100));
+        this.consecutiveWriteFailures = 0;
+      } catch {
+        this.consecutiveWriteFailures++;
+        if (this.consecutiveWriteFailures >= AcaiaService.MAX_WRITE_FAILURES) {
+          this.writeQueue = [];
+          this.handleDisconnect();
+          break;
+        }
+      }
+      await new Promise(r => setTimeout(r, 50));
     }
     this.writing = false;
   }
