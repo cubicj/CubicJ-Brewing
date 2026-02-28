@@ -5,6 +5,7 @@ import { BrewingSettings, DEFAULT_SETTINGS, BrewingSettingTab } from './settings
 import { BrewRecordService, type StorageAdapter } from './services/BrewRecordService';
 import { VaultDataService } from './services/VaultDataService';
 import { FileLogger } from './utils/FileLogger';
+import { BeanCodeBlock } from './views/BeanCodeBlock';
 
 const BLE_DEBUG = true;
 
@@ -40,6 +41,18 @@ export default class CubicJBrewingPlugin extends Plugin {
     this.acaiaService = new AcaiaService({ logger });
 
     this.vaultData = new VaultDataService(this.app);
+
+    const beanBlock = new BeanCodeBlock(this.app, this.vaultData);
+    beanBlock.register((lang, handler) => this.registerMarkdownCodeBlockProcessor(lang, handler));
+    this.registerEvent(
+      this.app.metadataCache.on('changed', (file) => {
+        const cache = this.app.metadataCache.getFileCache(file);
+        if (cache?.frontmatter?.type === 'bean') {
+          beanBlock.refreshAll();
+        }
+      }),
+    );
+
     const recordsPath = `${this.manifest.dir}/brew-records.json`;
     const adapter: StorageAdapter = {
       read: async () => {
