@@ -1,4 +1,4 @@
-export type BrewMethod = 'brewing' | 'espresso';
+export type BrewMethod = 'filter' | 'espresso';
 export type BrewTemp = 'hot' | 'iced';
 export type EspressoDrink = 'shot' | 'americano' | 'latte';
 
@@ -44,8 +44,8 @@ interface BrewRecordBase {
 	note?: string;
 }
 
-export interface BrewingRecord extends BrewRecordBase {
-	method: 'brewing';
+export interface FilterRecord extends BrewRecordBase {
+	method: 'filter';
 	waterTemp: number;
 	filter: string;
 }
@@ -56,7 +56,7 @@ export interface EspressoRecord extends BrewRecordBase {
 	basket: string;
 }
 
-export type BrewRecord = BrewingRecord | EspressoRecord;
+export type BrewRecord = FilterRecord | EspressoRecord;
 
 export interface BrewFlowSelection {
 	method?: BrewMethod;

@@ -6,7 +6,7 @@ import { formatTimer } from './TimerController';
 
 export type FlowStep = 'method' | 'bean' | 'configure' | 'brewing' | 'saving';
 
-const METHOD_LABELS: Record<BrewMethod, string> = { brewing: '브루잉', espresso: '에스프레소' };
+const METHOD_LABELS: Record<BrewMethod, string> = { filter: '필터', espresso: '에스프레소' };
 const TEMP_LABELS: Record<BrewTemp, string> = { hot: 'Hot', iced: 'Ice' };
 const DRINK_LABELS: Record<EspressoDrink, string> = { shot: '샷', americano: '아메리카노', latte: '라떼' };
 
@@ -53,8 +53,8 @@ export function getStepSummary(step: FlowStep, sel: BrewFlowSelection): string {
 		case 'configure': {
 			if (sel.grindSize == null) return '';
 			const parts = [`${sel.grindSize}`, `${sel.dose}g`];
-			if (sel.method === 'brewing' && sel.waterTemp) parts.push(`${sel.waterTemp}°`);
-			if (sel.method === 'brewing' && sel.filter) parts.push(sel.filter);
+			if (sel.method === 'filter' && sel.waterTemp) parts.push(`${sel.waterTemp}°`);
+			if (sel.method === 'filter' && sel.filter) parts.push(sel.filter);
 			if (sel.method === 'espresso' && sel.basket) parts.push(sel.basket);
 			return parts.join(' · ');
 		}
@@ -93,7 +93,7 @@ function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
 	};
 
 	const methodGroup = container.createDiv({ cls: 'brew-flow-toggle-group' });
-	const methods: BrewMethod[] = ['brewing', 'espresso'];
+	const methods: BrewMethod[] = ['filter', 'espresso'];
 	const methodBtns = methods.map(m => {
 		const btn = methodGroup.createDiv({ cls: 'brew-flow-toggle', text: METHOD_LABELS[m] });
 		if (m === selectedMethod) btn.addClass('is-active');
@@ -175,7 +175,7 @@ function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
 async function renderBean(container: HTMLElement, ctx: StepRenderContext): Promise<void> {
 	container.addClass('brew-flow-bean');
 
-	const beans = ctx.plugin.vaultData.getActiveBeans();
+	const beans = [...ctx.plugin.vaultData.getActiveBeans()].sort((a, b) => a.name.localeCompare(b.name));
 
 	if (beans.length === 0) {
 		container.createDiv({ cls: 'brew-flow-empty', text: 'type: bean frontmatter가 있는 노트가 없어요' });
@@ -213,14 +213,15 @@ async function renderBean(container: HTMLElement, ctx: StepRenderContext): Promi
 function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	container.addClass('brew-flow-configure');
 	const sel = ctx.flowState.selection;
-	const isBrewing = sel.method === 'brewing';
+	const isFilter = sel.method === 'filter';
+	const isEspresso = sel.method === 'espresso';
 
 	if (sel.lastRecord) {
 		const card = container.createDiv({ cls: 'brew-flow-last-record' });
 		card.createDiv({ cls: 'brew-flow-last-record-title', text: '이전 기록' });
 		const r = sel.lastRecord;
 		const parts = [`분쇄도 ${r.grindSize}`, `${r.dose}g`];
-		if (r.method === 'brewing') parts.push(`${r.waterTemp}°`, r.filter);
+		if (r.method === 'filter') parts.push(`${r.waterTemp}°`, r.filter);
 		if (r.method === 'espresso') parts.push(r.basket);
 		if (r.time) {
 			const min = Math.floor(r.time / 60);
@@ -240,7 +241,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	let filterSelect: HTMLSelectElement | null = null;
 	let basketSelect: HTMLSelectElement | null = null;
 
-	if (isBrewing) {
+	if (isFilter) {
 		waterTempInput = createFormField(form, '수온 (°C)', 'number', String(sel.waterTemp ?? ''));
 
 		const filterGroup = form.createDiv();
@@ -250,7 +251,9 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 			filterSelect.createEl('option', { text: f, value: f });
 		}
 		if (sel.filter) filterSelect.value = sel.filter;
-	} else {
+	}
+
+	if (isEspresso) {
 		const basketGroup = form.createDiv();
 		basketGroup.createEl('label', { text: '바스켓' });
 		basketSelect = basketGroup.createEl('select');
@@ -281,10 +284,11 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 			grindSize: parseFloat(grindInput.value) || 0,
 			dose: parseFloat(doseInput.value) || 0,
 		};
-		if (isBrewing) {
+		if (isFilter) {
 			vars.waterTemp = parseFloat(waterTempInput!.value) || 0;
 			vars.filter = filterSelect!.value;
-		} else {
+		}
+		if (isEspresso) {
 			vars.basket = basketSelect!.value;
 		}
 		ctx.flowState.updateVariables(vars);
@@ -296,10 +300,6 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 	container.addClass('brew-flow-active-brew');
 	const scaleConnected = ctx.plugin.acaiaService.state === 'connected';
-
-	if (!scaleConnected) {
-		container.createDiv({ cls: 'brew-flow-notice', text: '저울 미연결 — 수동 입력 가능' });
-	}
 
 	const recipe = ctx.flowState.selection.recipe;
 	if (recipe && recipe.steps.length > 0) {
@@ -355,9 +355,9 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 		parts.push(`${min}:${sec.toString().padStart(2, '0')}`);
 	}
 	if (sel.yield) parts.push(`${sel.yield}g`);
-	resultEl.textContent = parts.length > 0 ? parts.join(' / ') : '수동 기록';
+	if (parts.length > 0) resultEl.textContent = parts.join(' / ');
 
-	if (!sel.time) {
+	if (!sel.time && sel.method === 'espresso') {
 		const manualForm = container.createDiv({ cls: 'brew-flow-form' });
 		const timeInput = createFormField(manualForm, '시간 (초)', 'number', '');
 		const yieldInput = createFormField(manualForm, '추출량 (g)', 'number', '');
