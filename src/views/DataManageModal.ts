@@ -78,17 +78,21 @@ export class DataManageModal extends Modal {
 	}
 
 	private renderBeanTab(container: HTMLElement): void {
+		const headerEl = container.createDiv({ cls: 'dm-bean-header' });
+		const newBtn = headerEl.createEl('button', { text: '+ 새 원두', cls: 'dm-btn dm-new-bean-btn' });
+		newBtn.addEventListener('click', () => this.createNewBean());
+
 		const listEl = container.createDiv({ cls: 'dm-bean-list' });
 		const beans = this.plugin.vaultData.getAllBeans();
-		const active = beans.filter(b => b.status === 'active');
-		const finished = beans.filter(b => b.status === 'finished');
+		const active = [...beans.filter(b => b.status === 'active')].sort((a, b) => a.name.localeCompare(b.name));
+		const finished = [...beans.filter(b => b.status === 'finished')].sort((a, b) => a.name.localeCompare(b.name));
 
 		if (active.length > 0) {
 			for (const bean of active) this.renderBeanRow(listEl, bean);
 		}
 
 		if (finished.length > 0) {
-			listEl.createDiv({ cls: 'dm-divider', text: '다 쓴 원두' });
+			listEl.createDiv({ cls: 'dm-divider', text: '과거 원두' });
 			for (const bean of finished) this.renderBeanRow(listEl, bean);
 		}
 
@@ -104,47 +108,45 @@ export class DataManageModal extends Modal {
 		info.createDiv({ cls: 'dm-row-name', text: bean.name });
 
 		const days = this.plugin.vaultData.getDaysSinceRoast(bean);
-		const metaParts = [bean.roaster];
-		if (days !== null) metaParts.push(`D+${days}`);
+		const metaParts: string[] = [];
+		if (days !== null) metaParts.push(`로스팅 ${days}일차`);
 		const latest = bean.roastDates[bean.roastDates.length - 1];
 		if (latest) metaParts.push(latest);
-		info.createDiv({ cls: 'dm-row-meta', text: metaParts.join(' · ') });
+		if (metaParts.length > 0) {
+			info.createDiv({ cls: 'dm-row-meta', text: metaParts.join(' · ') });
+		}
 
-		const actions = row.createDiv({ cls: 'dm-row-actions' });
-
-		const dateBtn = actions.createEl('button', { text: '📅', cls: 'dm-btn' });
-		dateBtn.setAttribute('aria-label', '로스팅 날짜 추가');
-		dateBtn.addEventListener('click', (e) => {
-			e.stopPropagation();
-			this.showDateInput(row, bean, listEl);
+		row.addEventListener('click', () => {
+			this.close();
+			this.plugin.app.workspace.openLinkText(bean.path, '');
 		});
-
-		const statusBtn = actions.createEl('button', {
-			text: bean.status === 'active' ? '다 씀' : '복구',
-			cls: 'dm-btn dm-status-btn',
-		});
-		statusBtn.addEventListener('click', async (e) => {
-			e.stopPropagation();
-			const next = bean.status === 'active' ? 'finished' : 'active';
-			await this.plugin.vaultData.setBeanStatus(bean.path, next);
-			this.renderActiveTab();
-		});
+		row.style.cursor = 'pointer';
 	}
 
-	private showDateInput(row: HTMLElement, bean: BeanInfo, listEl: HTMLElement): void {
-		const existing = row.querySelector('.dm-date-row');
-		if (existing) { existing.remove(); return; }
+	private async createNewBean(): Promise<void> {
+		const folder = '3. Resources';
+		let name = '새 원두';
+		let path = `${folder}/${name}.md`;
+		let counter = 1;
+		while (this.app.vault.getAbstractFileByPath(path)) {
+			counter++;
+			name = `새 원두 ${counter}`;
+			path = `${folder}/${name}.md`;
+		}
 
-		const dateRow = row.createDiv({ cls: 'dm-date-row' });
-		const input = dateRow.createEl('input', { type: 'date' });
-		input.value = new Date().toISOString().slice(0, 10);
+		const template = [
+			'---',
+			'type: bean',
+			'roaster:',
+			'status: active',
+			'roast_date:',
+			'---',
+			'',
+		].join('\n');
 
-		const addBtn = dateRow.createEl('button', { text: '추가', cls: 'dm-btn dm-add-btn' });
-		addBtn.addEventListener('click', async () => {
-			if (!input.value) return;
-			await this.plugin.vaultData.addRoastDate(bean.path, input.value);
-			this.renderActiveTab();
-		});
+		await this.app.vault.create(path, template);
+		this.close();
+		await this.app.workspace.openLinkText(path, '');
 	}
 
 	private renderRecipeTab(container: HTMLElement): void {

@@ -574,3 +574,130 @@
   background: var(--interactive-accent);
   color: var(--text-on-accent);
 }
+
+.block-language-beans > button,
+.block-language-beans .copy-code-button,
+.block-language-beans .code-block-flair,
+div:has(> .block-language-beans) > .edit-block-button {
+  display: none !important;
+}
+
+.bean-hub {
+  padding: 8px 0;
+}
+
+.bean-hub-header {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 4px;
+}
+
+.bean-hub-section-title {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 4px 0;
+  margin-top: 4px;
+}
+
+.bean-hub-section-past {
+  margin-top: 12px;
+  border-top: 1px solid var(--background-modifier-border);
+  padding-top: 8px;
+}
+
+.bean-hub-row {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 4px;
+  gap: 8px;
+}
+
+.bean-hub-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.bean-hub-row.is-finished {
+  opacity: 0.6;
+}
+
+.bean-hub-name {
+  flex: 1;
+  cursor: pointer;
+  color: var(--text-accent);
+  text-decoration: none;
+}
+
+.bean-hub-name:hover {
+  text-decoration: underline;
+}
+
+.bean-hub-days {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.bean-hub-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.bean-hub-btn {
+  font-size: 0.8em;
+  padding: 2px 8px;
+  cursor: pointer;
+  background: var(--background-modifier-hover);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  color: var(--text-normal);
+  box-shadow: none;
+}
+
+.bean-hub-btn:hover {
+  background: var(--background-modifier-border);
+}
+
+.bean-hub-status-btn {
+  font-size: 0.75em;
+}
+
+.bean-hub-date-row {
+  display: flex;
+  gap: 4px;
+  padding: 4px 0 0 0;
+  align-items: center;
+}
+
+.bean-hub-date-row input[type="date"] {
+  font-size: 0.85em;
+  padding: 2px 4px;
+}
+
+.bean-hub-date-btns {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.bean-hub-add-btn {
+  font-size: 0.8em;
+}
+
+.bean-hub-empty {
+  color: var(--text-muted);
+  font-size: 0.85em;
+  padding: 8px;
+}
+
+.dm-bean-header {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 8px;
+}
+
+.dm-new-bean-btn {
+  font-size: 0.85em;
+}
