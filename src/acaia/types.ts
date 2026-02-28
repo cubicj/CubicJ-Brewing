@@ -1,4 +1,4 @@
-export type AcaiaState = 'idle' | 'scanning' | 'connecting' | 'connected' | 'disconnected';
+export type AcaiaState = 'idle' | 'scanning' | 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
 
 export interface ButtonEvent {
   type: 'tare' | 'timer_start' | 'timer_stop' | 'timer_reset';
