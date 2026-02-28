@@ -33,6 +33,12 @@ export class BrewFlowState {
 		this.step = 'configure';
 	}
 
+	deselectBean(): void {
+		this.selection.bean = undefined;
+		this.selection.lastRecord = undefined;
+		this.step = 'bean';
+	}
+
 	updateVariables(vars: Partial<BrewFlowSelection>): void {
 		Object.assign(this.selection, vars);
 	}
