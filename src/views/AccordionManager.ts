@@ -136,6 +136,11 @@ export class AccordionManager {
 		this.expandedSteps.add(stepOrder.indexOf(step));
 	}
 
+	expandStep(step: FlowStep): void {
+		const stepOrder: FlowStep[] = ['method', 'bean', 'configure', 'brewing', 'saving'];
+		this.expandedSteps.add(stepOrder.indexOf(step));
+	}
+
 	isBuilt(): boolean {
 		return this.panels.length > 0;
 	}

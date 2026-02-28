@@ -7,6 +7,7 @@ import { TimerController } from './TimerController';
 import { ScaleDisplayManager } from './ScaleDisplayManager';
 import { type FlowStep, renderStep, getStepSummary, type StepRenderContext } from './StepRenderers';
 import { AccordionManager } from './AccordionManager';
+import { BrewProfileRecorder } from './BrewProfileRecorder';
 
 export const VIEW_TYPE_BREWING = 'cubicj-brewing';
 
@@ -21,6 +22,7 @@ export class BrewingView extends ItemView {
 
 	private timerController!: TimerController;
 	private brewingStarted = false;
+	private recorder = new BrewProfileRecorder();
 
 	constructor(leaf: WorkspaceLeaf, plugin: CubicJBrewingPlugin) {
 		super(leaf);
@@ -110,6 +112,7 @@ export class BrewingView extends ItemView {
 	private resetFlow(): void {
 		this.flowState.cancel();
 		this.brewingStarted = false;
+		this.recorder.reset();
 		this.flowState.startBrew();
 		this.accordion.clearExpandedSteps();
 		this.accordion.update();
@@ -126,6 +129,8 @@ export class BrewingView extends ItemView {
 			brewingStarted: this.brewingStarted,
 			setBrewingStarted: (v) => { this.brewingStarted = v; },
 			resetFlow: () => this.resetFlow(),
+			recorder: this.recorder,
+			expandStep: (step) => this.accordion.expandStep(step),
 		};
 	}
 
@@ -137,6 +142,7 @@ export class BrewingView extends ItemView {
 
 		this.listen('weight', (grams: number) => {
 			this.scaleDisplay.updateWeight(grams);
+			if (this.recorder.isRecording) this.recorder.record(grams);
 		});
 
 		this.listen('timer', (seconds: number) => {

@@ -89,6 +89,16 @@ export class TimerController {
 		}
 	}
 
+	async freeze(): Promise<void> {
+		if (this.timerState === 'running') {
+			await this.callbacks.stopTimer();
+			this.timerElapsedAtStop = this.getElapsedSeconds();
+			this.timerState = 'stopped';
+			this.stopLocalTimer();
+			this.updateTimerDisplay();
+		}
+	}
+
 	resetToIdle(): void {
 		this.timerElapsedAtStop = 0;
 		this.timerStartedAt = 0;

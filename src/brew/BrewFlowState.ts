@@ -1,4 +1,4 @@
-import type { BrewMethod, BrewTemp, EspressoDrink, BeanInfo, RecipeInfo, BrewRecord, BrewFlowStep, BrewFlowSelection } from './types';
+import type { BrewMethod, BrewTemp, EspressoDrink, BeanInfo, RecipeInfo, BrewRecord, BrewFlowStep, BrewFlowSelection, BrewProfilePoint } from './types';
 
 export class BrewFlowState {
 	step: BrewFlowStep = 'idle';
@@ -51,9 +51,10 @@ export class BrewFlowState {
 		this.step = 'brewing';
 	}
 
-	finishBrewing(time?: number, yieldGrams?: number): void {
+	finishBrewing(time?: number, yieldGrams?: number, profile?: BrewProfilePoint[]): void {
 		this.selection.time = time;
 		this.selection.yield = yieldGrams;
+		this.selection.profile = profile;
 		this.step = 'saving';
 	}
 
