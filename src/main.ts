@@ -1,10 +1,12 @@
 import { Notice, Plugin } from 'obsidian';
-import { AcaiaService } from './acaia/AcaiaService';
+import { AcaiaService, type BleLogger } from './acaia/AcaiaService';
 import { BrewingView, VIEW_TYPE_BREWING } from './views/BrewingView';
 import { BrewingSettings, DEFAULT_SETTINGS, BrewingSettingTab } from './settings';
 import { BrewRecordService, type StorageAdapter } from './services/BrewRecordService';
 import { VaultDataService } from './services/VaultDataService';
 import { FileLogger } from './utils/FileLogger';
+
+const BLE_DEBUG = true;
 
 export default class CubicJBrewingPlugin extends Plugin {
   acaiaService!: AcaiaService;
@@ -12,11 +14,29 @@ export default class CubicJBrewingPlugin extends Plugin {
   recordService!: BrewRecordService;
   vaultData!: VaultDataService;
   private beforeUnloadHandler!: () => void;
+  private bleLogger: FileLogger | null = null;
 
   async onload() {
     await this.loadSettings();
     this.addSettingTab(new BrewingSettingTab(this.app, this));
-    this.acaiaService = new AcaiaService();
+
+    let logger: BleLogger | undefined;
+    if (BLE_DEBUG) {
+      const logPath = `${this.manifest.dir}/ble-debug.log`;
+      this.bleLogger = new FileLogger(
+        {
+          read: async (p) => this.app.vault.adapter.read(p),
+          write: async (p, c) => this.app.vault.adapter.write(p, c),
+        },
+        logPath,
+        1000,
+      );
+      this.bleLogger.start();
+      this.bleLogger.log(`\n=== session ${new Date().toISOString()} ===`);
+      logger = this.bleLogger;
+    }
+
+    this.acaiaService = new AcaiaService({ logger });
 
     this.vaultData = new VaultDataService(this.app);
     const recordsPath = `${this.manifest.dir}/brew-records.json`;
@@ -45,13 +65,17 @@ export default class CubicJBrewingPlugin extends Plugin {
 
     this.app.workspace.onLayoutReady(() => this.activateView());
 
-    this.beforeUnloadHandler = () => { this.acaiaService.destroy(); };
+    this.beforeUnloadHandler = () => {
+      this.acaiaService.destroy();
+      this.bleLogger?.stop();
+    };
     window.addEventListener('beforeunload', this.beforeUnloadHandler);
   }
 
   onunload() {
     window.removeEventListener('beforeunload', this.beforeUnloadHandler);
     this.acaiaService.destroy();
+    this.bleLogger?.stop();
   }
 
   async loadSettings(): Promise<void> {
