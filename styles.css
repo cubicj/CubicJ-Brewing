@@ -56,6 +56,27 @@
   50% { opacity: 0.3; }
 }
 
+.cubicj-brewing-view .brewing-scale-btn-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cubicj-brewing-view .brewing-scale-reset-btn {
+  font-size: var(--font-ui-smaller);
+  padding: 2px 8px;
+  cursor: pointer;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+}
+
+.cubicj-brewing-view .brewing-scale-reset-btn:hover {
+  color: var(--text-normal);
+  border-color: var(--text-muted);
+}
+
 .cubicj-brewing-view .brewing-scale-connect-btn {
   font-size: var(--font-ui-smaller);
   padding: 2px 10px;
@@ -268,6 +289,12 @@
 
 .cubicj-brewing-view .brew-flow-bean-item:hover {
   background: var(--background-modifier-hover);
+}
+
+.cubicj-brewing-view .brew-flow-bean-item.is-selected {
+  background: var(--background-modifier-active-hover);
+  border-left: 3px solid var(--interactive-accent);
+  padding-left: 5px;
 }
 
 .cubicj-brewing-view .brew-flow-bean-meta {
