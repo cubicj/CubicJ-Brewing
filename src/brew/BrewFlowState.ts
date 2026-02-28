@@ -22,7 +22,7 @@ export class BrewFlowState {
 		if (lastRecord) {
 			this.selection.grindSize = lastRecord.grindSize;
 			this.selection.dose = lastRecord.dose;
-			if (lastRecord.method === 'brewing') {
+			if (lastRecord.method === 'filter') {
 				this.selection.waterTemp = lastRecord.waterTemp;
 				this.selection.filter = lastRecord.filter;
 			}
@@ -96,6 +96,6 @@ export class BrewFlowState {
 		if (s.method === 'espresso') {
 			return { ...base, method: 'espresso', drink: s.drink!, basket: s.basket! };
 		}
-		return { ...base, method: 'brewing', waterTemp: s.waterTemp!, filter: s.filter! };
+		return { ...base, method: 'filter', waterTemp: s.waterTemp!, filter: s.filter! };
 	}
 }

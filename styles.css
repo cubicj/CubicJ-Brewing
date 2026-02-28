@@ -498,6 +498,11 @@
   width: 100%;
 }
 
+.cubicj-brewing-view .brew-flow-start-btn {
+  width: 100%;
+  margin-top: 4px;
+}
+
 .cubicj-brewing-view .brew-flow-recipe-select {
   margin: 8px 0;
 }
@@ -643,6 +648,7 @@ div:has(> .block-language-beans) > .edit-block-button {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
+  margin-left: 8px;
 }
 
 .bean-hub-btn {

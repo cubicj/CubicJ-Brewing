@@ -16,9 +16,9 @@ describe('BrewFlowState', () => {
 	it('method -> bean on selectMethod', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
-		state.selectMethod('brewing', 'hot');
+		state.selectMethod('filter', 'hot');
 		expect(state.step).toBe('bean');
-		expect(state.selection.method).toBe('brewing');
+		expect(state.selection.method).toBe('filter');
 		expect(state.selection.temp).toBe('hot');
 	});
 
@@ -33,7 +33,7 @@ describe('BrewFlowState', () => {
 	it('bean -> configure on selectBean', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
-		state.selectMethod('brewing', 'hot');
+		state.selectMethod('filter', 'hot');
 		const bean = { path: 'test.md', name: '첼로', roaster: 'LULL', status: 'active' as const, roastDates: ['2026-02-20'] };
 		state.selectBean(bean);
 		expect(state.step).toBe('configure');
@@ -43,7 +43,7 @@ describe('BrewFlowState', () => {
 	it('configure -> brewing on startBrewing', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
-		state.selectMethod('brewing', 'hot');
+		state.selectMethod('filter', 'hot');
 		state.selectBean({ path: 'test.md', name: '첼로', roaster: 'LULL', status: 'active', roastDates: ['2026-02-20'] });
 		state.updateVariables({ grindSize: 2.6, dose: 18, waterTemp: 96, filter: '하이플럭스' });
 		state.startBrewing();
@@ -53,7 +53,7 @@ describe('BrewFlowState', () => {
 	it('brewing -> saving on finishBrewing', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
-		state.selectMethod('brewing', 'hot');
+		state.selectMethod('filter', 'hot');
 		state.selectBean({ path: 'test.md', name: '첼로', roaster: 'LULL', status: 'active', roastDates: ['2026-02-20'] });
 		state.startBrewing();
 		state.finishBrewing(180.5, 282);
@@ -65,7 +65,7 @@ describe('BrewFlowState', () => {
 	it('goBack from bean returns to method', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
-		state.selectMethod('brewing', 'hot');
+		state.selectMethod('filter', 'hot');
 		state.goBack();
 		expect(state.step).toBe('method');
 	});
@@ -73,7 +73,7 @@ describe('BrewFlowState', () => {
 	it('goBack from configure returns to bean', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
-		state.selectMethod('brewing', 'hot');
+		state.selectMethod('filter', 'hot');
 		state.selectBean({ path: 'test.md', name: '첼로', roaster: 'LULL', status: 'active', roastDates: ['2026-02-20'] });
 		state.goBack();
 		expect(state.step).toBe('bean');
@@ -82,23 +82,23 @@ describe('BrewFlowState', () => {
 	it('cancel resets to idle', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
-		state.selectMethod('brewing', 'hot');
+		state.selectMethod('filter', 'hot');
 		state.selectBean({ path: 'test.md', name: '첼로', roaster: 'LULL', status: 'active', roastDates: ['2026-02-20'] });
 		state.cancel();
 		expect(state.step).toBe('idle');
 		expect(state.selection.method).toBeUndefined();
 	});
 
-	it('buildRecord creates BrewingRecord', () => {
+	it('buildRecord creates FilterRecord', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
-		state.selectMethod('brewing', 'hot');
+		state.selectMethod('filter', 'hot');
 		state.selectBean({ path: 'test.md', name: '첼로', roaster: 'LULL', status: 'active', roastDates: ['2026-02-20'] });
 		state.updateVariables({ grindSize: 2.6, dose: 18, waterTemp: 96, filter: '하이플럭스' });
 		state.startBrewing();
 		state.finishBrewing(180.5, 282);
 		const record = state.buildRecord('나');
-		expect(record.method).toBe('brewing');
+		expect(record.method).toBe('filter');
 		expect(record.bean).toBe('첼로');
 		expect(record.grindSize).toBe(2.6);
 		expect((record as any).waterTemp).toBe(96);
