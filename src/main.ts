@@ -30,6 +30,7 @@ export default class CubicJBrewingPlugin extends Plugin {
         },
         logPath,
         1000,
+        1000,
       );
       this.bleLogger.start();
       this.bleLogger.log(`\n=== session ${new Date().toISOString()} ===`);
