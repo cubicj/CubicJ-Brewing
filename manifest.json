@@ -5,5 +5,5 @@
   "description": "Brewing assistant with Acaia Pearl S BLE integration",
   "author": "CubicJ",
   "minAppVersion": "1.0.0",
-  "isDesktopOnly": true
+  "isDesktopOnly": false
 }

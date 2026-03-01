@@ -34,7 +34,7 @@ describe('BrewFlowState', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
 		state.selectMethod('filter', 'hot');
-		const bean = { path: 'test.md', name: '첼로', roaster: 'LULL', status: 'active' as const, roastDates: ['2026-02-20'] };
+		const bean = { path: 'test.md', name: '첼로', roaster: 'LULL', status: 'active' as const, roastDate: '2026-02-20' };
 		state.selectBean(bean);
 		expect(state.step).toBe('configure');
 		expect(state.selection.bean).toBe(bean);
@@ -44,7 +44,7 @@ describe('BrewFlowState', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
 		state.selectMethod('filter', 'hot');
-		state.selectBean({ path: 'test.md', name: '첼로', roaster: 'LULL', status: 'active', roastDates: ['2026-02-20'] });
+		state.selectBean({ path: 'test.md', name: '첼로', roaster: 'LULL', status: 'active', roastDate: '2026-02-20' });
 		state.updateVariables({ grindSize: 2.6, dose: 18, waterTemp: 96, filter: '하이플럭스' });
 		state.startBrewing();
 		expect(state.step).toBe('brewing');
@@ -54,7 +54,7 @@ describe('BrewFlowState', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
 		state.selectMethod('filter', 'hot');
-		state.selectBean({ path: 'test.md', name: '첼로', roaster: 'LULL', status: 'active', roastDates: ['2026-02-20'] });
+		state.selectBean({ path: 'test.md', name: '첼로', roaster: 'LULL', status: 'active', roastDate: '2026-02-20' });
 		state.startBrewing();
 		state.finishBrewing(180.5, 282);
 		expect(state.step).toBe('saving');
@@ -74,7 +74,7 @@ describe('BrewFlowState', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
 		state.selectMethod('filter', 'hot');
-		state.selectBean({ path: 'test.md', name: '첼로', roaster: 'LULL', status: 'active', roastDates: ['2026-02-20'] });
+		state.selectBean({ path: 'test.md', name: '첼로', roaster: 'LULL', status: 'active', roastDate: '2026-02-20' });
 		state.goBack();
 		expect(state.step).toBe('bean');
 	});
@@ -83,7 +83,7 @@ describe('BrewFlowState', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
 		state.selectMethod('filter', 'hot');
-		state.selectBean({ path: 'test.md', name: '첼로', roaster: 'LULL', status: 'active', roastDates: ['2026-02-20'] });
+		state.selectBean({ path: 'test.md', name: '첼로', roaster: 'LULL', status: 'active', roastDate: '2026-02-20' });
 		state.cancel();
 		expect(state.step).toBe('idle');
 		expect(state.selection.method).toBeUndefined();
@@ -93,7 +93,7 @@ describe('BrewFlowState', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
 		state.selectMethod('filter', 'hot');
-		state.selectBean({ path: 'test.md', name: '첼로', roaster: 'LULL', status: 'active', roastDates: ['2026-02-20'] });
+		state.selectBean({ path: 'test.md', name: '첼로', roaster: 'LULL', status: 'active', roastDate: '2026-02-20' });
 		state.updateVariables({ grindSize: 2.6, dose: 18, waterTemp: 96, filter: '하이플럭스' });
 		state.startBrewing();
 		state.finishBrewing(180.5, 282);

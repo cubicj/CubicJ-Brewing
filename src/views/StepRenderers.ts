@@ -194,9 +194,7 @@ async function renderBean(container: HTMLElement, ctx: StepRenderContext): Promi
 		item.createDiv({ text: bean.name });
 
 		const days = ctx.plugin.vaultData.getDaysSinceRoast(bean);
-		const metaParts = [bean.roaster];
-		if (days !== null) metaParts.push(`D+${days}`);
-		item.createDiv({ cls: 'brew-flow-bean-meta', text: metaParts.join(' · ') });
+		if (days !== null) item.createDiv({ cls: 'brew-flow-bean-meta', text: `로스팅 ${days}일차` });
 
 		item.addEventListener('click', async () => {
 			if (isSelected) {

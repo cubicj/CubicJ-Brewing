@@ -77,13 +77,21 @@ export class BrewFlowState {
 		this.selection = {};
 	}
 
+	get roastDays(): number | null {
+		const bean = this.selection.bean;
+		if (!bean?.roastDate) return null;
+		const diff = Date.now() - new Date(bean.roastDate).getTime();
+		return Math.floor(diff / 86400000);
+	}
+
 	buildRecord(drinker: string, note?: string): BrewRecord {
 		const s = this.selection;
 		const base = {
 			id: crypto.randomUUID(),
 			timestamp: new Date().toISOString(),
 			bean: s.bean!.name,
-			roastDate: s.bean!.roastDates[s.bean!.roastDates.length - 1],
+			roastDate: s.bean!.roastDate ?? '',
+			roastDays: this.roastDays,
 			temp: s.temp!,
 			grindSize: s.grindSize!,
 			dose: s.dose!,
