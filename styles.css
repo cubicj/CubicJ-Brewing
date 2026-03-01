@@ -593,24 +593,29 @@
   color: var(--text-on-accent);
 }
 
+.cm-embed-block:has(.block-language-beans) {
+  --embed-block-shadow-hover: none;
+}
+
 .block-language-beans > button,
 .block-language-beans .copy-code-button,
 .block-language-beans .code-block-flair,
-div:has(> .block-language-beans) > .edit-block-button {
-  display: none !important;
+.cm-embed-block:has(.block-language-beans) > .edit-block-button,
+.cm-embed-block:has(.block-language-beans):hover > .edit-block-button {
+  display: none;
 }
 
-.bean-hub {
+.block-language-beans .bean-hub {
   padding: 8px 0;
 }
 
-.bean-hub-header {
+.block-language-beans .bean-hub-header {
   display: flex;
   justify-content: flex-end;
   padding-bottom: 4px;
 }
 
-.bean-hub-section-title {
+.block-language-beans .bean-hub-section-title {
   font-size: 0.85em;
   font-weight: 600;
   color: var(--text-muted);
@@ -618,13 +623,13 @@ div:has(> .block-language-beans) > .edit-block-button {
   margin-top: 4px;
 }
 
-.bean-hub-section-past {
+.block-language-beans .bean-hub-section-past {
   margin-top: 12px;
   border-top: 1px solid var(--background-modifier-border);
   padding-top: 8px;
 }
 
-.bean-hub-row {
+.block-language-beans .bean-hub-row {
   display: flex;
   align-items: center;
   padding: 6px 8px;
@@ -632,39 +637,39 @@ div:has(> .block-language-beans) > .edit-block-button {
   gap: 8px;
 }
 
-.bean-hub-row:hover {
+.block-language-beans .bean-hub-row:hover {
   background: var(--background-modifier-hover);
 }
 
-.bean-hub-row.is-finished {
+.block-language-beans .bean-hub-row.is-finished {
   opacity: 0.6;
 }
 
-.bean-hub-name {
+.block-language-beans .bean-hub-name {
   flex: 1;
   cursor: pointer;
   color: var(--text-accent);
   text-decoration: none;
 }
 
-.bean-hub-name:hover {
+.block-language-beans .bean-hub-name:hover {
   text-decoration: underline;
 }
 
-.bean-hub-days {
+.block-language-beans .bean-hub-days {
   font-size: 0.85em;
   color: var(--text-muted);
   white-space: nowrap;
 }
 
-.bean-hub-actions {
+.block-language-beans .bean-hub-actions {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
   margin-left: 8px;
 }
 
-.bean-hub-btn {
+.block-language-beans .bean-hub-btn {
   font-size: 0.8em;
   padding: 2px 8px;
   cursor: pointer;
@@ -675,48 +680,48 @@ div:has(> .block-language-beans) > .edit-block-button {
   box-shadow: none;
 }
 
-.bean-hub-btn:hover {
+.block-language-beans .bean-hub-btn:hover {
   background: var(--background-modifier-border);
 }
 
-.bean-hub-status-btn {
+.block-language-beans .bean-hub-status-btn {
   font-size: 0.75em;
 }
 
-.bean-hub-date-row {
+.block-language-beans .bean-hub-date-row {
   display: flex;
   gap: 4px;
   padding: 4px 0 0 0;
   align-items: center;
 }
 
-.bean-hub-date-row input[type="date"] {
+.block-language-beans .bean-hub-date-row input[type="date"] {
   font-size: 0.85em;
   padding: 2px 4px;
 }
 
-.bean-hub-date-btns {
+.block-language-beans .bean-hub-date-btns {
   display: flex;
   gap: 4px;
   margin-left: auto;
 }
 
-.bean-hub-add-btn {
+.block-language-beans .bean-hub-add-btn {
   font-size: 0.8em;
 }
 
-.bean-hub-empty {
+.block-language-beans .bean-hub-empty {
   color: var(--text-muted);
   font-size: 0.85em;
   padding: 8px;
 }
 
-.dm-bean-header {
+.cubicj-data-manage-modal .dm-bean-header {
   display: flex;
   justify-content: flex-end;
   padding-bottom: 8px;
 }
 
-.dm-new-bean-btn {
+.cubicj-data-manage-modal .dm-new-bean-btn {
   font-size: 0.85em;
 }
