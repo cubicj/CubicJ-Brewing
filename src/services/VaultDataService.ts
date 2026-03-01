@@ -14,13 +14,11 @@ export class VaultDataService {
 			.filter((b): b is BeanInfo => b !== null);
 	}
 
-	async addRoastDate(path: string, date: string): Promise<void> {
+	async setRoastDate(path: string, date: string): Promise<void> {
 		const file = this.app.vault.getAbstractFileByPath(path);
 		if (!file || !('extension' in file)) return;
 		await this.app.fileManager.processFrontMatter(file as TFile, (fm) => {
-			const dates = Array.isArray(fm.roast_date) ? fm.roast_date : fm.roast_date ? [fm.roast_date] : [];
-			dates.push(date);
-			fm.roast_date = dates;
+			fm.roast_date = date;
 		});
 	}
 
@@ -42,15 +40,14 @@ export class VaultDataService {
 		const cache = this.app.metadataCache.getFileCache(file);
 		const fm = cache?.frontmatter;
 		if (fm?.type !== 'bean') return null;
-		const roastDates = Array.isArray(fm.roast_date)
-			? fm.roast_date.map(String)
-			: fm.roast_date ? [String(fm.roast_date)] : [];
+		const raw = Array.isArray(fm.roast_date) ? fm.roast_date[fm.roast_date.length - 1] : fm.roast_date;
+		const roastDate = raw ? String(raw) : null;
 		return {
 			path: file.path,
 			name: file.basename,
 			roaster: fm.roaster ?? '',
 			status: fm.status ?? 'active',
-			roastDates,
+			roastDate,
 		};
 	}
 
@@ -75,9 +72,8 @@ export class VaultDataService {
 	}
 
 	getDaysSinceRoast(bean: BeanInfo): number | null {
-		if (bean.roastDates.length === 0) return null;
-		const latest = bean.roastDates[bean.roastDates.length - 1];
-		const diff = Date.now() - new Date(latest).getTime();
+		if (!bean.roastDate) return null;
+		const diff = Date.now() - new Date(bean.roastDate).getTime();
 		return Math.floor(diff / 86400000);
 	}
 }

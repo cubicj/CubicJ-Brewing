@@ -9,7 +9,7 @@ export interface BeanInfo {
 	name: string;
 	roaster: string;
 	status: 'active' | 'finished';
-	roastDates: string[];
+	roastDate: string | null;
 }
 
 export interface RecipeStep {
@@ -38,6 +38,7 @@ interface BrewRecordBase {
 	timestamp: string;
 	bean: string;
 	roastDate: string;
+	roastDays: number | null;
 	method: BrewMethod;
 	temp: BrewTemp;
 	grindSize: number;

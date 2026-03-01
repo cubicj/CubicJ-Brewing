@@ -97,7 +97,7 @@ export class BeanCodeBlock {
 			const confirmBtn = btns.createEl('button', { text: '확인', cls: 'bean-hub-btn bean-hub-add-btn' });
 			confirmBtn.addEventListener('click', async () => {
 				if (!input.value) return;
-				await this.vaultData.addRoastDate(bean.path, input.value);
+				await this.vaultData.setRoastDate(bean.path, input.value);
 				await this.vaultData.setBeanStatus(bean.path, 'active');
 			});
 
