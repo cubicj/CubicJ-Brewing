@@ -4,7 +4,9 @@ import type { BrewMethod, BrewTemp, EspressoDrink, BrewFlowSelection } from '../
 import type { TimerController } from './TimerController';
 import { formatTimer } from './TimerController';
 import type { BrewProfileRecorder } from './BrewProfileRecorder';
+import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import { BrewProfileChart } from './BrewProfileChart';
+import { Notice } from 'obsidian';
 
 export type FlowStep = 'method' | 'bean' | 'configure' | 'brewing' | 'saving';
 
@@ -35,6 +37,7 @@ export interface StepRenderContext {
 	recorder: BrewProfileRecorder;
 	expandStep: (step: FlowStep) => void;
 	animateContentChange: (step: FlowStep, mutation: () => void) => void;
+	profileStorage: BrewProfileStorage;
 }
 
 export function renderStep(step: FlowStep, container: HTMLElement, ctx: StepRenderContext): void {
@@ -345,8 +348,7 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 				await ctx.timerController.freeze();
 				const totalSeconds = ctx.timerController.getElapsedSeconds();
 				const yieldGrams = parseFloat(ctx.getWeightText()) || undefined;
-				const profile = ctx.recorder.getDownsampled(5);
-				ctx.flowState.finishBrewing(totalSeconds || undefined, yieldGrams, profile.length > 0 ? profile : undefined);
+				ctx.flowState.finishBrewing(totalSeconds || undefined, yieldGrams);
 			} else {
 				ctx.flowState.finishBrewing(undefined, undefined);
 			}
@@ -402,9 +404,28 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 	ro.observe(noteEl);
 
 	const btnRow = container.createDiv({ cls: 'brewing-controls' });
-	const doneBtn = btnRow.createEl('button', { text: '완료', cls: 'brewing-ctrl-btn brew-flow-save-btn' });
+	const doneBtn = btnRow.createEl('button', { text: '저장', cls: 'brewing-ctrl-btn brew-flow-save-btn' });
 
-	doneBtn.addEventListener('click', () => {
-		ctx.resetFlow();
+	doneBtn.addEventListener('click', async () => {
+		doneBtn.disabled = true;
+		doneBtn.textContent = '저장 중...';
+		try {
+			const note = noteEl.value.trim() || undefined;
+			const points = ctx.recorder.getDownsampled(2);
+			let profilePath: string | undefined;
+			if (points.length > 0) {
+				const timestamp = new Date().toISOString();
+				profilePath = await ctx.profileStorage.save(timestamp, points);
+			}
+			const record = ctx.flowState.buildRecord(note, profilePath);
+			await ctx.plugin.recordService.add(record);
+			new Notice('저장 완료');
+			ctx.resetFlow();
+		} catch (err) {
+			console.error('Brew record save failed:', err);
+			new Notice('저장 실패');
+			doneBtn.disabled = false;
+			doneBtn.textContent = '저장';
+		}
 	});
 }

@@ -132,6 +132,7 @@ export class BrewingView extends ItemView {
 			recorder: this.recorder,
 			expandStep: (step) => this.accordion.expandStep(step),
 			animateContentChange: (step, mutation) => this.accordion.animateContentChange(step, mutation),
+			profileStorage: this.plugin.profileStorage,
 		};
 	}
 

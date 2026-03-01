@@ -1,4 +1,4 @@
-import type { BrewMethod, BrewTemp, EspressoDrink, BeanInfo, RecipeInfo, BrewRecord, BrewFlowStep, BrewFlowSelection, BrewProfilePoint } from './types';
+import type { BrewMethod, BrewTemp, EspressoDrink, BeanInfo, RecipeInfo, BrewRecord, BrewFlowStep, BrewFlowSelection } from './types';
 
 export class BrewFlowState {
 	step: BrewFlowStep = 'idle';
@@ -51,10 +51,9 @@ export class BrewFlowState {
 		this.step = 'brewing';
 	}
 
-	finishBrewing(time?: number, yieldGrams?: number, profile?: BrewProfilePoint[]): void {
+	finishBrewing(time?: number, yieldGrams?: number): void {
 		this.selection.time = time;
 		this.selection.yield = yieldGrams;
-		this.selection.profile = profile;
 		this.step = 'saving';
 	}
 
@@ -84,7 +83,7 @@ export class BrewFlowState {
 		return Math.floor(diff / 86400000);
 	}
 
-	buildRecord(drinker: string, note?: string): BrewRecord {
+	buildRecord(note?: string, profilePath?: string): BrewRecord {
 		const s = this.selection;
 		const base = {
 			id: crypto.randomUUID(),
@@ -97,9 +96,9 @@ export class BrewFlowState {
 			dose: s.dose!,
 			time: s.time,
 			yield: s.yield,
-			drinker,
 			recipe: s.recipe?.name,
 			note,
+			profilePath,
 		};
 
 		if (s.method === 'espresso') {

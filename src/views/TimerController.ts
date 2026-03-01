@@ -96,6 +96,7 @@ export class TimerController {
 			this.timerState = 'stopped';
 			this.stopLocalTimer();
 			this.updateTimerDisplay();
+			this.elements.timerBtn.textContent = '\u21BA';
 		}
 	}
 

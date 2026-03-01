@@ -19,7 +19,7 @@ const makeFilter = (overrides: Partial<FilterRecord> = {}): FilterRecord => ({
 	dose: 18,
 	waterTemp: 96,
 	filter: '하이플럭스',
-	drinker: '나',
+	roastDays: null,
 	...overrides,
 });
 
