@@ -53,6 +53,22 @@ export interface Noble {
 
 export const NOBLE_PATH = '<NOBLE_PATH>';
 export const SCALE_PREFIXES = ['PEARL', 'ACAIA', 'PROCH', 'PYXIS', 'LUNAR'];
+
+const MODEL_NAMES: [string, string][] = [
+	['PEARLS', 'Acaia Pearl S'],
+	['LUNAR', 'Acaia Lunar'],
+	['PYXIS', 'Acaia Pyxis'],
+	['PROCH', 'Acaia Proch'],
+	['PEARL', 'Acaia Pearl'],
+	['ACAIA', 'Acaia'],
+];
+
+export function resolveModelName(bleName: string): string {
+	for (const [prefix, name] of MODEL_NAMES) {
+		if (bleName.startsWith(prefix)) return name;
+	}
+	return bleName;
+}
 export const WRITE_UUID = '49535343884143f4a8d4ecbe34729bb3';
 export const NOTIFY_UUID = '495353431e4d4bd9ba6123c647249616';
 

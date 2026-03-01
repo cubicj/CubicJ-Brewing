@@ -16,4 +16,8 @@ export class BrewProfileStorage {
 		const raw = await this.adapter.read(`${this.baseDir}/${profilePath}`);
 		return raw ? JSON.parse(raw) : [];
 	}
+
+	async delete(profilePath: string): Promise<void> {
+		await this.adapter.remove(`${this.baseDir}/${profilePath}`);
+	}
 }

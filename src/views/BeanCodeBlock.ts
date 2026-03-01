@@ -128,6 +128,8 @@ export class BeanCodeBlock {
 			'roast_date:',
 			'---',
 			'',
+			'### [[원두 데이터|원두 데이터로 돌아가기]]',
+			'',
 			'```brews',
 			'```',
 			'',

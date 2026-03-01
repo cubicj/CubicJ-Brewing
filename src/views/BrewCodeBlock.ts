@@ -32,7 +32,11 @@ export class BrewCodeBlock {
 
 	private async renderAsync(el: HTMLElement, sourcePath: string): Promise<void> {
 		el.dataset.sourcePath = sourcePath;
-		const beanName = this.resolveBeanName(sourcePath);
+		let beanName = this.resolveBeanName(sourcePath);
+		if (!beanName) {
+			await new Promise(r => setTimeout(r, 500));
+			beanName = this.resolveBeanName(sourcePath);
+		}
 		if (!beanName) {
 			el.empty();
 			el.createDiv({ text: 'type: bean 노트에서만 사용 가능', cls: 'brew-records-empty' });
@@ -86,7 +90,7 @@ export class BrewCodeBlock {
 			setIcon(btn, 'list');
 			btn.addEventListener('click', () => {
 				const title = `${beanName} — ${this.formatDate(record.timestamp)}`;
-				new BrewProfileModal(this.app, title, record, this.profileStorage).open();
+				new BrewProfileModal(this.app, title, record, this.profileStorage, this.recordService).open();
 			});
 		}
 	}
@@ -95,9 +99,10 @@ export class BrewCodeBlock {
 		const d = new Date(iso);
 		const month = String(d.getMonth() + 1).padStart(2, '0');
 		const day = String(d.getDate()).padStart(2, '0');
-		const hour = String(d.getHours()).padStart(2, '0');
+		const h = d.getHours();
 		const min = String(d.getMinutes()).padStart(2, '0');
-		return `${String(d.getFullYear()).slice(2)}-${month}-${day} ${hour}:${min}`;
+		const ampm = h < 12 ? 'am' : 'pm';
+		return `${String(d.getFullYear()).slice(2)}-${month}-${day} · ${h % 12 || 12}:${min} ${ampm}`;
 	}
 
 	private formatTime(seconds: number): string {

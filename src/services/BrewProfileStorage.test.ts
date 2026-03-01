@@ -16,6 +16,9 @@ class InMemoryFileAdapter implements FileAdapter {
 	async mkdir(path: string): Promise<void> {
 		this.mkdirCalls.push(path);
 	}
+	async remove(path: string): Promise<void> {
+		this.files.delete(path);
+	}
 }
 
 describe('BrewProfileStorage', () => {
@@ -50,6 +53,14 @@ describe('BrewProfileStorage', () => {
 
 	it('returns empty array for missing profile', async () => {
 		const loaded = await storage.load('brew-profiles/nonexistent.json');
+		expect(loaded).toEqual([]);
+	});
+
+	it('deletes a saved profile', async () => {
+		const points: BrewProfilePoint[] = [{ t: 0, w: 0 }];
+		const path = await storage.save('2026-03-01T16:00:00.000Z', points);
+		await storage.delete(path);
+		const loaded = await storage.load(path);
 		expect(loaded).toEqual([]);
 	});
 });

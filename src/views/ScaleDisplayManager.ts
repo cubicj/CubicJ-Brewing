@@ -17,6 +17,7 @@ export class ScaleDisplayManager {
 	private scaleHeaderEl!: HTMLElement;
 	private scaleDotEl!: HTMLElement;
 	private scaleStatusEl!: HTMLElement;
+	private scaleNameEl!: HTMLElement;
 	private scaleBatteryEl!: HTMLElement;
 	private scaleDataEl!: HTMLElement;
 	private weightEl!: HTMLElement;
@@ -35,6 +36,7 @@ export class ScaleDisplayManager {
 		const infoRow = this.scaleHeaderEl.createDiv({ cls: 'brewing-scale-info' });
 		this.scaleDotEl = infoRow.createSpan({ cls: 'brewing-scale-dot' });
 		this.scaleStatusEl = infoRow.createSpan({ cls: 'brewing-scale-status' });
+		this.scaleNameEl = infoRow.createSpan({ cls: 'brewing-scale-name' });
 		this.scaleBatteryEl = infoRow.createSpan({ cls: 'brewing-scale-battery' });
 	}
 
@@ -63,13 +65,15 @@ export class ScaleDisplayManager {
 		return { timerEl: this.timerEl, timerBtn: this.timerBtn, weightEl: this.weightEl };
 	}
 
-	updateHeader(state: AcaiaState): void {
+	updateHeader(state: AcaiaState, scaleName?: string | null): void {
 		this.scaleDotEl.className = 'brewing-scale-dot';
 		if (state === 'connected') this.scaleDotEl.addClass('is-connected');
 		else if (state === 'disconnected') this.scaleDotEl.addClass('is-disconnected');
 		else if (state === 'scanning' || state === 'connecting' || state === 'reconnecting') this.scaleDotEl.addClass('is-busy');
 
 		this.scaleStatusEl.removeClass('brewing-error');
+
+		this.scaleNameEl.textContent = '';
 
 		switch (state) {
 			case 'idle':
@@ -89,6 +93,7 @@ export class ScaleDisplayManager {
 				break;
 			case 'connected':
 				this.scaleStatusEl.textContent = '연결됨';
+				if (scaleName) this.scaleNameEl.textContent = `· ${scaleName}`;
 				this.connectBtn.textContent = '해제';
 				break;
 			case 'disconnected':
@@ -144,7 +149,7 @@ export class ScaleDisplayManager {
 	}
 
 	updateBattery(percent: number): void {
-		this.scaleBatteryEl.textContent = `Battery: ${percent}%`;
+		this.scaleBatteryEl.textContent = `· Battery: ${percent}%`;
 	}
 
 	showError(message: string): void {

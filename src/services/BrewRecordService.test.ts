@@ -82,6 +82,44 @@ describe('BrewRecordService', () => {
 		expect(called).toBe(true);
 	});
 
+	it('updates a record by id', async () => {
+		const record = makeFilter({ grindSize: 2.5, note: 'test' });
+		await service.add(record);
+		await service.update(record.id, { grindSize: 3.0, note: 'updated' });
+		const all = await service.getAll();
+		expect(all[0].grindSize).toBe(3.0);
+		expect(all[0].note).toBe('updated');
+	});
+
+	it('calls onChange after update', async () => {
+		const record = makeFilter();
+		await service.add(record);
+		let called = false;
+		service.onChange = () => { called = true; };
+		await service.update(record.id, { grindSize: 3.0 });
+		expect(called).toBe(true);
+	});
+
+	it('removes a record by id', async () => {
+		const r1 = makeFilter({ bean: 'A' });
+		const r2 = makeFilter({ bean: 'B' });
+		await service.add(r1);
+		await service.add(r2);
+		await service.remove(r1.id);
+		const all = await service.getAll();
+		expect(all).toHaveLength(1);
+		expect(all[0].bean).toBe('B');
+	});
+
+	it('calls onChange after remove', async () => {
+		const record = makeFilter();
+		await service.add(record);
+		let called = false;
+		service.onChange = () => { called = true; };
+		await service.remove(record.id);
+		expect(called).toBe(true);
+	});
+
 	it('getByBean returns records for specific bean sorted newest first', async () => {
 		await service.add(makeFilter({ bean: '첼로 블렌드', timestamp: '2026-03-01T10:00:00Z' }));
 		await service.add(makeFilter({ bean: '첼로 블렌드', timestamp: '2026-03-02T10:00:00Z' }));

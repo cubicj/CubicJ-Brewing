@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { AcaiaState, AcaiaEvents, ButtonEvent, NOBLE_PATH, SCALE_PREFIXES, WRITE_UUID, NOTIFY_UUID, Noble, NoblePeripheral, NobleCharacteristic } from './types';
+import { AcaiaState, AcaiaEvents, ButtonEvent, NOBLE_PATH, SCALE_PREFIXES, WRITE_UUID, NOTIFY_UUID, Noble, NoblePeripheral, NobleCharacteristic, resolveModelName } from './types';
 import {
   encodeIdentify, encodeHeartbeat, encodeNotificationRequest,
   encodeTare, encodeTimerControl, encodeGetSettings,
@@ -41,6 +41,7 @@ export class AcaiaService extends EventEmitter {
   private reconnectAttempt = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private connectId = 0;
+  private _scaleName: string | null = null;
   private logger?: BleLogger;
 
   constructor(options?: AcaiaServiceOptions) {
@@ -66,6 +67,10 @@ export class AcaiaService extends EventEmitter {
 
   get state(): AcaiaState {
     return this._state;
+  }
+
+  get scaleName(): string | null {
+    return this._scaleName;
   }
 
   get currentReconnectAttempt(): number {
@@ -119,6 +124,8 @@ export class AcaiaService extends EventEmitter {
       this.log(`scale found: ${peripheral.advertisement?.localName} (${peripheral.address})`);
 
       this.peripheral = peripheral;
+      const localName = peripheral.advertisement?.localName ?? '';
+      this._scaleName = localName ? resolveModelName(localName) : null;
       this.setState('connecting');
 
       if (peripheral.state === 'connected') {

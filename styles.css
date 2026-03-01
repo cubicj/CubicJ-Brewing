@@ -869,6 +869,10 @@
   width: 75vw;
   max-width: 75vw;
 }
+.modal.brew-profile-modal.brew-profile-editing {
+  width: 400px;
+  max-width: 90vw;
+}
 .brew-profile-modal .brew-profile-subtitle {
   color: var(--text-muted);
   font-size: var(--font-ui-small);
@@ -902,6 +906,85 @@
 }
 .brew-profile-modal .brew-profile-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   margin-top: 16px;
+}
+.brew-profile-modal .brew-profile-footer-right {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Edit form — mirrors sidebar configure step layout */
+.brew-profile-modal .brew-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.brew-profile-modal .brew-edit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.brew-profile-modal .brew-edit-row label {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+.brew-profile-modal .brew-edit-row select,
+.brew-profile-modal .brew-edit-row textarea {
+  width: 100%;
+}
+.brew-profile-modal .brew-edit-note textarea {
+  min-height: 60px;
+  resize: vertical;
+}
+/* Stepper in modal — clone sidebar stepper styles */
+.brew-profile-modal .brew-flow-stepper-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.brew-profile-modal .brew-flow-stepper-btn {
+  flex: 0 0 auto;
+  min-width: 36px;
+  padding: 4px 8px;
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+.brew-profile-modal .brew-flow-stepper-value {
+  flex: 1;
+  text-align: center;
+  font-weight: var(--font-semibold);
+  font-size: var(--font-ui-medium);
+  user-select: none;
+}
+.brew-profile-modal .brew-flow-stepper-value.is-draggable {
+  cursor: ew-resize;
+}
+.brew-profile-modal .brew-flow-stepper-value.is-dragging {
+  color: var(--text-accent);
+}
+.brew-profile-modal .brew-flow-stepper-input {
+  width: 100%;
+  text-align: center;
+  font-weight: var(--font-semibold);
+  font-size: var(--font-ui-medium);
+  border: none;
+}
+.brew-profile-modal .brew-flow-stepper label {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+/* Confirm modal */
+.brew-confirm-message {
+  margin-bottom: 16px;
+}
+.brew-confirm-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
 }
