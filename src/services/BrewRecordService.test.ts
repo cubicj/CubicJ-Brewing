@@ -65,4 +65,21 @@ describe('BrewRecordService', () => {
 		const last = await service.getLastRecord('없는원두', 'espresso');
 		expect(last).toBeUndefined();
 	});
+
+	it('calls onChange after add', async () => {
+		let called = false;
+		service.onChange = () => { called = true; };
+		await service.add(makeFilter());
+		expect(called).toBe(true);
+	});
+
+	it('getByBean returns records for specific bean sorted newest first', async () => {
+		await service.add(makeFilter({ bean: '첼로 블렌드', timestamp: '2026-03-01T10:00:00Z' }));
+		await service.add(makeFilter({ bean: '첼로 블렌드', timestamp: '2026-03-02T10:00:00Z' }));
+		await service.add(makeFilter({ bean: '에티오피아', timestamp: '2026-03-01T12:00:00Z' }));
+		const records = await service.getByBean('첼로 블렌드');
+		expect(records).toHaveLength(2);
+		expect(records[0].timestamp).toBe('2026-03-02T10:00:00Z');
+		expect(records[1].timestamp).toBe('2026-03-01T10:00:00Z');
+	});
 });

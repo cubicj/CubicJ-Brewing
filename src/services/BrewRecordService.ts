@@ -7,6 +7,7 @@ export interface StorageAdapter {
 
 export class BrewRecordService {
 	private records: BrewRecord[] | null = null;
+	onChange: (() => void) | null = null;
 
 	constructor(private adapter: StorageAdapter) {}
 
@@ -25,10 +26,18 @@ export class BrewRecordService {
 		return this.load();
 	}
 
+	async getByBean(bean: string): Promise<BrewRecord[]> {
+		const records = await this.load();
+		return records
+			.filter(r => r.bean === bean)
+			.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+	}
+
 	async add(record: BrewRecord): Promise<void> {
 		const records = await this.load();
 		records.push(record);
 		await this.save();
+		this.onChange?.();
 	}
 
 	async getLastRecord(bean: string, method: BrewMethod): Promise<BrewRecord | undefined> {

@@ -6,6 +6,7 @@ import { formatTimer } from './TimerController';
 import type { BrewProfileRecorder } from './BrewProfileRecorder';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import { BrewProfileChart } from './BrewProfileChart';
+import { BrewProfileModal } from './BrewProfileModal';
 import { Notice } from 'obsidian';
 
 export type FlowStep = 'method' | 'bean' | 'configure' | 'brewing' | 'saving';
@@ -333,7 +334,15 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 		chart = new BrewProfileChart(chartContainer);
 		chart.startLive(ctx.recorder);
 	} else if (!ctx.brewingStarted && hasProfile) {
-		const chartContainer = container.createDiv({ cls: 'brew-profile-container' });
+		const chartWrapper = container.createDiv({ cls: 'brew-profile-wrapper' });
+		const expandBtn = chartWrapper.createEl('button', { text: '⛶', cls: 'brew-profile-expand-btn' });
+		expandBtn.setAttribute('aria-label', '확대');
+		expandBtn.addEventListener('click', () => {
+			const pts = ctx.recorder.getPoints();
+			const bean = ctx.flowState.selection.bean ?? '';
+			new BrewProfileModal(ctx.plugin.app, bean, pts).open();
+		});
+		const chartContainer = chartWrapper.createDiv({ cls: 'brew-profile-container' });
 		const staticChart = new BrewProfileChart(chartContainer);
 		staticChart.renderStatic(ctx.recorder.getPoints());
 	}

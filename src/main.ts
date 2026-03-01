@@ -6,6 +6,7 @@ import { BrewProfileStorage } from './services/BrewProfileStorage';
 import type { FileAdapter } from './services/FileAdapter';
 import { VaultDataService } from './services/VaultDataService';
 import { BeanCodeBlock } from './views/BeanCodeBlock';
+import { BrewCodeBlock } from './views/BrewCodeBlock';
 
 const BLE_DEBUG = true;
 
@@ -57,6 +58,10 @@ export default class CubicJBrewingPlugin extends Plugin {
       },
     };
     this.profileStorage = new BrewProfileStorage(this.manifest.dir, fileAdapter);
+
+    const brewBlock = new BrewCodeBlock(this.app, this.recordService, this.profileStorage);
+    brewBlock.register((lang, handler) => this.registerMarkdownCodeBlockProcessor(lang, handler));
+    this.recordService.onChange = () => brewBlock.refreshAll();
 
     if (Platform.isDesktop) {
       await this.initDesktop();
