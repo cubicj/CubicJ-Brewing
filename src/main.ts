@@ -56,6 +56,9 @@ export default class CubicJBrewingPlugin extends Plugin {
       mkdir: async (path) => {
         await this.app.vault.adapter.mkdir(path);
       },
+      remove: async (path) => {
+        await this.app.vault.adapter.remove(path);
+      },
     };
     this.profileStorage = new BrewProfileStorage(this.manifest.dir, fileAdapter);
 

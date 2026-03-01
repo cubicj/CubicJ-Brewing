@@ -40,6 +40,24 @@ export class BrewRecordService {
 		this.onChange?.();
 	}
 
+	async update(id: string, changes: Partial<BrewRecord>): Promise<void> {
+		const records = await this.load();
+		const idx = records.findIndex(r => r.id === id);
+		if (idx === -1) return;
+		records[idx] = { ...records[idx], ...changes } as BrewRecord;
+		await this.save();
+		this.onChange?.();
+	}
+
+	async remove(id: string): Promise<void> {
+		const records = await this.load();
+		const idx = records.findIndex(r => r.id === id);
+		if (idx === -1) return;
+		records.splice(idx, 1);
+		await this.save();
+		this.onChange?.();
+	}
+
 	async getLastRecord(bean: string, method: BrewMethod, temp: BrewTemp, filter?: string): Promise<BrewRecord | undefined> {
 		const records = await this.load();
 		return records

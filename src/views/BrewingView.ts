@@ -64,7 +64,7 @@ export class BrewingView extends ItemView {
 		});
 
 		this.bindServiceEvents();
-		this.scaleDisplay.updateHeader(svc.state);
+		this.scaleDisplay.updateHeader(svc.state, svc.scaleName);
 		this.renderContent();
 	}
 
@@ -138,7 +138,7 @@ export class BrewingView extends ItemView {
 
 	private bindServiceEvents(): void {
 		this.listen('state', (state: AcaiaState) => {
-			this.scaleDisplay.updateHeader(state);
+			this.scaleDisplay.updateHeader(state, this.plugin.acaiaService?.scaleName);
 			this.scaleDisplay.updateControls(state, () => this.timerController.resetToIdle());
 		});
 
