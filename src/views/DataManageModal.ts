@@ -2,7 +2,7 @@ import { Modal } from 'obsidian';
 import type CubicJBrewingPlugin from '../main';
 import type { BeanInfo } from '../brew/types';
 
-type TabId = 'bean' | 'recipe' | 'brew-equip' | 'espresso-equip';
+type TabId = 'bean' | 'recipe' | 'equip';
 
 interface TabDef {
 	id: TabId;
@@ -23,8 +23,7 @@ export class DataManageModal extends Modal {
 		this.tabs = [
 			{ id: 'bean', label: '원두', render: (el) => this.renderBeanTab(el) },
 			{ id: 'recipe', label: '레시피', render: (el) => this.renderRecipeTab(el) },
-			{ id: 'brew-equip', label: '브루잉 장비', render: (el) => this.renderBrewEquipTab(el) },
-			{ id: 'espresso-equip', label: '에쏘 장비', render: (el) => this.renderEspressoEquipTab(el) },
+			{ id: 'equip', label: '장비', render: (el) => this.renderEquipTab(el) },
 		];
 	}
 
@@ -104,12 +103,11 @@ export class DataManageModal extends Modal {
 	private renderBeanRow(listEl: HTMLElement, bean: BeanInfo): void {
 		const row = listEl.createDiv({ cls: `dm-row${bean.status === 'finished' ? ' is-finished' : ''}` });
 
-		const info = row.createDiv({ cls: 'dm-row-info' });
-		info.createDiv({ cls: 'dm-row-name', text: bean.name });
+		row.createDiv({ cls: 'dm-row-name', text: bean.name });
 
 		const days = this.plugin.vaultData.getDaysSinceRoast(bean);
 		if (days !== null) {
-			info.createDiv({ cls: 'dm-row-meta', text: `로스팅 ${days}일차` });
+			row.createSpan({ cls: 'dm-row-days', text: `로스팅 ${days}일차` });
 		}
 
 		const actions = row.createDiv({ cls: 'dm-row-actions' });
@@ -182,11 +180,7 @@ export class DataManageModal extends Modal {
 		container.createDiv({ cls: 'dm-empty', text: '준비 중' });
 	}
 
-	private renderBrewEquipTab(container: HTMLElement): void {
-		container.createDiv({ cls: 'dm-empty', text: '준비 중' });
-	}
-
-	private renderEspressoEquipTab(container: HTMLElement): void {
+	private renderEquipTab(container: HTMLElement): void {
 		container.createDiv({ cls: 'dm-empty', text: '준비 중' });
 	}
 }

@@ -52,17 +52,26 @@ describe('BrewRecordService', () => {
 		expect(all).toHaveLength(1);
 	});
 
-	it('getLastRecord returns most recent by bean x method', async () => {
+	it('getLastRecord returns most recent by bean x method x temp', async () => {
 		await service.add(makeFilter({ timestamp: '2026-02-25T10:00:00Z', grindSize: 2.5 }));
 		await service.add(makeFilter({ timestamp: '2026-02-26T10:00:00Z', grindSize: 2.6 }));
 		await service.add(makeFilter({ bean: '룰 디카페인', timestamp: '2026-02-27T10:00:00Z' }));
-		const last = await service.getLastRecord('첼로 블렌드', 'filter');
+		const last = await service.getLastRecord('첼로 블렌드', 'filter', 'hot');
 		expect(last?.grindSize).toBe(2.6);
+	});
+
+	it('getLastRecord distinguishes temp', async () => {
+		await service.add(makeFilter({ timestamp: '2026-02-25T10:00:00Z', temp: 'hot', grindSize: 2.5 }));
+		await service.add(makeFilter({ timestamp: '2026-02-26T10:00:00Z', temp: 'iced', grindSize: 3.0 }));
+		const hot = await service.getLastRecord('첼로 블렌드', 'filter', 'hot');
+		const iced = await service.getLastRecord('첼로 블렌드', 'filter', 'iced');
+		expect(hot?.grindSize).toBe(2.5);
+		expect(iced?.grindSize).toBe(3.0);
 	});
 
 	it('getLastRecord returns undefined when no match', async () => {
 		await service.add(makeFilter());
-		const last = await service.getLastRecord('없는원두', 'espresso');
+		const last = await service.getLastRecord('없는원두', 'espresso', 'hot');
 		expect(last).toBeUndefined();
 	});
 

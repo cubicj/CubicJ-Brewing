@@ -30,6 +30,7 @@ export class BrewProfileChart {
 	private scrollContainer: HTMLElement | null = null;
 	private scrollWheelHandler: ((e: WheelEvent) => void) | null = null;
 	private scrollKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+	private dragHandlers: { down: (e: MouseEvent) => void; move: (e: MouseEvent) => void; up: () => void } | null = null;
 
 	private cachedSource: BrewProfilePoint[] | null = null;
 	private cachedDetail: BrewProfilePoint[] = [];
@@ -64,11 +65,13 @@ export class BrewProfileChart {
 		container.style.outline = 'none';
 
 		this.scrollWheelHandler = (e: WheelEvent) => {
-			if (!e.deltaX || e.shiftKey) return;
+			const dx = e.deltaX || (e.shiftKey ? e.deltaY : 0);
+			if (!dx) return;
+			e.preventDefault();
 			e.stopPropagation();
-			container.scrollLeft += e.deltaX * 0.5;
+			container.scrollLeft += dx;
 		};
-		container.addEventListener('wheel', this.scrollWheelHandler, { passive: false });
+		container.addEventListener('wheel', this.scrollWheelHandler, { capture: true, passive: false } as AddEventListenerOptions);
 
 		const STEP = 60;
 		this.scrollKeyHandler = (e: KeyboardEvent) => {
@@ -76,6 +79,27 @@ export class BrewProfileChart {
 			else if (e.key === 'ArrowLeft') { container.scrollLeft -= STEP; e.preventDefault(); }
 		};
 		container.addEventListener('keydown', this.scrollKeyHandler);
+
+		let dragging = false;
+		let dragStartX = 0;
+		let dragScrollLeft = 0;
+		const down = (e: MouseEvent) => {
+			dragging = true;
+			dragStartX = e.clientX;
+			dragScrollLeft = container.scrollLeft;
+		};
+		const move = (e: MouseEvent) => {
+			if (!dragging) return;
+			container.scrollLeft = dragScrollLeft - (e.clientX - dragStartX);
+		};
+		const up = () => {
+			dragging = false;
+		};
+		container.addEventListener('mousedown', down);
+		container.addEventListener('mousemove', move);
+		container.addEventListener('mouseleave', up);
+		container.addEventListener('mouseup', up);
+		this.dragHandlers = { down, move, up };
 
 		this.crosshairMoveHandler = (e: MouseEvent) => {
 			const rect = this.canvas.getBoundingClientRect();
@@ -121,9 +145,16 @@ export class BrewProfileChart {
 			cancelAnimationFrame(this.crosshairRaf);
 			this.crosshairRaf = 0;
 		}
+		if (this.scrollContainer && this.dragHandlers) {
+			this.scrollContainer.removeEventListener('mousedown', this.dragHandlers.down);
+			this.scrollContainer.removeEventListener('mousemove', this.dragHandlers.move);
+			this.scrollContainer.removeEventListener('mouseleave', this.dragHandlers.up);
+			this.scrollContainer.removeEventListener('mouseup', this.dragHandlers.up);
+		}
 		this.scrollContainer = null;
 		this.scrollWheelHandler = null;
 		this.scrollKeyHandler = null;
+		this.dragHandlers = null;
 		this.crosshairMoveHandler = null;
 		this.crosshairLeaveHandler = null;
 	}
@@ -319,13 +350,16 @@ export class BrewProfileChart {
 		ctx.fillStyle = LINE_COLOR;
 		ctx.fill();
 
-		const tLabel = t >= 60
-			? `${Math.floor(t / 60)}:${Math.floor(t % 60).toString().padStart(2, '0')}`
-			: `${Math.round(t)}s`;
-		const label = `${w.toFixed(1)}g @ ${tLabel}`;
+		const tSec = Math.round(t);
+		const tLabel = tSec >= 60
+			? `${Math.floor(tSec / 60)}분 ${tSec % 60}초`
+			: `${tSec}초`;
+		const line1 = `무게: ${w.toFixed(1)}g`;
+		const line2 = `시간: ${tLabel}`;
 		ctx.font = `${11 * dpr}px -apple-system, BlinkMacSystemFont, sans-serif`;
-		const tw = ctx.measureText(label).width + 8 * dpr;
-		const th = 18 * dpr;
+		const tw = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width) + 8 * dpr;
+		const lineH = 16 * dpr;
+		const th = lineH * 2 + 4 * dpr;
 
 		let lx = x + 8 * dpr;
 		if (lx + tw > pl + plotW) lx = x - tw - 4 * dpr;
@@ -338,7 +372,8 @@ export class BrewProfileChart {
 		ctx.fillRect(lx, ly, tw, th);
 		ctx.fillStyle = '#e8e8e8';
 		ctx.textAlign = 'left';
-		ctx.fillText(label, lx + 4 * dpr, ly + 13 * dpr);
+		ctx.fillText(line1, lx + 4 * dpr, ly + 13 * dpr);
+		ctx.fillText(line2, lx + 4 * dpr, ly + 13 * dpr + lineH);
 	}
 
 	private interpolateWeight(trend: BrewProfilePoint[], t: number): number {

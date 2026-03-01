@@ -227,19 +227,16 @@
   opacity: 0.5;
 }
 
-.cubicj-data-manage-modal .dm-row-info {
+.cubicj-data-manage-modal .dm-row-name {
   flex: 1;
   min-width: 0;
-}
-
-.cubicj-data-manage-modal .dm-row-name {
   font-weight: var(--font-semibold);
-  margin-bottom: 2px;
 }
 
-.cubicj-data-manage-modal .dm-row-meta {
-  font-size: var(--font-ui-smaller);
+.cubicj-data-manage-modal .dm-row-days {
+  font-size: 0.85em;
   color: var(--text-muted);
+  margin-right: var(--size-4-2);
 }
 
 .cubicj-data-manage-modal .dm-row-actions {
@@ -481,8 +478,8 @@
 /* Configure */
 
 .cubicj-brewing-view .brew-flow-form {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   margin: 8px 0;
 }
@@ -499,6 +496,46 @@
   width: 100%;
 }
 
+.cubicj-brewing-view .brew-flow-stepper {
+}
+.cubicj-brewing-view .brew-flow-stepper-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.cubicj-brewing-view .brew-flow-stepper-btn {
+  flex: 0 0 auto;
+  min-width: 36px;
+  padding: 4px 8px;
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+  box-shadow: none;
+  border-radius: var(--radius-s);
+}
+.cubicj-brewing-view .brew-flow-stepper-value {
+  flex: 1;
+  text-align: center;
+  font-weight: var(--font-semibold);
+  font-size: var(--font-ui-medium);
+  user-select: none;
+}
+.cubicj-brewing-view .brew-flow-stepper-value.is-draggable {
+  cursor: ew-resize;
+}
+.cubicj-brewing-view .brew-flow-stepper-value.is-dragging {
+  color: var(--text-accent);
+}
+.cubicj-brewing-view .brew-flow-stepper-input {
+  width: 100%;
+  text-align: center;
+  font-weight: var(--font-semibold);
+  font-size: var(--font-ui-medium);
+  border: none;
+  outline: none;
+  background: var(--background-modifier-form-field);
+  border-radius: var(--radius-s);
+  padding: 2px;
+}
 .cubicj-brewing-view .brew-flow-start-btn {
   width: 100%;
   margin-top: 4px;
@@ -836,6 +873,23 @@
   color: var(--text-muted);
   font-size: var(--font-ui-small);
   margin-bottom: 12px;
+}
+.brew-profile-modal .brew-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px 16px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--background-primary-alt);
+  border-radius: var(--radius-s);
+}
+.brew-profile-modal .brew-detail-label {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+.brew-profile-modal .brew-detail-value {
+  font-weight: var(--font-semibold);
 }
 .brew-profile-modal .brew-profile-container {
   height: auto;

@@ -236,8 +236,8 @@ export class AcaiaService extends EventEmitter {
     await this.enqueueWrite(encodeTare());
   }
 
-  async sendNotificationRequest(weightArg?: number): Promise<void> {
-    await this.enqueueWrite(encodeNotificationRequest(weightArg));
+  async sendNotificationRequest(): Promise<void> {
+    await this.enqueueWrite(encodeNotificationRequest());
   }
 
   async startTimer(): Promise<void> {
