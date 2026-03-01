@@ -397,7 +397,7 @@
   max-height: 0;
   opacity: 0;
   overflow: hidden;
-  transition: max-height 0.35s ease, opacity 0.3s ease;
+  transition: max-height 0.35s ease, height 0.35s ease, opacity 0.3s ease;
 }
 
 .cubicj-brewing-view .brew-accordion-body.is-open {

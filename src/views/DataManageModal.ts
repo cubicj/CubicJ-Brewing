@@ -108,11 +108,8 @@ export class DataManageModal extends Modal {
 		info.createDiv({ cls: 'dm-row-name', text: bean.name });
 
 		const days = this.plugin.vaultData.getDaysSinceRoast(bean);
-		const metaParts: string[] = [];
-		if (days !== null) metaParts.push(`로스팅 ${days}일차`);
-		if (bean.roastDate) metaParts.push(bean.roastDate);
-		if (metaParts.length > 0) {
-			info.createDiv({ cls: 'dm-row-meta', text: metaParts.join(' · ') });
+		if (days !== null) {
+			info.createDiv({ cls: 'dm-row-meta', text: `로스팅 ${days}일차` });
 		}
 
 		row.addEventListener('click', () => {
