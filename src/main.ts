@@ -2,6 +2,8 @@ import { Notice, Platform, Plugin } from 'obsidian';
 import type { AcaiaService, BleLogger } from './acaia/AcaiaService';
 import type { FileLogger } from './utils/FileLogger';
 import { BrewRecordService, type StorageAdapter } from './services/BrewRecordService';
+import { BrewProfileStorage } from './services/BrewProfileStorage';
+import type { FileAdapter } from './services/FileAdapter';
 import { VaultDataService } from './services/VaultDataService';
 import { BeanCodeBlock } from './views/BeanCodeBlock';
 
@@ -10,6 +12,7 @@ const BLE_DEBUG = true;
 export default class CubicJBrewingPlugin extends Plugin {
   acaiaService: AcaiaService | null = null;
   recordService!: BrewRecordService;
+  profileStorage!: BrewProfileStorage;
   vaultData!: VaultDataService;
   private beforeUnloadHandler: (() => void) | null = null;
   private bleLogger: FileLogger | null = null;
@@ -40,6 +43,20 @@ export default class CubicJBrewingPlugin extends Plugin {
       },
     };
     this.recordService = new BrewRecordService(adapter);
+
+    const fileAdapter: FileAdapter = {
+      read: async (path) => {
+        try { return await this.app.vault.adapter.read(path); }
+        catch { return null; }
+      },
+      write: async (path, content) => {
+        await this.app.vault.adapter.write(path, content);
+      },
+      mkdir: async (path) => {
+        await this.app.vault.adapter.mkdir(path);
+      },
+    };
+    this.profileStorage = new BrewProfileStorage(this.manifest.dir, fileAdapter);
 
     if (Platform.isDesktop) {
       await this.initDesktop();

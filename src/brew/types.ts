@@ -45,10 +45,9 @@ interface BrewRecordBase {
 	dose: number;
 	time?: number;
 	yield?: number;
-	drinker: string;
 	recipe?: string;
 	note?: string;
-	profile?: BrewProfilePoint[];
+	profilePath?: string;
 }
 
 export interface FilterRecord extends BrewRecordBase {
@@ -79,7 +78,5 @@ export interface BrewFlowSelection {
 	recipe?: RecipeInfo;
 	time?: number;
 	yield?: number;
-	drinker?: string;
 	note?: string;
-	profile?: BrewProfilePoint[];
 }

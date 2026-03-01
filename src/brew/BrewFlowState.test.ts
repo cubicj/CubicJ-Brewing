@@ -97,11 +97,11 @@ describe('BrewFlowState', () => {
 		state.updateVariables({ grindSize: 2.6, dose: 18, waterTemp: 96, filter: '하이플럭스' });
 		state.startBrewing();
 		state.finishBrewing(180.5, 282);
-		const record = state.buildRecord('나');
+		const record = state.buildRecord();
 		expect(record.method).toBe('filter');
 		expect(record.bean).toBe('첼로');
 		expect(record.grindSize).toBe(2.6);
 		expect((record as any).waterTemp).toBe(96);
-		expect(record.drinker).toBe('나');
+		
 	});
 });
