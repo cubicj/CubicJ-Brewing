@@ -36,7 +36,8 @@ export class BrewProfileModal extends Modal {
 		}
 
 		const chartContainer = this.contentEl.createDiv({ cls: 'brew-profile-container' });
-		const chart = new BrewProfileChart(chartContainer, Math.round(window.innerHeight * 0.6));
+		const modalHeight = Math.min(500, Math.round(window.innerHeight * 0.5));
+		const chart = new BrewProfileChart(chartContainer, modalHeight, 8, true);
 		chart.renderStatic(points);
 
 		const footer = this.contentEl.createDiv({ cls: 'brew-profile-footer' });

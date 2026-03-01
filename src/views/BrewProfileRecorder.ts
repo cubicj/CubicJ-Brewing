@@ -29,20 +29,6 @@ export class BrewProfileRecorder {
 		return this.points;
 	}
 
-	getDownsampled(stride = 5): BrewProfilePoint[] {
-		const result: BrewProfilePoint[] = [];
-		for (let i = 0; i < this.points.length; i += stride) {
-			result.push(this.points[i]);
-		}
-		if (this.points.length > 0) {
-			const last = this.points[this.points.length - 1];
-			if (result[result.length - 1] !== last) {
-				result.push(last);
-			}
-		}
-		return result;
-	}
-
 	reset(): void {
 		this.points = [];
 		this.startTime = 0;
