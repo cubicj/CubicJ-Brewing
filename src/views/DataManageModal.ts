@@ -112,6 +112,39 @@ export class DataManageModal extends Modal {
 			info.createDiv({ cls: 'dm-row-meta', text: `로스팅 ${days}일차` });
 		}
 
+		const actions = row.createDiv({ cls: 'dm-row-actions' });
+
+		if (bean.status === 'active') {
+			const exhaustBtn = actions.createEl('button', { text: '소진', cls: 'dm-btn dm-btn-muted' });
+			exhaustBtn.addEventListener('click', async (e) => {
+				e.stopPropagation();
+				await this.plugin.vaultData.setBeanStatus(bean.path, 'finished');
+				this.renderActiveTab();
+			});
+		} else {
+			const repurchaseBtn = actions.createEl('button', { text: '재구매', cls: 'dm-btn dm-btn-accent' });
+			repurchaseBtn.addEventListener('click', (e) => {
+				e.stopPropagation();
+				const dateInput = row.createEl('input', { type: 'date', cls: 'dm-date-input' });
+				dateInput.valueAsDate = new Date();
+				dateInput.focus();
+				repurchaseBtn.style.display = 'none';
+
+				dateInput.addEventListener('change', async () => {
+					if (!dateInput.value) return;
+					await this.plugin.vaultData.setRoastDate(bean.path, dateInput.value);
+					await this.plugin.vaultData.setBeanStatus(bean.path, 'active');
+					this.renderActiveTab();
+				});
+				dateInput.addEventListener('blur', () => {
+					if (!dateInput.value) {
+						dateInput.remove();
+						repurchaseBtn.style.display = '';
+					}
+				});
+			});
+		}
+
 		row.addEventListener('click', () => {
 			this.close();
 			this.plugin.app.workspace.openLinkText(bean.path, '');

@@ -41,33 +41,6 @@ describe('BrewProfileRecorder', () => {
 		expect(rec.getPoints()).toHaveLength(1);
 	});
 
-	it('downsamples to every Nth point', () => {
-		const rec = new BrewProfileRecorder();
-		rec.start();
-		for (let i = 0; i < 10; i++) {
-			vi.advanceTimersByTime(100);
-			rec.record(i * 10);
-		}
-
-		const down = rec.getDownsampled(5);
-		expect(down).toHaveLength(3);
-		expect(down[0].w).toBe(0);
-		expect(down[1].w).toBe(50);
-		expect(down[2].w).toBe(90);
-	});
-
-	it('downsample includes last point', () => {
-		const rec = new BrewProfileRecorder();
-		rec.start();
-		for (let i = 0; i < 7; i++) {
-			vi.advanceTimersByTime(100);
-			rec.record(i);
-		}
-
-		const down = rec.getDownsampled(5);
-		expect(down[down.length - 1].w).toBe(6);
-	});
-
 	it('reset clears all state', () => {
 		const rec = new BrewProfileRecorder();
 		rec.start();

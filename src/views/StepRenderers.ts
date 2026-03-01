@@ -420,7 +420,7 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 		doneBtn.textContent = '저장 중...';
 		try {
 			const note = noteEl.value.trim() || undefined;
-			const points = ctx.recorder.getDownsampled(2);
+			const points = ctx.recorder.getPoints();
 			let profilePath: string | undefined;
 			if (points.length > 0) {
 				const timestamp = new Date().toISOString();
