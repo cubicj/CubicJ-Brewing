@@ -1,26 +1,21 @@
 import { Notice, Platform, Plugin } from 'obsidian';
-import { AcaiaService, type BleLogger } from './acaia/AcaiaService';
-import { BrewingView, VIEW_TYPE_BREWING } from './views/BrewingView';
-import { BrewingSettings, DEFAULT_SETTINGS, BrewingSettingTab } from './settings';
+import type { AcaiaService, BleLogger } from './acaia/AcaiaService';
+import type { FileLogger } from './utils/FileLogger';
 import { BrewRecordService, type StorageAdapter } from './services/BrewRecordService';
 import { VaultDataService } from './services/VaultDataService';
-import { FileLogger } from './utils/FileLogger';
 import { BeanCodeBlock } from './views/BeanCodeBlock';
 
 const BLE_DEBUG = true;
 
 export default class CubicJBrewingPlugin extends Plugin {
   acaiaService: AcaiaService | null = null;
-  settings!: BrewingSettings;
   recordService!: BrewRecordService;
   vaultData!: VaultDataService;
   private beforeUnloadHandler: (() => void) | null = null;
   private bleLogger: FileLogger | null = null;
+  private viewType: string | null = null;
 
   async onload() {
-    await this.loadSettings();
-    this.addSettingTab(new BrewingSettingTab(this.app, this));
-
     this.vaultData = new VaultDataService(this.app);
 
     const beanBlock = new BeanCodeBlock(this.app, this.vaultData);
@@ -47,11 +42,16 @@ export default class CubicJBrewingPlugin extends Plugin {
     this.recordService = new BrewRecordService(adapter);
 
     if (Platform.isDesktop) {
-      this.initDesktop();
+      await this.initDesktop();
     }
   }
 
-  private initDesktop(): void {
+  private async initDesktop(): Promise<void> {
+    const { AcaiaService } = await import('./acaia/AcaiaService');
+    const { BrewingView, VIEW_TYPE_BREWING } = await import('./views/BrewingView');
+    const { FileLogger } = await import('./utils/FileLogger');
+    this.viewType = VIEW_TYPE_BREWING;
+
     let logger: BleLogger | undefined;
     if (BLE_DEBUG) {
       const logPath = `${this.manifest.dir}/ble-debug.log`;
@@ -100,20 +100,13 @@ export default class CubicJBrewingPlugin extends Plugin {
     this.bleLogger?.stop();
   }
 
-  async loadSettings(): Promise<void> {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-  }
-
-  async saveSettings(): Promise<void> {
-    await this.saveData(this.settings);
-  }
-
   private async runRateExperiment(): Promise<void> {
-    if (this.acaiaService.state !== 'connected') {
+    if (!this.acaiaService || this.acaiaService.state !== 'connected') {
       new Notice('Scale not connected. Connect first.');
       return;
     }
 
+    const { FileLogger } = await import('./utils/FileLogger');
     const logPath = `${this.manifest.dir}/ble-experiment.log`;
     const logger = new FileLogger(
       {
@@ -163,12 +156,13 @@ export default class CubicJBrewingPlugin extends Plugin {
   }
 
   private async activateView(): Promise<void> {
-    const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_BREWING);
+    if (!this.viewType) return;
+    const leaves = this.app.workspace.getLeavesOfType(this.viewType);
     if (leaves.length === 0) {
       const leaf = this.app.workspace.getRightLeaf(false);
-      await leaf?.setViewState({ type: VIEW_TYPE_BREWING, active: true });
+      await leaf?.setViewState({ type: this.viewType, active: true });
     }
-    const target = this.app.workspace.getLeavesOfType(VIEW_TYPE_BREWING)[0];
+    const target = this.app.workspace.getLeavesOfType(this.viewType)[0];
     if (target) this.app.workspace.revealLeaf(target);
   }
 }

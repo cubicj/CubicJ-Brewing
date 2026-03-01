@@ -95,8 +95,18 @@ export class AccordionManager {
 					requestAnimationFrame(() => {
 						body.style.maxHeight = h + 'px';
 					});
+					const ref = body;
+					const onOpenEnd = (e: TransitionEvent) => {
+						if (e.propertyName === 'max-height') {
+							ref.style.maxHeight = 'none';
+							ref.removeEventListener('transitionend', onOpenEnd);
+							this.accordionEndListeners.delete(ref);
+						}
+					};
+					this.accordionEndListeners.set(body, onOpenEnd);
+					body.addEventListener('transitionend', onOpenEnd);
 				} else {
-					body.style.maxHeight = body.scrollHeight + 'px';
+					body.style.maxHeight = 'none';
 				}
 			} else {
 				if (wasOpen) {
@@ -106,6 +116,7 @@ export class AccordionManager {
 					}
 
 					body.style.maxHeight = body.scrollHeight + 'px';
+					void body.offsetHeight;
 					requestAnimationFrame(() => {
 						body.classList.remove('is-open');
 						body.style.maxHeight = '0px';
@@ -139,6 +150,39 @@ export class AccordionManager {
 	expandStep(step: FlowStep): void {
 		const stepOrder: FlowStep[] = ['method', 'bean', 'configure', 'brewing', 'saving'];
 		this.expandedSteps.add(stepOrder.indexOf(step));
+	}
+
+	animateContentChange(step: FlowStep, mutation: () => void): void {
+		const stepOrder: FlowStep[] = ['method', 'bean', 'configure', 'brewing', 'saving'];
+		const idx = stepOrder.indexOf(step);
+		const p = this.panels[idx];
+		if (!p || !this.expandedSteps.has(idx) || !p.body.classList.contains('is-open') || p.body.style.maxHeight !== 'none') {
+			mutation();
+			return;
+		}
+		const { body } = p;
+		const prev = this.accordionEndListeners.get(body);
+		if (prev) {
+			body.removeEventListener('transitionend', prev);
+			this.accordionEndListeners.delete(body);
+		}
+		const before = body.scrollHeight;
+		mutation();
+		const after = body.scrollHeight;
+		if (before === after) return;
+		body.style.height = before + 'px';
+		void body.offsetHeight;
+		requestAnimationFrame(() => {
+			body.style.height = after + 'px';
+			const onEnd = (e: TransitionEvent) => {
+				if (e.propertyName !== 'height') return;
+				body.style.height = '';
+				body.removeEventListener('transitionend', onEnd);
+				this.accordionEndListeners.delete(body);
+			};
+			this.accordionEndListeners.set(body, onEnd);
+			body.addEventListener('transitionend', onEnd);
+		});
 	}
 
 	isBuilt(): boolean {

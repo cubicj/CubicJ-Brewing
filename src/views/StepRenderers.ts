@@ -10,6 +10,8 @@ export type FlowStep = 'method' | 'bean' | 'configure' | 'brewing' | 'saving';
 
 const METHOD_LABELS: Record<BrewMethod, string> = { filter: '필터', espresso: '에스프레소' };
 const TEMP_LABELS: Record<BrewTemp, string> = { hot: 'Hot', iced: 'Ice' };
+const FILTERS = ['하이플럭스', 'V60 기본'];  // TBD: vault note DB
+const BASKETS = ['DH 18g', 'IMS SF 20g', 'IMS 20g', 'Torch 18g'];  // TBD: vault note DB
 const DRINK_LABELS: Record<EspressoDrink, string> = { shot: '샷', americano: '아메리카노', latte: '라떼' };
 
 export const STEP_CONFIG: Array<{ step: FlowStep; label: string }> = [
@@ -32,6 +34,7 @@ export interface StepRenderContext {
 	resetFlow: () => void;
 	recorder: BrewProfileRecorder;
 	expandStep: (step: FlowStep) => void;
+	animateContentChange: (step: FlowStep, mutation: () => void) => void;
 }
 
 export function renderStep(step: FlowStep, container: HTMLElement, ctx: StepRenderContext): void {
@@ -57,7 +60,7 @@ export function getStepSummary(step: FlowStep, sel: BrewFlowSelection): string {
 		case 'configure': {
 			if (sel.grindSize == null) return '';
 			const parts = [`${sel.grindSize}`, `${sel.dose}g`];
-			if (sel.method === 'filter' && sel.waterTemp) parts.push(`${sel.waterTemp}°`);
+			if (sel.method === 'filter' && sel.waterTemp) parts.push(`${sel.waterTemp}°C`);
 			if (sel.method === 'filter' && sel.filter) parts.push(sel.filter);
 			if (sel.method === 'espresso' && sel.basket) parts.push(sel.basket);
 			return parts.join(' · ');
@@ -110,8 +113,11 @@ function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
 				methodBtns.forEach(b => b.removeClass('is-active'));
 				btn.addClass('is-active');
 			}
-			drinkRow.style.display = selectedMethod === 'espresso' ? '' : 'none';
-			if (selectedMethod !== 'espresso') selectedDrink = null;
+			const show = selectedMethod === 'espresso';
+			if (!show) selectedDrink = null;
+			ctx.animateContentChange('method', () => {
+				drinkRow.style.display = show ? '' : 'none';
+			});
 			syncSelection();
 			tryAdvance();
 		});
@@ -223,7 +229,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 		card.createDiv({ cls: 'brew-flow-last-record-title', text: '이전 기록' });
 		const r = sel.lastRecord;
 		const parts = [`분쇄도 ${r.grindSize}`, `${r.dose}g`];
-		if (r.method === 'filter') parts.push(`${r.waterTemp}°`, r.filter);
+		if (r.method === 'filter') parts.push(`${r.waterTemp}°C`, r.filter);
 		if (r.method === 'espresso') parts.push(r.basket);
 		if (r.time) {
 			const min = Math.floor(r.time / 60);
@@ -249,7 +255,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 		const filterGroup = form.createDiv();
 		filterGroup.createEl('label', { text: '필터' });
 		filterSelect = filterGroup.createEl('select');
-		for (const f of ctx.plugin.settings.filters) {
+		for (const f of FILTERS) {
 			filterSelect.createEl('option', { text: f, value: f });
 		}
 		if (sel.filter) filterSelect.value = sel.filter;
@@ -259,7 +265,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 		const basketGroup = form.createDiv();
 		basketGroup.createEl('label', { text: '바스켓' });
 		basketSelect = basketGroup.createEl('select');
-		for (const b of ctx.plugin.settings.baskets) {
+		for (const b of BASKETS) {
 			basketSelect.createEl('option', { text: b, value: b });
 		}
 		if (sel.basket) basketSelect.value = sel.basket;
@@ -380,7 +386,7 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 
 	container.createEl('h4', { text: '메모', cls: 'brew-flow-section-label' });
 	const noteEl = container.createEl('textarea', { cls: 'brew-flow-note' });
-	noteEl.placeholder = '맛, 변수 조절 메모...';
+	noteEl.placeholder = '';
 
 	let roReady = false;
 	const ro = new ResizeObserver(() => {

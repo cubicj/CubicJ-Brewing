@@ -131,6 +131,7 @@ export class BrewingView extends ItemView {
 			resetFlow: () => this.resetFlow(),
 			recorder: this.recorder,
 			expandStep: (step) => this.accordion.expandStep(step),
+			animateContentChange: (step, mutation) => this.accordion.animateContentChange(step, mutation),
 		};
 	}
 
