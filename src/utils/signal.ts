@@ -68,7 +68,7 @@ export function savitzkyGolay(
 }
 
 export function processDetail(points: BrewProfilePoint[]): BrewProfilePoint[] {
-	return savitzkyGolay(spikeFilter(points));
+	return spikeFilter(points);
 }
 
 export function processTrend(points: BrewProfilePoint[]): BrewProfilePoint[] {

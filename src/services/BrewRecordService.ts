@@ -1,4 +1,4 @@
-import type { BrewRecord, BrewMethod } from '../brew/types';
+import type { BrewRecord, BrewMethod, BrewTemp } from '../brew/types';
 
 export interface StorageAdapter {
 	read(): Promise<string | null>;
@@ -40,10 +40,11 @@ export class BrewRecordService {
 		this.onChange?.();
 	}
 
-	async getLastRecord(bean: string, method: BrewMethod): Promise<BrewRecord | undefined> {
+	async getLastRecord(bean: string, method: BrewMethod, temp: BrewTemp, filter?: string): Promise<BrewRecord | undefined> {
 		const records = await this.load();
 		return records
-			.filter(r => r.bean === bean && r.method === method)
+			.filter(r => r.bean === bean && r.method === method && r.temp === temp
+				&& (!filter || (r.method === 'filter' && r.filter === filter)))
 			.sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0];
 	}
 }

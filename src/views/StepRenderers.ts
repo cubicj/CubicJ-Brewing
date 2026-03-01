@@ -1,6 +1,6 @@
 import type CubicJBrewingPlugin from '../main';
 import type { BrewFlowState } from '../brew/BrewFlowState';
-import type { BrewMethod, BrewTemp, EspressoDrink, BrewFlowSelection } from '../brew/types';
+import type { BrewMethod, BrewTemp, EspressoDrink, BrewFlowSelection, BrewRecord } from '../brew/types';
 import type { TimerController } from './TimerController';
 import { formatTimer } from './TimerController';
 import type { BrewProfileRecorder } from './BrewProfileRecorder';
@@ -14,6 +14,7 @@ export type FlowStep = 'method' | 'bean' | 'configure' | 'brewing' | 'saving';
 const METHOD_LABELS: Record<BrewMethod, string> = { filter: '필터', espresso: '에스프레소' };
 const TEMP_LABELS: Record<BrewTemp, string> = { hot: 'Hot', iced: 'Ice' };
 const FILTERS = ['하이플럭스', 'V60 기본'];  // TBD: vault note DB
+const GRINDERS: string[] = [];  // TBD: vault note DB
 const BASKETS = ['DH 18g', 'IMS SF 20g', 'IMS 20g', 'Torch 18g'];  // TBD: vault note DB
 const DRINK_LABELS: Record<EspressoDrink, string> = { shot: '샷', americano: '아메리카노', latte: '라떼' };
 
@@ -59,8 +60,15 @@ export function getStepSummary(step: FlowStep, sel: BrewFlowSelection): string {
 			if (sel.drink) parts.push(DRINK_LABELS[sel.drink]);
 			return parts.join(' · ');
 		}
-		case 'bean':
-			return sel.bean ? sel.bean.name : '';
+		case 'bean': {
+			if (!sel.bean) return '';
+			const parts = [sel.bean.name];
+			if (sel.bean.roastDate) {
+				const days = Math.floor((Date.now() - new Date(sel.bean.roastDate).getTime()) / 86400000);
+				if (days >= 0) parts.push(`${days}일차`);
+			}
+			return parts.join(' · ');
+		}
 		case 'configure': {
 			if (sel.grindSize == null) return '';
 			const parts = [`${sel.grindSize}`, `${sel.dose}g`];
@@ -87,6 +95,94 @@ function createFormField(container: HTMLElement, label: string, type: string, va
 	input.value = value;
 	if (type === 'number') input.step = 'any';
 	return input;
+}
+
+interface StepperConfig {
+	label: string;
+	initial: number;
+	min: number;
+	max: number;
+	step: number;
+	format: (v: number) => string;
+	pxPerStep: number;
+}
+
+function createStepper(container: HTMLElement, config: StepperConfig): { getValue: () => number; setValue: (v: number) => void } {
+	let value = config.initial;
+	const group = container.createDiv({ cls: 'brew-flow-stepper' });
+	group.createEl('label', { text: config.label });
+	const controls = group.createDiv({ cls: 'brew-flow-stepper-controls' });
+
+	const clamp = (v: number) => Math.max(config.min, Math.min(config.max, v));
+	const display = controls.createDiv({ cls: 'brew-flow-stepper-value is-draggable' });
+	const update = () => { display.textContent = config.format(value); };
+
+	const decBtn = controls.createEl('button', { text: '◀', cls: 'brew-flow-stepper-btn' });
+	controls.insertBefore(decBtn, display);
+	decBtn.addEventListener('click', () => { value = clamp(value - config.step); update(); });
+
+	update();
+
+	const incBtn = controls.createEl('button', { text: '▶', cls: 'brew-flow-stepper-btn' });
+	incBtn.addEventListener('click', () => { value = clamp(value + config.step); update(); });
+
+	let dragStartX = 0;
+	let dragStartVal = 0;
+	let dragged = false;
+	const onMove = (e: MouseEvent) => {
+		const dx = e.clientX - dragStartX;
+		if (Math.abs(dx) > 3) dragged = true;
+		const raw = dragStartVal + (dx / config.pxPerStep) * config.step;
+		value = clamp(Math.round(raw / config.step) * config.step);
+		update();
+	};
+	const onUp = () => {
+		document.removeEventListener('mousemove', onMove);
+		document.removeEventListener('mouseup', onUp);
+		display.removeClass('is-dragging');
+	};
+	display.addEventListener('mousedown', (e: MouseEvent) => {
+		e.preventDefault();
+		dragStartX = e.clientX;
+		dragStartVal = value;
+		dragged = false;
+		display.addClass('is-dragging');
+		document.addEventListener('mousemove', onMove);
+		document.addEventListener('mouseup', onUp);
+	});
+
+	let editing = false;
+	display.addEventListener('dblclick', () => {
+		if (editing) return;
+		editing = true;
+		const input = document.createElement('input');
+		input.type = 'number';
+		input.step = 'any';
+		input.value = String(value);
+		input.className = 'brew-flow-stepper-input';
+		display.textContent = '';
+		display.appendChild(input);
+		input.focus();
+		input.select();
+		const commit = () => {
+			if (!editing) return;
+			editing = false;
+			const parsed = parseFloat(input.value);
+			if (!isNaN(parsed)) value = clamp(parsed);
+			input.remove();
+			update();
+		};
+		input.addEventListener('blur', commit);
+		input.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') commit();
+			if (e.key === 'Escape') { editing = false; input.remove(); update(); }
+		});
+	});
+
+	return {
+		getValue: () => value,
+		setValue: (v: number) => { value = clamp(v); update(); },
+	};
 }
 
 function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
@@ -175,8 +271,15 @@ function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
 	const tryAdvance = () => {
 		const complete = !!selectedMethod && !!selectedTemp && (selectedMethod !== 'espresso' || !!selectedDrink);
 		if (complete) {
-			setTimeout(() => {
+			setTimeout(async () => {
 				ctx.flowState.selectMethod(selectedMethod!, selectedTemp!, selectedDrink ?? undefined);
+				const bean = ctx.flowState.selection.bean;
+				if (bean) {
+					const lastRecord = await ctx.plugin.recordService.getLastRecord(
+						bean.name, selectedMethod!, selectedTemp!,
+					);
+					ctx.flowState.selectBean(bean, lastRecord);
+				}
 				ctx.renderContent();
 			}, 150);
 		} else if (ctx.flowState.step !== 'method') {
@@ -213,7 +316,8 @@ async function renderBean(container: HTMLElement, ctx: StepRenderContext): Promi
 			} else {
 				const lastRecord = await ctx.plugin.recordService.getLastRecord(
 					bean.name,
-					ctx.flowState.selection.method!
+					ctx.flowState.selection.method!,
+					ctx.flowState.selection.temp!,
 				);
 				ctx.flowState.selectBean(bean, lastRecord);
 				ctx.renderContent();
@@ -228,34 +332,31 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	const isFilter = sel.method === 'filter';
 	const isEspresso = sel.method === 'espresso';
 
-	if (sel.lastRecord) {
-		const card = container.createDiv({ cls: 'brew-flow-last-record' });
+	const cardWrapper = container.createDiv();
+
+	const updateCard = (record: BrewRecord | undefined) => {
+		cardWrapper.empty();
+		const card = cardWrapper.createDiv({ cls: 'brew-flow-last-record' });
 		card.createDiv({ cls: 'brew-flow-last-record-title', text: '이전 기록' });
-		const r = sel.lastRecord;
-		const parts = [`분쇄도 ${r.grindSize}`, `${r.dose}g`];
-		if (r.method === 'filter') parts.push(`${r.waterTemp}°C`, r.filter);
-		if (r.method === 'espresso') parts.push(r.basket);
-		if (r.time) {
-			const min = Math.floor(r.time / 60);
-			const sec = Math.floor(r.time % 60);
-			parts.push(`${min}:${sec.toString().padStart(2, '0')}`);
+		if (!record) {
+			card.createDiv({ cls: 'brew-flow-last-record-meta', text: '-' });
+			return;
 		}
-		if (r.yield) parts.push(`${r.yield}g`);
+		const parts = [`분쇄도 ${record.grindSize}`, `${record.dose}g`];
+		if (record.method === 'filter') parts.push(`${record.waterTemp}°C`);
+		if (record.method === 'espresso') parts.push(record.basket);
 		card.createDiv({ cls: 'brew-flow-last-record-meta', text: parts.join(' · ') });
-	}
+	};
+
+	updateCard(sel.lastRecord);
 
 	const form = container.createDiv({ cls: 'brew-flow-form' });
 
-	const grindInput = createFormField(form, '분쇄도', 'number', String(sel.grindSize ?? ''));
-	const doseInput = createFormField(form, '원두량 (g)', 'number', String(sel.dose ?? ''));
-
-	let waterTempInput: HTMLInputElement | null = null;
 	let filterSelect: HTMLSelectElement | null = null;
 	let basketSelect: HTMLSelectElement | null = null;
+	let waterTempStepper: ReturnType<typeof createStepper> | null = null;
 
 	if (isFilter) {
-		waterTempInput = createFormField(form, '수온 (°C)', 'number', String(sel.waterTemp ?? ''));
-
 		const filterGroup = form.createDiv();
 		filterGroup.createEl('label', { text: '필터' });
 		filterSelect = filterGroup.createEl('select');
@@ -273,6 +374,56 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 			basketSelect.createEl('option', { text: b, value: b });
 		}
 		if (sel.basket) basketSelect.value = sel.basket;
+	}
+
+	if (GRINDERS.length > 0) {
+		const grinderGroup = form.createDiv();
+		grinderGroup.createEl('label', { text: '그라인더' });
+		const grinderSelect = grinderGroup.createEl('select');
+		for (const g of GRINDERS) {
+			grinderSelect.createEl('option', { text: g, value: g });
+		}
+	}
+
+	const grindStepper = createStepper(form, {
+		label: '분쇄도', initial: sel.grindSize ?? 0,
+		min: 0, max: 50, step: 0.1,
+		format: v => v.toFixed(1), pxPerStep: 8,
+	});
+	const doseStepper = createStepper(form, {
+		label: '원두량', initial: sel.dose ?? 0,
+		min: 0, max: 100, step: 0.1,
+		format: v => `${v.toFixed(1)}g`, pxPerStep: 8,
+	});
+
+	const applyLastRecord = (record: BrewRecord) => {
+		grindStepper.setValue(record.grindSize);
+		doseStepper.setValue(record.dose);
+		if (record.method === 'filter') {
+			waterTempStepper?.setValue(record.waterTemp);
+		}
+		sel.lastRecord = record;
+		sel.grindSize = record.grindSize;
+		sel.dose = record.dose;
+		if (record.method === 'filter') {
+			sel.waterTemp = record.waterTemp;
+		}
+	};
+
+	if (isFilter) {
+		waterTempStepper = createStepper(form, {
+			label: '수온', initial: sel.waterTemp ?? 93,
+			min: 0, max: 100, step: 1,
+			format: v => `${v}°C`, pxPerStep: 8,
+		});
+
+		filterSelect!.addEventListener('change', async () => {
+			const record = await ctx.plugin.recordService.getLastRecord(
+				sel.bean!.name, sel.method!, sel.temp!, filterSelect!.value,
+			);
+			updateCard(record);
+			if (record) applyLastRecord(record);
+		});
 	}
 
 	const recipes = ctx.plugin.vaultData.getAllRecipes();
@@ -293,11 +444,11 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	const completeBtn = container.createEl('button', { text: '세팅 완료', cls: 'brew-flow-start-btn' });
 	completeBtn.addEventListener('click', () => {
 		const vars: Partial<BrewFlowSelection> = {
-			grindSize: parseFloat(grindInput.value) || 0,
-			dose: parseFloat(doseInput.value) || 0,
+			grindSize: grindStepper.getValue(),
+			dose: doseStepper.getValue(),
 		};
 		if (isFilter) {
-			vars.waterTemp = parseFloat(waterTempInput!.value) || 0;
+			vars.waterTemp = waterTempStepper!.getValue();
 			vars.filter = filterSelect!.value;
 		}
 		if (isEspresso) {

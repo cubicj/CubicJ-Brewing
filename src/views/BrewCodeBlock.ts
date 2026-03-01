@@ -64,7 +64,7 @@ export class BrewCodeBlock {
 		const table = el.createEl('table', { cls: 'brew-record-table' });
 		const thead = table.createEl('thead');
 		const headerRow = thead.createEl('tr');
-		for (const col of ['날짜', '방식', '로스팅', '분쇄도', '원두', '메모', '그래프']) {
+		for (const col of ['날짜', '방식', '메모', '상세']) {
 			headerRow.createEl('th', { text: col });
 		}
 
@@ -76,21 +76,18 @@ export class BrewCodeBlock {
 			dateTd.createDiv({ text: `${String(d.getFullYear()).slice(2)}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` });
 			const h = d.getHours();
 			dateTd.createDiv({ text: `${h % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}` });
-			tr.createEl('td', { text: record.method === 'espresso' ? '에스프레소' : '필터' });
-			tr.createEl('td', { text: record.roastDays !== null ? `${record.roastDays}일` : '-' });
-			tr.createEl('td', { text: String(record.grindSize) });
-			tr.createEl('td', { text: `${record.dose}g` });
+			const method = record.method === 'espresso' ? '에스프레소' : '필터';
+			const temp = record.temp === 'iced' ? 'Ice' : 'Hot';
+			tr.createEl('td', { text: `${method}(${temp})` });
 			tr.createEl('td', { text: record.note ?? '', cls: 'brew-record-note' });
 
 			const actionTd = tr.createEl('td');
-			if (record.profilePath) {
-				const btn = actionTd.createEl('button', { cls: 'brew-record-chart-btn' });
-				setIcon(btn, 'line-chart');
-				btn.addEventListener('click', () => {
-					const title = `${beanName} — ${this.formatDate(record.timestamp)}`;
-					new BrewProfileModal(this.app, title, record.profilePath!, this.profileStorage).open();
-				});
-			}
+			const btn = actionTd.createEl('button', { cls: 'brew-record-chart-btn' });
+			setIcon(btn, 'list');
+			btn.addEventListener('click', () => {
+				const title = `${beanName} — ${this.formatDate(record.timestamp)}`;
+				new BrewProfileModal(this.app, title, record, this.profileStorage).open();
+			});
 		}
 	}
 

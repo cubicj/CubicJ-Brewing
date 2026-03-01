@@ -124,7 +124,7 @@ describe('savitzkyGolay', () => {
 });
 
 describe('processDetail', () => {
-	it('applies spike filter then SG', () => {
+	it('applies spike filter only', () => {
 		const points: BrewProfilePoint[] = Array.from({ length: 20 }, (_, i) => ({
 			t: i * 0.1, w: 100 + i,
 		}));
