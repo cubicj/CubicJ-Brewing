@@ -725,3 +725,116 @@
 .cubicj-data-manage-modal .dm-new-bean-btn {
   font-size: 0.85em;
 }
+
+/* Brew Records Code Block */
+.cm-embed-block:has(.block-language-brews) {
+  --embed-block-shadow-hover: none;
+}
+.block-language-brews > button,
+.block-language-brews .copy-code-button,
+.block-language-brews .code-block-flair,
+.cm-embed-block:has(.block-language-brews) > .edit-block-button,
+.cm-embed-block:has(.block-language-brews):hover > .edit-block-button {
+  display: none !important;
+}
+
+.block-language-brews .brew-records-empty {
+  color: var(--text-muted);
+  padding: 12px 0;
+  font-size: var(--font-ui-small);
+}
+
+.block-language-brews .brew-record-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-ui-small);
+}
+.block-language-brews .brew-record-table th {
+  text-align: left;
+  color: var(--text-muted);
+  font-weight: 500;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  white-space: nowrap;
+}
+.block-language-brews .brew-record-table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--background-modifier-border-hover);
+  white-space: nowrap;
+}
+.block-language-brews .brew-record-note {
+  white-space: normal;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.block-language-brews .brew-record-chart-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 14px;
+  opacity: 0.6;
+  box-shadow: none;
+}
+.block-language-brews .brew-record-chart-btn:hover {
+  opacity: 1;
+}
+.block-language-brews .brew-records-header {
+  margin: 0 0 8px;
+  font-size: var(--font-ui-medium);
+}
+
+/* Brew Profile Expand Button (sidebar) */
+.cubicj-brewing-view .brew-profile-wrapper {
+  position: relative;
+}
+.cubicj-brewing-view .brew-profile-expand-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 1;
+  background: rgba(10, 10, 10, 0.6);
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 14px;
+  line-height: 1;
+  border-radius: 3px;
+  box-shadow: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.cubicj-brewing-view .brew-profile-wrapper:hover .brew-profile-expand-btn {
+  opacity: 1;
+}
+.cubicj-brewing-view .brew-profile-expand-btn:hover {
+  color: #ddd;
+  background: rgba(10, 10, 10, 0.8);
+}
+
+/* Brew Profile Modal */
+.brew-profile-modal {
+  --modal-width: 90vw;
+  --modal-max-width: 90vw;
+}
+.brew-profile-modal .brew-profile-subtitle {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  margin-bottom: 12px;
+}
+.brew-profile-modal .brew-profile-container {
+  height: auto;
+  overflow-x: auto;
+}
+.brew-profile-modal .brew-profile-empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 40px 0;
+}
+.brew-profile-modal .brew-profile-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}

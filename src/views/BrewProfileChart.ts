@@ -17,10 +17,13 @@ export class BrewProfileChart {
 	private staticPoints: BrewProfilePoint[] | null = null;
 	private ro: ResizeObserver;
 
-	constructor(container: HTMLElement) {
+	private chartHeight: number;
+
+	constructor(container: HTMLElement, height = CHART_HEIGHT) {
+		this.chartHeight = height;
 		this.canvas = container.createEl('canvas', { cls: 'brew-profile-canvas' });
-		this.canvas.height = CHART_HEIGHT * devicePixelRatio;
-		this.canvas.style.height = CHART_HEIGHT + 'px';
+		this.canvas.height = height * devicePixelRatio;
+		this.canvas.style.height = height + 'px';
 		this.canvas.style.width = '100%';
 		this.ctx = this.canvas.getContext('2d')!;
 

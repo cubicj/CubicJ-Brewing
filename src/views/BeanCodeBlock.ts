@@ -128,6 +128,9 @@ export class BeanCodeBlock {
 			'roast_date:',
 			'---',
 			'',
+			'```brews',
+			'```',
+			'',
 		].join('\n');
 
 		await this.app.vault.create(path, template);
