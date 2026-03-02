@@ -936,3 +936,103 @@
   gap: 8px;
   margin-top: 20px;
 }
+
+/* Equipment tab */
+.dm-equip-category {
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin: 16px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.dm-equip-category:first-child {
+  margin-top: 0;
+}
+.dm-equip-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 8px 0 4px;
+  font-weight: 500;
+}
+.dm-equip-add-btn {
+  font-size: 1.1em;
+  padding: 0 6px;
+  min-width: unset;
+}
+.dm-equip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.dm-equip-row:hover {
+  background: var(--background-modifier-hover);
+}
+.dm-equip-row span:first-child {
+  flex: 1;
+}
+.dm-equip-grinder-meta {
+  color: var(--text-muted);
+  font-size: 0.85em;
+  flex: none !important;
+}
+.dm-equip-del-btn {
+  opacity: 0;
+  font-size: 0.8em;
+  padding: 0 4px;
+  min-width: unset;
+  color: var(--text-muted);
+}
+.dm-equip-row:hover .dm-equip-del-btn {
+  opacity: 1;
+}
+.dm-equip-input {
+  width: 100%;
+  padding: 4px 8px;
+  margin: 4px 0;
+}
+.dm-equip-num {
+  width: 60px;
+}
+.dm-equip-grinder-form {
+  padding: 8px;
+  margin: 4px 0;
+  background: var(--background-secondary);
+  border-radius: 6px;
+}
+.dm-equip-grinder-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+.dm-equip-select {
+  padding: 4px 8px;
+}
+.dm-equip-grinder-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: flex-end;
+}
+
+/* Accessories checklist */
+.brew-flow-accessories {
+  margin: 4px 0;
+}
+.brew-flow-accessories > label:first-child {
+  display: block;
+  margin-bottom: 4px;
+}
+.brew-flow-accessory-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  cursor: pointer;
+}

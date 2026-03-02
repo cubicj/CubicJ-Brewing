@@ -1,6 +1,6 @@
 import type CubicJBrewingPlugin from '../main';
 import type { BrewFlowState } from '../brew/BrewFlowState';
-import type { BrewMethod, BrewTemp, EspressoDrink, BrewFlowSelection, BrewRecord } from '../brew/types';
+import type { BrewMethod, BrewTemp, EspressoDrink, BrewFlowSelection, BrewRecord, GrinderConfig } from '../brew/types';
 import type { TimerController } from './TimerController';
 import { formatTimer } from './TimerController';
 import type { BrewProfileRecorder } from './BrewProfileRecorder';
@@ -39,9 +39,11 @@ export interface StepRenderContext {
 	expandStep: (step: FlowStep) => void;
 	animateContentChange: (step: FlowStep, mutation: () => void) => void;
 	profileStorage: BrewProfileStorage;
+	grinders: GrinderConfig[];
+	drippers: string[];
 	filters: string[];
 	baskets: string[];
-	grinders: string[];
+	accessories: string[];
 }
 
 export function renderStep(step: FlowStep, container: HTMLElement, ctx: StepRenderContext): void {
@@ -73,8 +75,10 @@ export function getStepSummary(step: FlowStep, sel: BrewFlowSelection): string {
 		}
 		case 'configure': {
 			if (sel.grindSize == null) return '';
-			const fmt = (v: number) => parseFloat(v.toFixed(1));
-			const parts = [`${fmt(sel.grindSize!)}`, `${fmt(sel.dose!)}g`];
+			const fmt = (v: number) => parseFloat(v.toFixed(2));
+			const parts: string[] = [];
+			if (sel.grinder) parts.push(sel.grinder);
+			parts.push(`${fmt(sel.grindSize!)}`, `${fmt(sel.dose!)}g`);
 			if (sel.method === 'filter' && sel.waterTemp) parts.push(`${sel.waterTemp}°C`);
 			if (sel.method === 'filter' && sel.filter) parts.push(sel.filter);
 			if (sel.method === 'espresso' && sel.basket) parts.push(sel.basket);
@@ -220,6 +224,16 @@ async function renderBean(container: HTMLElement, ctx: StepRenderContext): Promi
 	}
 }
 
+function grinderToStepperConfig(g: GrinderConfig) {
+	const decimals = Math.max(0, -Math.floor(Math.log10(g.step)));
+	return {
+		step: g.step,
+		min: g.min,
+		max: g.max,
+		format: (v: number) => v.toFixed(decimals),
+	};
+}
+
 function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	container.addClass('brew-flow-configure');
 	const sel = ctx.flowState.selection;
@@ -248,26 +262,58 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 
 	let filterSelect: HTMLSelectElement | null = null;
 	let basketSelect: HTMLSelectElement | null = null;
+	let dripperSelect: HTMLSelectElement | null = null;
 	let waterTempStepper: ReturnType<typeof createStepper> | null = null;
+	const syncSummary = () => ctx.updateAccordion();
 
 	if (isFilter) {
 		filterSelect = createSelectField(form, '필터', ctx.filters, sel.filter ?? ctx.filters[0], (v) => { sel.filter = v; syncSummary(); });
+		if (ctx.drippers.length > 0) {
+			dripperSelect = createSelectField(form, '드리퍼', ctx.drippers, sel.dripper ?? ctx.drippers[0], (v) => { sel.dripper = v; syncSummary(); });
+		}
 	}
 
 	if (isEspresso) {
 		basketSelect = createSelectField(form, '바스켓', ctx.baskets, sel.basket ?? ctx.baskets[0], (v) => { sel.basket = v; syncSummary(); });
 	}
 
+	let selectedGrinder: GrinderConfig | undefined;
+	let grindStepperConfig = { step: 0.1, min: 0, max: 50, format: (v: number) => v.toFixed(1) };
+
 	if (ctx.grinders.length > 0) {
-		createSelectField(form, '그라인더', ctx.grinders, ctx.grinders[0], () => {});
+		if (sel.grinder) {
+			selectedGrinder = ctx.grinders.find(g => g.name === sel.grinder);
+		}
+		if (!selectedGrinder) {
+			selectedGrinder = ctx.grinders[0];
+			sel.grinder = selectedGrinder.name;
+		}
+		grindStepperConfig = grinderToStepperConfig(selectedGrinder);
+
+		if (ctx.grinders.length > 1) {
+			const grinderNames = ctx.grinders.map(g => g.name);
+			createSelectField(form, '그라인더', grinderNames, selectedGrinder.name, (v) => {
+				const g = ctx.grinders.find(gr => gr.name === v)!;
+				sel.grinder = g.name;
+				sel.grindSize = undefined;
+				grindStepperConfig = grinderToStepperConfig(g);
+				grindStepper.destroy();
+				grindStepper = createStepper(form, {
+					label: '분쇄도', initial: 0,
+					...grindStepperConfig, pxPerStep: 8,
+					onChange: grindOnChange,
+				});
+				form.insertBefore(grindStepper.el, doseStepper.el);
+				syncSummary();
+			});
+		}
 	}
 
-	const syncSummary = () => ctx.updateAccordion();
-	const grindStepper = createStepper(form, {
+	const grindOnChange = (v: number) => { sel.grindSize = v; syncSummary(); };
+	let grindStepper = createStepper(form, {
 		label: '분쇄도', initial: sel.grindSize ?? 0,
-		min: 0, max: 50, step: 0.1,
-		format: v => v.toFixed(1), pxPerStep: 8,
-		onChange: v => { sel.grindSize = v; syncSummary(); },
+		...grindStepperConfig, pxPerStep: 8,
+		onChange: grindOnChange,
 	});
 	const doseStepper = createStepper(form, {
 		label: '원두량', initial: sel.dose ?? 0,
@@ -288,6 +334,10 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 		if (record.method === 'filter') {
 			sel.waterTemp = record.waterTemp;
 		}
+		if (record.grinder) sel.grinder = record.grinder;
+		if (record.method === 'filter' && record.dripper) {
+			sel.dripper = record.dripper;
+		}
 	};
 
 	if (isFilter) {
@@ -305,6 +355,23 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 			updateCard(record);
 			if (record) applyLastRecord(record);
 		});
+	}
+
+	if (isEspresso && ctx.accessories.length > 0) {
+		const accGroup = form.createDiv({ cls: 'brew-flow-accessories' });
+		accGroup.createEl('label', { text: '악세서리' });
+		const selected = new Set(sel.accessories ?? []);
+		for (const acc of ctx.accessories) {
+			const label = accGroup.createEl('label', { cls: 'brew-flow-accessory-item' });
+			const cb = label.createEl('input', { type: 'checkbox' });
+			cb.checked = selected.has(acc);
+			label.appendText(acc);
+			cb.addEventListener('change', () => {
+				if (cb.checked) selected.add(acc);
+				else selected.delete(acc);
+				sel.accessories = selected.size > 0 ? [...selected] : undefined;
+			});
+		}
 	}
 
 	const recipes = ctx.plugin.vaultData.getAllRecipes();
@@ -327,13 +394,16 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 		const vars: Partial<BrewFlowSelection> = {
 			grindSize: grindStepper.getValue(),
 			dose: doseStepper.getValue(),
+			grinder: sel.grinder,
 		};
 		if (isFilter) {
 			vars.waterTemp = waterTempStepper!.getValue();
 			vars.filter = filterSelect!.value;
+			vars.dripper = dripperSelect?.value;
 		}
 		if (isEspresso) {
 			vars.basket = basketSelect!.value;
+			vars.accessories = sel.accessories;
 		}
 		ctx.flowState.updateVariables(vars);
 		ctx.flowState.startBrewing();

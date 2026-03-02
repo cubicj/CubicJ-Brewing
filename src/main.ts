@@ -8,6 +8,7 @@ import type { FileAdapter } from './services/FileAdapter';
 import { VaultDataService } from './services/VaultDataService';
 import { BeanCodeBlock } from './views/BeanCodeBlock';
 import { BrewCodeBlock } from './views/BrewCodeBlock';
+import type { EquipmentSettings } from './brew/types';
 
 const BLE_PACKET_DEBUG = false;
 const PLUGIN_DEBUG = true;
@@ -17,6 +18,7 @@ export default class CubicJBrewingPlugin extends Plugin {
   recordService!: BrewRecordService;
   profileStorage!: BrewProfileStorage;
   vaultData!: VaultDataService;
+  equipment: EquipmentSettings = { grinders: [], drippers: [], filters: [], baskets: [], accessories: [] };
   pluginLogger: PluginLogger | null = null;
   private beforeUnloadHandler: (() => void) | null = null;
   private blePacketLogger: FileLogger | null = null;
@@ -33,6 +35,7 @@ export default class CubicJBrewingPlugin extends Plugin {
     }
     this.pluginLogger?.log('PLUGIN', 'onload');
     this.vaultData = new VaultDataService(this.app);
+    await this.loadEquipment();
 
     const beanBlock = new BeanCodeBlock(this.app, this.vaultData);
     beanBlock.register((lang, handler) => this.registerMarkdownCodeBlockProcessor(lang, handler));
@@ -74,7 +77,7 @@ export default class CubicJBrewingPlugin extends Plugin {
     };
     this.profileStorage = new BrewProfileStorage(this.manifest.dir, fileAdapter);
 
-    const brewBlock = new BrewCodeBlock(this.app, this.recordService, this.profileStorage);
+    const brewBlock = new BrewCodeBlock(this.app, this.recordService, this.profileStorage, () => this.equipment);
     brewBlock.register((lang, handler) => this.registerMarkdownCodeBlockProcessor(lang, handler));
     this.recordService.onChange = () => brewBlock.refreshAll();
 
@@ -132,6 +135,19 @@ export default class CubicJBrewingPlugin extends Plugin {
     this.acaiaService?.destroy();
     this.pluginLogger?.stop();
     this.blePacketLogger?.stop();
+  }
+
+  async loadEquipment(): Promise<void> {
+    const data = await this.loadData() ?? {};
+    if (data.equipment) {
+      this.equipment = data.equipment;
+    }
+  }
+
+  async saveEquipment(): Promise<void> {
+    const data = await this.loadData() ?? {};
+    data.equipment = this.equipment;
+    await this.saveData(data);
   }
 
   private async activateView(): Promise<void> {

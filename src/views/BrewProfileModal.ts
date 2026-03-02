@@ -2,12 +2,11 @@ import { Modal, type App } from 'obsidian';
 import { BrewProfileChart } from './BrewProfileChart';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import type { BrewRecordService } from '../services/BrewRecordService';
-import type { BrewProfilePoint, BrewRecord } from '../brew/types';
-import { DEFAULT_FILTERS, DEFAULT_BASKETS } from '../brew/constants';
+import type { BrewProfilePoint, BrewRecord, EquipmentSettings } from '../brew/types';
 import { renderEditForm } from './BrewRecordForm';
 
 export type ModalMode =
-	| { type: 'detail'; record: BrewRecord; recordService: BrewRecordService; profileStorage: BrewProfileStorage }
+	| { type: 'detail'; record: BrewRecord; recordService: BrewRecordService; profileStorage: BrewProfileStorage; equipment: EquipmentSettings }
 	| { type: 'expand'; points: BrewProfilePoint[] };
 
 export class BrewProfileModal extends Modal {
@@ -106,8 +105,7 @@ export class BrewProfileModal extends Modal {
 		this.contentEl.createDiv({ text: this.subtitle, cls: 'brew-profile-subtitle' });
 		renderEditForm(this.contentEl, this.record, {
 			app: this.app,
-			filters: DEFAULT_FILTERS,
-			baskets: DEFAULT_BASKETS,
+			equipment: this.mode.equipment,
 			recordService: this.mode.recordService,
 			profileStorage: this.mode.profileStorage,
 			onSaved: (updated) => { this.record = updated; this.renderReadMode(); },
@@ -128,16 +126,22 @@ export class BrewProfileModal extends Modal {
 
 		const items: [string, string][] = [
 			['로스팅', record.roastDays !== null ? `${record.roastDays}일차` : '-'],
-			['분쇄도', String(record.grindSize)],
-			['원두', `${record.dose}g`],
 		];
+
+		if (record.grinder) items.push(['그라인더', record.grinder]);
+		items.push(['분쇄도', String(record.grindSize)]);
+		items.push(['원두', `${record.dose}g`]);
 
 		if (record.method === 'filter') {
 			items.push(['물 온도', `${record.waterTemp}°C`]);
 			items.push(['필터', record.filter]);
+			if (record.dripper) items.push(['드리퍼', record.dripper]);
 		} else {
 			items.push(['음료', record.drink === 'shot' ? '샷' : record.drink === 'americano' ? '아메리카노' : '라떼']);
 			items.push(['바스켓', record.basket]);
+			if (record.accessories && record.accessories.length > 0) {
+				items.push(['악세서리', record.accessories.join(', ')]);
+			}
 		}
 
 		for (const [label, value] of items) {

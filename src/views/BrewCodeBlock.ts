@@ -1,7 +1,7 @@
 import { type App, type MarkdownPostProcessorContext, setIcon } from 'obsidian';
 import type { BrewRecordService } from '../services/BrewRecordService';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
-import type { BrewRecord } from '../brew/types';
+import type { BrewRecord, EquipmentSettings } from '../brew/types';
 import { BrewProfileModal } from './BrewProfileModal';
 
 export class BrewCodeBlock {
@@ -11,6 +11,7 @@ export class BrewCodeBlock {
 		private app: App,
 		private recordService: BrewRecordService,
 		private profileStorage: BrewProfileStorage,
+		private getEquipment: () => EquipmentSettings,
 	) {}
 
 	register(registerFn: (lang: string, handler: (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void) => void): void {
@@ -90,7 +91,7 @@ export class BrewCodeBlock {
 			setIcon(btn, 'list');
 			btn.addEventListener('click', () => {
 				const title = `${beanName} — ${this.formatDate(record.timestamp)}`;
-				new BrewProfileModal(this.app, title, { type: 'detail', record, recordService: this.recordService, profileStorage: this.profileStorage }).open();
+				new BrewProfileModal(this.app, title, { type: 'detail', record, recordService: this.recordService, profileStorage: this.profileStorage, equipment: this.getEquipment() }).open();
 			});
 		}
 	}

@@ -1,5 +1,5 @@
 import type { App } from 'obsidian';
-import type { BrewRecord, BrewMethod, BrewTemp, EspressoDrink } from '../brew/types';
+import type { BrewRecord, BrewMethod, BrewTemp, EspressoDrink, EquipmentSettings } from '../brew/types';
 import type { BrewRecordService } from '../services/BrewRecordService';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import { DRINK_LABELS, METHOD_LABELS } from '../brew/constants';
@@ -8,8 +8,7 @@ import { ConfirmModal } from './BrewProfileModal';
 
 export interface BrewRecordFormDeps {
 	app: App;
-	filters: string[];
-	baskets: string[];
+	equipment: EquipmentSettings;
 	recordService: BrewRecordService;
 	profileStorage: BrewProfileStorage;
 	onSaved: (updated: BrewRecord) => void;
@@ -42,6 +41,18 @@ export function renderEditForm(
 		if (t.v === record.temp) opt.selected = true;
 	}
 
+	let grinderSelect: HTMLSelectElement | null = null;
+	if (deps.equipment.grinders.length > 0) {
+		const grinderRow = form.createDiv({ cls: 'brew-edit-row' });
+		grinderRow.createEl('label', { text: '그라인더' });
+		grinderSelect = grinderRow.createEl('select');
+		grinderSelect.createEl('option', { text: '없음', value: '' });
+		for (const g of deps.equipment.grinders) {
+			const opt = grinderSelect.createEl('option', { text: g.name, value: g.name });
+			if (record.grinder === g.name) opt.selected = true;
+		}
+	}
+
 	const grindStepper = createStepper(form, {
 		label: '분쇄도', initial: record.grindSize,
 		min: 0, max: 50, step: 0.1, pxPerStep: 10,
@@ -65,9 +76,21 @@ export function renderEditForm(
 	const filterRow = filterGroup.createDiv({ cls: 'brew-edit-row' });
 	filterRow.createEl('label', { text: '필터' });
 	const filterSelect = filterRow.createEl('select');
-	for (const f of deps.filters) {
+	for (const f of deps.equipment.filters) {
 		const opt = filterSelect.createEl('option', { text: f, value: f });
 		if (record.method === 'filter' && record.filter === f) opt.selected = true;
+	}
+
+	let dripperSelect: HTMLSelectElement | null = null;
+	if (deps.equipment.drippers.length > 0) {
+		const dripperRow = filterGroup.createDiv({ cls: 'brew-edit-row' });
+		dripperRow.createEl('label', { text: '드리퍼' });
+		dripperSelect = dripperRow.createEl('select');
+		dripperSelect.createEl('option', { text: '없음', value: '' });
+		for (const d of deps.equipment.drippers) {
+			const opt = dripperSelect.createEl('option', { text: d, value: d });
+			if (record.method === 'filter' && record.dripper === d) opt.selected = true;
+		}
 	}
 
 	const espressoGroup = form.createDiv({ cls: 'brew-edit-espresso-fields' });
@@ -88,9 +111,25 @@ export function renderEditForm(
 	const basketRow = espressoGroup.createDiv({ cls: 'brew-edit-row' });
 	basketRow.createEl('label', { text: '바스켓' });
 	const basketSelect = basketRow.createEl('select');
-	for (const b of deps.baskets) {
+	for (const b of deps.equipment.baskets) {
 		const opt = basketSelect.createEl('option', { text: b, value: b });
 		if (record.method === 'espresso' && record.basket === b) opt.selected = true;
+	}
+
+	const accChecked = new Set(record.method === 'espresso' ? record.accessories ?? [] : []);
+	if (deps.equipment.accessories.length > 0) {
+		const accContainer = espressoGroup.createDiv({ cls: 'brew-edit-row brew-flow-accessories' });
+		accContainer.createEl('label', { text: '악세서리' });
+		for (const acc of deps.equipment.accessories) {
+			const lbl = accContainer.createEl('label', { cls: 'brew-flow-accessory-item' });
+			const cb = lbl.createEl('input', { type: 'checkbox' });
+			cb.checked = accChecked.has(acc);
+			lbl.appendText(acc);
+			cb.addEventListener('change', () => {
+				if (cb.checked) accChecked.add(acc);
+				else accChecked.delete(acc);
+			});
+		}
 	}
 
 	const noteRow = form.createDiv({ cls: 'brew-edit-row brew-edit-note' });
@@ -131,21 +170,23 @@ export function renderEditForm(
 			temp,
 			grindSize: grindStepper.getValue(),
 			dose: doseStepper.getValue(),
+			grinder: grinderSelect?.value || undefined,
 			note: noteInput.value.trim() || undefined,
 		};
 
 		let changes: Partial<BrewRecord>;
 		if (method === 'filter') {
-			changes = { ...base, method: 'filter' as const, waterTemp: waterTempStepper.getValue(), filter: filterSelect.value };
+			changes = { ...base, method: 'filter' as const, waterTemp: waterTempStepper.getValue(), filter: filterSelect.value, dripper: dripperSelect?.value || undefined };
 		} else {
-			changes = { ...base, method: 'espresso' as const, drink: drinkSelect.value as EspressoDrink, basket: basketSelect.value };
+			const accList = [...accChecked];
+			changes = { ...base, method: 'espresso' as const, drink: drinkSelect.value as EspressoDrink, basket: basketSelect.value, accessories: accList.length > 0 ? accList : undefined };
 		}
 
 		if (method !== record.method) {
 			if (method === 'filter') {
-				changes = { ...changes, drink: undefined, basket: undefined } as any;
+				changes = { ...changes, drink: undefined, basket: undefined, accessories: undefined } as any;
 			} else {
-				changes = { ...changes, waterTemp: undefined, filter: undefined } as any;
+				changes = { ...changes, waterTemp: undefined, filter: undefined, dripper: undefined } as any;
 			}
 		}
 

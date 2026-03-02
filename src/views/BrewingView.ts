@@ -8,7 +8,6 @@ import { ScaleDisplayManager } from './ScaleDisplayManager';
 import { type FlowStep, renderStep, getStepSummary, type StepRenderContext } from './StepRenderers';
 import { AccordionManager } from './AccordionManager';
 import { BrewProfileRecorder } from './BrewProfileRecorder';
-import { DEFAULT_FILTERS, DEFAULT_BASKETS, DEFAULT_GRINDERS } from '../brew/constants';
 
 export const VIEW_TYPE_BREWING = 'cubicj-brewing';
 
@@ -137,9 +136,11 @@ export class BrewingView extends ItemView {
 			expandStep: (step) => this.accordion.expandStep(step),
 			animateContentChange: (step, mutation) => this.accordion.animateContentChange(step, mutation),
 			profileStorage: this.plugin.profileStorage,
-			filters: DEFAULT_FILTERS,
-			baskets: DEFAULT_BASKETS,
-			grinders: DEFAULT_GRINDERS,
+			grinders: this.plugin.equipment.grinders,
+			drippers: this.plugin.equipment.drippers,
+			filters: this.plugin.equipment.filters,
+			baskets: this.plugin.equipment.baskets,
+			accessories: this.plugin.equipment.accessories,
 		};
 	}
 

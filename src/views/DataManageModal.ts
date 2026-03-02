@@ -1,6 +1,6 @@
 import { Modal } from 'obsidian';
 import type CubicJBrewingPlugin from '../main';
-import type { BeanInfo } from '../brew/types';
+import type { BeanInfo, GrinderConfig, EquipmentSettings } from '../brew/types';
 
 type TabId = 'bean' | 'recipe' | 'equip';
 
@@ -162,6 +162,151 @@ export class DataManageModal extends Modal {
 	}
 
 	private renderEquipTab(container: HTMLElement): void {
-		container.createDiv({ cls: 'dm-empty', text: '준비 중' });
+		const eq = this.plugin.equipment;
+
+		this.renderEquipSection(container, '공용', [
+			{ label: '그라인더', items: eq.grinders, key: 'grinders' },
+		]);
+		this.renderEquipSection(container, '필터 브루잉', [
+			{ label: '드리퍼', items: eq.drippers, key: 'drippers' },
+			{ label: '필터', items: eq.filters, key: 'filters' },
+		]);
+		this.renderEquipSection(container, '에스프레소', [
+			{ label: '바스켓', items: eq.baskets, key: 'baskets' },
+			{ label: '악세서리', items: eq.accessories, key: 'accessories' },
+		]);
+	}
+
+	private renderEquipSection(
+		container: HTMLElement,
+		categoryLabel: string,
+		lists: Array<{ label: string; items: string[] | GrinderConfig[]; key: keyof EquipmentSettings }>,
+	): void {
+		container.createDiv({ cls: 'dm-equip-category', text: categoryLabel });
+		for (const list of lists) {
+			if (list.key === 'grinders') {
+				this.renderGrinderList(container, list.label);
+			} else {
+				this.renderStringList(container, list.label, list.key as Exclude<keyof EquipmentSettings, 'grinders'>);
+			}
+		}
+	}
+
+	private renderStringList(container: HTMLElement, label: string, key: Exclude<keyof EquipmentSettings, 'grinders'>): void {
+		const section = container.createDiv({ cls: 'dm-equip-list' });
+		const header = section.createDiv({ cls: 'dm-equip-list-header' });
+		header.createSpan({ text: label });
+		const addBtn = header.createEl('button', { text: '+', cls: 'dm-btn dm-equip-add-btn' });
+
+		const listEl = section.createDiv({ cls: 'dm-equip-items' });
+		const items = this.plugin.equipment[key] as string[];
+
+		const renderItems = () => {
+			listEl.empty();
+			if (items.length === 0) {
+				listEl.createDiv({ cls: 'dm-empty', text: `${label}을(를) 추가하세요` });
+				return;
+			}
+			for (let i = 0; i < items.length; i++) {
+				const row = listEl.createDiv({ cls: 'dm-equip-row' });
+				row.createSpan({ text: items[i] });
+				const delBtn = row.createEl('button', { text: '\u2715', cls: 'dm-btn dm-equip-del-btn' });
+				delBtn.addEventListener('click', async () => {
+					items.splice(i, 1);
+					await this.plugin.saveEquipment();
+					renderItems();
+				});
+			}
+		};
+		renderItems();
+
+		addBtn.addEventListener('click', () => {
+			const input = section.createEl('input', { type: 'text', cls: 'dm-equip-input', placeholder: `${label} 이름` });
+			input.focus();
+			const commit = async () => {
+				const val = input.value.trim();
+				if (val && !items.includes(val)) {
+					items.push(val);
+					await this.plugin.saveEquipment();
+				}
+				input.remove();
+				renderItems();
+			};
+			input.addEventListener('keydown', (e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { input.remove(); } });
+			input.addEventListener('blur', commit);
+		});
+	}
+
+	private renderGrinderList(container: HTMLElement, label: string): void {
+		const section = container.createDiv({ cls: 'dm-equip-list' });
+		const header = section.createDiv({ cls: 'dm-equip-list-header' });
+		header.createSpan({ text: label });
+		const addBtn = header.createEl('button', { text: '+', cls: 'dm-btn dm-equip-add-btn' });
+
+		const listEl = section.createDiv({ cls: 'dm-equip-items' });
+		const grinders = this.plugin.equipment.grinders;
+
+		const renderItems = () => {
+			listEl.empty();
+			if (grinders.length === 0) {
+				listEl.createDiv({ cls: 'dm-empty', text: '그라인더를 추가하세요' });
+				return;
+			}
+			for (let i = 0; i < grinders.length; i++) {
+				const g = grinders[i];
+				const row = listEl.createDiv({ cls: 'dm-equip-row' });
+				row.createSpan({ cls: 'dm-equip-grinder-name', text: g.name });
+				row.createSpan({ cls: 'dm-equip-grinder-meta', text: `${g.step} (${g.min}~${g.max})` });
+				const delBtn = row.createEl('button', { text: '\u2715', cls: 'dm-btn dm-equip-del-btn' });
+				delBtn.addEventListener('click', async () => {
+					grinders.splice(i, 1);
+					await this.plugin.saveEquipment();
+					renderItems();
+				});
+			}
+		};
+		renderItems();
+
+		addBtn.addEventListener('click', () => {
+			const formEl = section.createDiv({ cls: 'dm-equip-grinder-form' });
+			const nameInput = formEl.createEl('input', { type: 'text', cls: 'dm-equip-input', placeholder: '이름' });
+
+			const stepRow = formEl.createDiv({ cls: 'dm-equip-grinder-row' });
+			stepRow.createSpan({ text: '눈금' });
+			const stepSelect = stepRow.createEl('select', { cls: 'dm-equip-select' });
+			for (const s of [0.01, 0.1, 1]) {
+				stepSelect.createEl('option', { text: String(s), value: String(s) });
+			}
+			stepSelect.value = '0.1';
+
+			const rangeRow = formEl.createDiv({ cls: 'dm-equip-grinder-row' });
+			const minInput = rangeRow.createEl('input', { type: 'number', cls: 'dm-equip-input dm-equip-num', placeholder: 'min' });
+			rangeRow.createSpan({ text: '~' });
+			const maxInput = rangeRow.createEl('input', { type: 'number', cls: 'dm-equip-input dm-equip-num', placeholder: 'max' });
+			minInput.value = '0';
+			maxInput.value = '50';
+
+			const btnRow = formEl.createDiv({ cls: 'dm-equip-grinder-actions' });
+			const saveBtn = btnRow.createEl('button', { text: '추가', cls: 'dm-btn dm-btn-accent' });
+			const cancelBtn = btnRow.createEl('button', { text: '취소', cls: 'dm-btn dm-btn-muted' });
+
+			nameInput.focus();
+
+			saveBtn.addEventListener('click', async () => {
+				const name = nameInput.value.trim();
+				if (!name) return;
+				grinders.push({
+					name,
+					step: parseFloat(stepSelect.value),
+					min: parseFloat(minInput.value) || 0,
+					max: parseFloat(maxInput.value) || 50,
+				});
+				await this.plugin.saveEquipment();
+				formEl.remove();
+				renderItems();
+			});
+			cancelBtn.addEventListener('click', () => formEl.remove());
+			nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveBtn.click(); if (e.key === 'Escape') formEl.remove(); });
+		});
 	}
 }
