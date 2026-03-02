@@ -76,12 +76,8 @@ export function getStepSummary(step: FlowStep, sel: BrewFlowSelection): string {
 		case 'configure': {
 			if (sel.grindSize == null) return '';
 			const fmt = (v: number) => parseFloat(v.toFixed(2));
-			const parts: string[] = [];
-			if (sel.grinder) parts.push(sel.grinder);
-			parts.push(`${fmt(sel.grindSize!)}`, `${fmt(sel.dose!)}g`);
+			const parts: string[] = [`분쇄도 ${fmt(sel.grindSize!)}`, `도징량 ${fmt(sel.dose!)}g`];
 			if (sel.method === 'filter' && sel.waterTemp) parts.push(`${sel.waterTemp}°C`);
-			if (sel.method === 'filter' && sel.filter) parts.push(sel.filter);
-			if (sel.method === 'espresso' && sel.basket) parts.push(sel.basket);
 			return parts.join(' · ');
 		}
 		case 'brewing': {
@@ -239,6 +235,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	const sel = ctx.flowState.selection;
 	const isFilter = sel.method === 'filter';
 	const isEspresso = sel.method === 'espresso';
+	const last = sel.lastRecord;
 
 	const cardWrapper = container.createDiv();
 
@@ -256,7 +253,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 		card.createDiv({ cls: 'brew-flow-last-record-meta', text: parts.join(' · ') });
 	};
 
-	updateCard(sel.lastRecord);
+	updateCard(last);
 
 	const form = container.createDiv({ cls: 'brew-flow-form' });
 
@@ -266,10 +263,34 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	let waterTempStepper: ReturnType<typeof createStepper> | null = null;
 	const syncSummary = () => ctx.updateAccordion();
 
+	const queryAndApplyDials = async () => {
+		const equip: { filter?: string; grinder?: string; dripper?: string } = {};
+		if (sel.filter) equip.filter = sel.filter;
+		if (sel.grinder) equip.grinder = sel.grinder;
+		if (sel.dripper) equip.dripper = sel.dripper;
+		const record = await ctx.plugin.recordService.getLastRecord(
+			sel.bean!.name, sel.method!, sel.temp!, equip,
+		);
+		sel.lastRecord = record;
+		updateCard(record);
+		if (record) applyDials(record);
+	};
+
 	if (isFilter) {
-		filterSelect = createSelectField(form, '필터', ctx.filters, sel.filter ?? ctx.filters[0], (v) => { sel.filter = v; syncSummary(); });
+		const initFilter = sel.filter ?? (last?.method === 'filter' && last.filter && ctx.filters.includes(last.filter) ? last.filter : ctx.filters[0]);
+		sel.filter = initFilter;
+		filterSelect = createSelectField(form, '필터', ctx.filters, initFilter, (v) => {
+			sel.filter = v;
+			queryAndApplyDials();
+		});
+
+		const initDripper = sel.dripper ?? (last?.method === 'filter' && last.dripper && ctx.drippers.includes(last.dripper) ? last.dripper : ctx.drippers[0]);
+		sel.dripper = initDripper;
 		if (ctx.drippers.length > 0) {
-			dripperSelect = createSelectField(form, '드리퍼', ctx.drippers, sel.dripper ?? ctx.drippers[0], (v) => { sel.dripper = v; syncSummary(); });
+			dripperSelect = createSelectField(form, '드리퍼', ctx.drippers, initDripper, (v) => {
+				sel.dripper = v;
+				queryAndApplyDials();
+			});
 		}
 	}
 
@@ -281,13 +302,14 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	let grindStepperConfig = { step: 0.1, min: 0, max: 50, format: (v: number) => v.toFixed(1) };
 
 	if (ctx.grinders.length > 0) {
-		if (sel.grinder) {
-			selectedGrinder = ctx.grinders.find(g => g.name === sel.grinder);
+		const initGrinderName = sel.grinder ?? (last?.grinder && ctx.grinders.find(g => g.name === last.grinder) ? last.grinder : undefined);
+		if (initGrinderName) {
+			selectedGrinder = ctx.grinders.find(g => g.name === initGrinderName);
 		}
 		if (!selectedGrinder) {
 			selectedGrinder = ctx.grinders[0];
-			sel.grinder = selectedGrinder.name;
 		}
+		sel.grinder = selectedGrinder.name;
 		grindStepperConfig = grinderToStepperConfig(selectedGrinder);
 
 		if (ctx.grinders.length > 1) {
@@ -295,7 +317,6 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 			createSelectField(form, '그라인더', grinderNames, selectedGrinder.name, (v) => {
 				const g = ctx.grinders.find(gr => gr.name === v)!;
 				sel.grinder = g.name;
-				sel.grindSize = undefined;
 				grindStepperConfig = grinderToStepperConfig(g);
 				grindStepper.destroy();
 				grindStepper = createStepper(form, {
@@ -304,7 +325,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 					onChange: grindOnChange,
 				});
 				form.insertBefore(grindStepper.el, doseStepper.el);
-				syncSummary();
+				queryAndApplyDials();
 			});
 		}
 	}
@@ -316,27 +337,22 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 		onChange: grindOnChange,
 	});
 	const doseStepper = createStepper(form, {
-		label: '원두량', initial: sel.dose ?? 0,
+		label: '도징량', initial: sel.dose ?? 0,
 		min: 0, max: 100, step: 0.1,
 		format: v => `${v.toFixed(1)}g`, pxPerStep: 8,
 		onChange: v => { sel.dose = v; syncSummary(); },
 	});
 
-	const applyLastRecord = (record: BrewRecord) => {
-		grindStepper.setValue(record.grindSize);
-		doseStepper.setValue(record.dose);
-		if (record.method === 'filter') {
-			waterTempStepper?.setValue(record.waterTemp);
-		}
-		sel.lastRecord = record;
+	const applyDials = (record: BrewRecord) => {
 		sel.grindSize = record.grindSize;
 		sel.dose = record.dose;
 		if (record.method === 'filter') {
 			sel.waterTemp = record.waterTemp;
 		}
-		if (record.grinder) sel.grinder = record.grinder;
-		if (record.method === 'filter' && record.dripper) {
-			sel.dripper = record.dripper;
+		grindStepper.setValue(record.grindSize);
+		doseStepper.setValue(record.dose);
+		if (record.method === 'filter') {
+			waterTempStepper?.setValue(record.waterTemp);
 		}
 	};
 
@@ -346,14 +362,6 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 			min: 0, max: 100, step: 1,
 			format: v => `${v}°C`, pxPerStep: 8,
 			onChange: v => { sel.waterTemp = v; syncSummary(); },
-		});
-
-		filterSelect!.addEventListener('change', async () => {
-			const record = await ctx.plugin.recordService.getLastRecord(
-				sel.bean!.name, sel.method!, sel.temp!, filterSelect!.value,
-			);
-			updateCard(record);
-			if (record) applyLastRecord(record);
 		});
 	}
 

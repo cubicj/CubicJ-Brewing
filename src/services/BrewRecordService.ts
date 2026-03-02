@@ -59,11 +59,19 @@ export class BrewRecordService {
 		this.onChange?.();
 	}
 
-	async getLastRecord(bean: string, method: BrewMethod, temp: BrewTemp, filter?: string): Promise<BrewRecord | undefined> {
+	async getLastRecord(
+		bean: string, method: BrewMethod, temp: BrewTemp,
+		equip?: { filter?: string; grinder?: string; dripper?: string },
+	): Promise<BrewRecord | undefined> {
 		const records = await this.load();
 		return records
-			.filter(r => r.bean === bean && r.method === method && r.temp === temp
-				&& (!filter || (r.method === 'filter' && r.filter === filter)))
+			.filter(r => {
+				if (r.bean !== bean || r.method !== method || r.temp !== temp) return false;
+				if (equip?.filter && !(r.method === 'filter' && r.filter === equip.filter)) return false;
+				if (equip?.grinder && r.grinder !== equip.grinder) return false;
+				if (equip?.dripper && !(r.method === 'filter' && r.dripper === equip.dripper)) return false;
+				return true;
+			})
 			.sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0];
 	}
 }
