@@ -865,7 +865,7 @@
 }
 .brew-profile-modal .brew-detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 8px 16px;
   margin-bottom: 16px;
   padding: 12px;
@@ -879,6 +879,7 @@
 }
 .brew-profile-modal .brew-detail-value {
   font-weight: var(--font-semibold);
+  white-space: nowrap;
 }
 .brew-profile-modal .brew-profile-container {
   height: auto;
@@ -938,18 +939,19 @@
 }
 
 /* Equipment tab */
+.dm-equip-section {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
 .dm-equip-category {
   font-size: 0.75em;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
-  margin: 16px 0 8px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--background-modifier-border);
-}
-.dm-equip-category:first-child {
-  margin-top: 0;
+  margin-bottom: 4px;
 }
 .dm-equip-list-header {
   display: flex;
@@ -959,9 +961,8 @@
   font-weight: 500;
 }
 .dm-equip-add-btn {
-  font-size: 1.1em;
-  padding: 0 6px;
-  min-width: unset;
+  --icon-size: var(--icon-size-s);
+  padding: 4px;
 }
 .dm-equip-row {
   display: flex;

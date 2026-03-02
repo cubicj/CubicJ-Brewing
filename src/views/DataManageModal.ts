@@ -1,8 +1,14 @@
-import { Modal } from 'obsidian';
+import { Modal, setIcon } from 'obsidian';
 import type CubicJBrewingPlugin from '../main';
 import type { BeanInfo, GrinderConfig, EquipmentSettings } from '../brew/types';
 
 type TabId = 'bean' | 'recipe' | 'equip';
+
+function hasJongseong(str: string): boolean {
+	const last = str.charCodeAt(str.length - 1);
+	if (last < 0xAC00 || last > 0xD7A3) return false;
+	return (last - 0xAC00) % 28 !== 0;
+}
 
 interface TabDef {
 	id: TabId;
@@ -182,12 +188,13 @@ export class DataManageModal extends Modal {
 		categoryLabel: string,
 		lists: Array<{ label: string; items: string[] | GrinderConfig[]; key: keyof EquipmentSettings }>,
 	): void {
-		container.createDiv({ cls: 'dm-equip-category', text: categoryLabel });
+		const section = container.createDiv({ cls: 'dm-equip-section' });
+		section.createDiv({ cls: 'dm-equip-category', text: categoryLabel });
 		for (const list of lists) {
 			if (list.key === 'grinders') {
-				this.renderGrinderList(container, list.label);
+				this.renderGrinderList(section, list.label);
 			} else {
-				this.renderStringList(container, list.label, list.key as Exclude<keyof EquipmentSettings, 'grinders'>);
+				this.renderStringList(section, list.label, list.key as Exclude<keyof EquipmentSettings, 'grinders'>);
 			}
 		}
 	}
@@ -196,7 +203,8 @@ export class DataManageModal extends Modal {
 		const section = container.createDiv({ cls: 'dm-equip-list' });
 		const header = section.createDiv({ cls: 'dm-equip-list-header' });
 		header.createSpan({ text: label });
-		const addBtn = header.createEl('button', { text: '+', cls: 'dm-btn dm-equip-add-btn' });
+		const addBtn = header.createEl('button', { cls: 'clickable-icon dm-equip-add-btn' });
+		setIcon(addBtn, 'plus');
 
 		const listEl = section.createDiv({ cls: 'dm-equip-items' });
 		const items = this.plugin.equipment[key] as string[];
@@ -204,7 +212,7 @@ export class DataManageModal extends Modal {
 		const renderItems = () => {
 			listEl.empty();
 			if (items.length === 0) {
-				listEl.createDiv({ cls: 'dm-empty', text: `${label}을(를) 추가하세요` });
+				listEl.createDiv({ cls: 'dm-empty', text: `${label}${hasJongseong(label) ? '을' : '를'} 추가하세요` });
 				return;
 			}
 			for (let i = 0; i < items.length; i++) {
@@ -221,19 +229,25 @@ export class DataManageModal extends Modal {
 		renderItems();
 
 		addBtn.addEventListener('click', () => {
-			const input = section.createEl('input', { type: 'text', cls: 'dm-equip-input', placeholder: `${label} 이름` });
+			const formEl = section.createDiv({ cls: 'dm-equip-grinder-form' });
+			const input = formEl.createEl('input', { type: 'text', cls: 'dm-equip-input', placeholder: `${label} 이름`, attr: { spellcheck: 'false' } });
+
+			const btnRow = formEl.createDiv({ cls: 'dm-equip-grinder-actions' });
+			const saveBtn = btnRow.createEl('button', { text: '추가', cls: 'dm-btn dm-btn-accent' });
+			const cancelBtn = btnRow.createEl('button', { text: '취소', cls: 'dm-btn dm-btn-muted' });
+
 			input.focus();
-			const commit = async () => {
+
+			saveBtn.addEventListener('click', async () => {
 				const val = input.value.trim();
-				if (val && !items.includes(val)) {
-					items.push(val);
-					await this.plugin.saveEquipment();
-				}
-				input.remove();
+				if (!val || items.includes(val)) return;
+				items.push(val);
+				await this.plugin.saveEquipment();
+				formEl.remove();
 				renderItems();
-			};
-			input.addEventListener('keydown', (e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { input.remove(); } });
-			input.addEventListener('blur', commit);
+			});
+			cancelBtn.addEventListener('click', () => formEl.remove());
+			input.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveBtn.click(); if (e.key === 'Escape') formEl.remove(); });
 		});
 	}
 
@@ -241,7 +255,8 @@ export class DataManageModal extends Modal {
 		const section = container.createDiv({ cls: 'dm-equip-list' });
 		const header = section.createDiv({ cls: 'dm-equip-list-header' });
 		header.createSpan({ text: label });
-		const addBtn = header.createEl('button', { text: '+', cls: 'dm-btn dm-equip-add-btn' });
+		const addBtn = header.createEl('button', { cls: 'clickable-icon dm-equip-add-btn' });
+		setIcon(addBtn, 'plus');
 
 		const listEl = section.createDiv({ cls: 'dm-equip-items' });
 		const grinders = this.plugin.equipment.grinders;
@@ -249,14 +264,14 @@ export class DataManageModal extends Modal {
 		const renderItems = () => {
 			listEl.empty();
 			if (grinders.length === 0) {
-				listEl.createDiv({ cls: 'dm-empty', text: '그라인더를 추가하세요' });
+				listEl.createDiv({ cls: 'dm-empty', text: `${label}${hasJongseong(label) ? '을' : '를'} 추가하세요` });
 				return;
 			}
 			for (let i = 0; i < grinders.length; i++) {
 				const g = grinders[i];
 				const row = listEl.createDiv({ cls: 'dm-equip-row' });
 				row.createSpan({ cls: 'dm-equip-grinder-name', text: g.name });
-				row.createSpan({ cls: 'dm-equip-grinder-meta', text: `${g.step} (${g.min}~${g.max})` });
+				row.createSpan({ cls: 'dm-equip-grinder-meta', text: `분쇄도 범위: ${g.min}~${g.max}, 최소 단위: ${g.step}` });
 				const delBtn = row.createEl('button', { text: '\u2715', cls: 'dm-btn dm-equip-del-btn' });
 				delBtn.addEventListener('click', async () => {
 					grinders.splice(i, 1);
@@ -269,20 +284,21 @@ export class DataManageModal extends Modal {
 
 		addBtn.addEventListener('click', () => {
 			const formEl = section.createDiv({ cls: 'dm-equip-grinder-form' });
-			const nameInput = formEl.createEl('input', { type: 'text', cls: 'dm-equip-input', placeholder: '이름' });
+			const nameInput = formEl.createEl('input', { type: 'text', cls: 'dm-equip-input', placeholder: '이름', attr: { spellcheck: 'false' } });
+
+			const rangeRow = formEl.createDiv({ cls: 'dm-equip-grinder-row' });
+			rangeRow.createSpan({ text: '분쇄도 범위' });
+			const minInput = rangeRow.createEl('input', { type: 'number', cls: 'dm-equip-input dm-equip-num', placeholder: 'min' });
+			rangeRow.createSpan({ text: '~' });
+			const maxInput = rangeRow.createEl('input', { type: 'number', cls: 'dm-equip-input dm-equip-num', placeholder: 'max' });
 
 			const stepRow = formEl.createDiv({ cls: 'dm-equip-grinder-row' });
-			stepRow.createSpan({ text: '눈금' });
+			stepRow.createSpan({ text: '최소 단위' });
 			const stepSelect = stepRow.createEl('select', { cls: 'dm-equip-select' });
 			for (const s of [0.01, 0.1, 1]) {
 				stepSelect.createEl('option', { text: String(s), value: String(s) });
 			}
 			stepSelect.value = '0.1';
-
-			const rangeRow = formEl.createDiv({ cls: 'dm-equip-grinder-row' });
-			const minInput = rangeRow.createEl('input', { type: 'number', cls: 'dm-equip-input dm-equip-num', placeholder: 'min' });
-			rangeRow.createSpan({ text: '~' });
-			const maxInput = rangeRow.createEl('input', { type: 'number', cls: 'dm-equip-input dm-equip-num', placeholder: 'max' });
 			minInput.value = '0';
 			maxInput.value = '50';
 

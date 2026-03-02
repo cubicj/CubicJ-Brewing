@@ -75,6 +75,29 @@ describe('BrewRecordService', () => {
 		expect(last).toBeUndefined();
 	});
 
+	it('getLastRecord filters by grinder', async () => {
+		await service.add(makeFilter({ timestamp: '2026-02-25T10:00:00Z', grinder: 'C40', grindSize: 24 }));
+		await service.add(makeFilter({ timestamp: '2026-02-26T10:00:00Z', grinder: 'J-Ultra', grindSize: 2.5 }));
+		const c40 = await service.getLastRecord('첼로 블렌드', 'filter', 'hot', { grinder: 'C40' });
+		const jUltra = await service.getLastRecord('첼로 블렌드', 'filter', 'hot', { grinder: 'J-Ultra' });
+		expect(c40?.grindSize).toBe(24);
+		expect(jUltra?.grindSize).toBe(2.5);
+	});
+
+	it('getLastRecord filters by dripper', async () => {
+		await service.add(makeFilter({ timestamp: '2026-02-25T10:00:00Z', dripper: 'V60', grindSize: 2.5 }));
+		await service.add(makeFilter({ timestamp: '2026-02-26T10:00:00Z', dripper: 'Switch', grindSize: 3.0 }));
+		const v60 = await service.getLastRecord('첼로 블렌드', 'filter', 'hot', { dripper: 'V60' });
+		expect(v60?.grindSize).toBe(2.5);
+	});
+
+	it('getLastRecord without equip filter returns overall latest', async () => {
+		await service.add(makeFilter({ timestamp: '2026-02-25T10:00:00Z', grinder: 'C40', grindSize: 24 }));
+		await service.add(makeFilter({ timestamp: '2026-02-26T10:00:00Z', grinder: 'J-Ultra', grindSize: 2.5 }));
+		const latest = await service.getLastRecord('첼로 블렌드', 'filter', 'hot');
+		expect(latest?.grindSize).toBe(2.5);
+	});
+
 	it('calls onChange after add', async () => {
 		let called = false;
 		service.onChange = () => { called = true; };

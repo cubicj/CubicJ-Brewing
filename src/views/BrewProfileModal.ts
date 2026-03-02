@@ -122,33 +122,48 @@ export class BrewProfileModal extends Modal {
 	}
 
 	private renderDetails(record: BrewRecord): void {
-		const grid = this.contentEl.createDiv({ cls: 'brew-detail-grid' });
+		const eq = this.mode.type === 'detail' ? this.mode.equipment : undefined;
+		const grinderConfig = eq?.grinders.find(g => g.name === record.grinder);
 
-		const items: [string, string][] = [
-			['로스팅', record.roastDays !== null ? `${record.roastDays}일차` : '-'],
-		];
+		const fmtGrind = (v: number) => {
+			if (grinderConfig && grinderConfig.step < 0.1) return v.toFixed(2);
+			if (grinderConfig && grinderConfig.step < 1) return v.toFixed(1);
+			return String(v);
+		};
 
-		if (record.grinder) items.push(['그라인더', record.grinder]);
-		items.push(['분쇄도', String(record.grindSize)]);
-		items.push(['원두', `${record.dose}g`]);
-
+		const equipRow: [string, string][] = [];
+		if (record.grinder) equipRow.push(['그라인더', record.grinder]);
 		if (record.method === 'filter') {
-			items.push(['물 온도', `${record.waterTemp}°C`]);
-			items.push(['필터', record.filter]);
-			if (record.dripper) items.push(['드리퍼', record.dripper]);
+			if (record.dripper) equipRow.push(['드리퍼', record.dripper]);
+			equipRow.push(['필터', record.filter]);
 		} else {
-			items.push(['음료', record.drink === 'shot' ? '샷' : record.drink === 'americano' ? '아메리카노' : '라떼']);
-			items.push(['바스켓', record.basket]);
+			equipRow.push(['바스켓', record.basket]);
 			if (record.accessories && record.accessories.length > 0) {
-				items.push(['악세서리', record.accessories.join(', ')]);
+				equipRow.push(['악세서리', record.accessories.join(', ')]);
 			}
 		}
 
-		for (const [label, value] of items) {
-			const cell = grid.createDiv({ cls: 'brew-detail-cell' });
-			cell.createDiv({ cls: 'brew-detail-label', text: label });
-			cell.createDiv({ cls: 'brew-detail-value', text: value });
+		const dataRow: [string, string][] = [
+			['로스팅', record.roastDays !== null ? `${record.roastDays}일차` : '-'],
+			['분쇄도', fmtGrind(record.grindSize)],
+			['도징량', `${record.dose}g`],
+		];
+		if (record.method === 'filter' && record.waterTemp) dataRow.push(['물 온도', `${record.waterTemp}°C`]);
+		if (record.method === 'espresso') {
+			dataRow.push(['음료', record.drink === 'shot' ? '샷' : record.drink === 'americano' ? '아메리카노' : '라떼']);
 		}
+
+		const renderGrid = (items: [string, string][]) => {
+			const grid = this.contentEl.createDiv({ cls: 'brew-detail-grid' });
+			for (const [label, value] of items) {
+				const cell = grid.createDiv({ cls: 'brew-detail-cell' });
+				cell.createDiv({ cls: 'brew-detail-label', text: label });
+				cell.createDiv({ cls: 'brew-detail-value', text: value });
+			}
+		};
+
+		renderGrid(dataRow);
+		if (equipRow.length > 0) renderGrid(equipRow);
 	}
 }
 

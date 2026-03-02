@@ -60,7 +60,7 @@ export function renderEditForm(
 	});
 
 	const doseStepper = createStepper(form, {
-		label: '원두(g)', initial: record.dose,
+		label: '도징량(g)', initial: record.dose,
 		min: 0, max: 100, step: 0.1, pxPerStep: 10,
 		format: v => `${v.toFixed(1)}g`,
 	});
