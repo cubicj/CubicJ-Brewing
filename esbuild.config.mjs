@@ -4,7 +4,7 @@ import builtins from "module";
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 
 const prod = process.argv[2] === "production";
-const VAULT_PLUGIN_DIR = "<VAULT_PLUGIN_DIR>";
+const VAULT_PLUGIN_DIR = process.env.VAULT_PLUGIN_DIR || "<VAULT_PLUGIN_DIR>";
 
 const copyToVault = {
   name: "copy-to-vault",

@@ -15,6 +15,7 @@ import { createToggleGroup, createSelectField } from './FormHelpers';
 export type FlowStep = 'method' | 'bean' | 'configure' | 'brewing' | 'saving';
 
 const TEMP_LABELS: Record<BrewTemp, string> = { hot: 'Hot', iced: 'Ice' };
+let savingRo: ResizeObserver | null = null;
 
 export const STEP_CONFIG: Array<{ step: FlowStep; label: string }> = [
 	{ step: 'method', label: '추출 방식' },
@@ -430,8 +431,9 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 	const noteEl = container.createEl('textarea', { cls: 'brew-flow-note' });
 	noteEl.placeholder = '';
 
+	if (savingRo) savingRo.disconnect();
 	let roReady = false;
-	const ro = new ResizeObserver(() => {
+	savingRo = new ResizeObserver(() => {
 		if (!roReady) { roReady = true; return; }
 		const body = noteEl.closest('.brew-accordion-body') as HTMLElement | null;
 		if (body?.classList.contains('is-open') && body.style.maxHeight !== '0px') {
@@ -441,7 +443,7 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 			body.style.transition = '';
 		}
 	});
-	ro.observe(noteEl);
+	savingRo.observe(noteEl);
 
 	const btnRow = container.createDiv({ cls: 'brewing-controls' });
 	const doneBtn = btnRow.createEl('button', { text: '저장', cls: 'brewing-ctrl-btn brew-flow-save-btn' });

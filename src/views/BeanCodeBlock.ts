@@ -110,32 +110,8 @@ export class BeanCodeBlock {
 	}
 
 	private async createNewBean(): Promise<void> {
-		const folder = '3. Resources';
-		let name = '새 원두';
-		let path = `${folder}/${name}.md`;
-		let counter = 1;
-		while (this.app.vault.getAbstractFileByPath(path)) {
-			counter++;
-			name = `새 원두 ${counter}`;
-			path = `${folder}/${name}.md`;
-		}
-
-		const template = [
-			'---',
-			'type: bean',
-			'roaster:',
-			'status: active',
-			'roast_date:',
-			'---',
-			'',
-			'### [[원두 데이터|원두 데이터로 돌아가기]]',
-			'',
-			'```brews',
-			'```',
-			'',
-		].join('\n');
-
-		await this.app.vault.create(path, template);
+		const extra = '### [[원두 데이터|원두 데이터로 돌아가기]]\n\n```brews\n```';
+		const path = await this.vaultData.createBeanNote(extra);
 		await this.app.workspace.openLinkText(path, '');
 	}
 }
