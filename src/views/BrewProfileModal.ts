@@ -2,44 +2,31 @@ import { Modal, type App } from 'obsidian';
 import { BrewProfileChart } from './BrewProfileChart';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import type { BrewRecordService } from '../services/BrewRecordService';
-import type { BrewProfilePoint, BrewRecord, BrewMethod, BrewTemp, EspressoDrink } from '../brew/types';
-import { createStepper } from './Stepper';
+import type { BrewProfilePoint, BrewRecord } from '../brew/types';
+import { DEFAULT_FILTERS, DEFAULT_BASKETS } from '../brew/constants';
+import { renderEditForm } from './BrewRecordForm';
 
-const FILTERS = ['하이플럭스', 'V60 기본'];
-const BASKETS = ['DH 18g', 'IMS SF 20g', 'IMS 20g', 'Torch 18g'];
-const DRINKS: { value: EspressoDrink; label: string }[] = [
-	{ value: 'shot', label: '샷' },
-	{ value: 'americano', label: '아메리카노' },
-	{ value: 'latte', label: '라떼' },
-];
+export type ModalMode =
+	| { type: 'detail'; record: BrewRecord; recordService: BrewRecordService; profileStorage: BrewProfileStorage }
+	| { type: 'expand'; points: BrewProfilePoint[] };
 
 export class BrewProfileModal extends Modal {
 	private subtitle: string;
+	private mode: ModalMode;
 	private record?: BrewRecord;
-	private profileStorage?: BrewProfileStorage;
-	private recordService?: BrewRecordService;
 	private resolvePoints: () => Promise<BrewProfilePoint[]>;
 	private wheelHandler: ((e: WheelEvent) => void) | null = null;
 
-	constructor(app: App, subtitle: string, record: BrewRecord, profileStorage: BrewProfileStorage, recordService: BrewRecordService);
-	constructor(app: App, subtitle: string, points: BrewProfilePoint[]);
-	constructor(
-		app: App,
-		subtitle: string,
-		recordOrPoints: BrewRecord | BrewProfilePoint[],
-		profileStorage?: BrewProfileStorage,
-		recordService?: BrewRecordService,
-	) {
+	constructor(app: App, subtitle: string, mode: ModalMode) {
 		super(app);
 		this.subtitle = subtitle;
-		if (Array.isArray(recordOrPoints)) {
-			this.resolvePoints = async () => recordOrPoints;
+		this.mode = mode;
+		if (mode.type === 'expand') {
+			this.resolvePoints = async () => mode.points;
 		} else {
-			this.record = recordOrPoints;
-			this.profileStorage = profileStorage;
-			this.recordService = recordService;
-			this.resolvePoints = recordOrPoints.profilePath
-				? () => profileStorage!.load(recordOrPoints.profilePath!)
+			this.record = mode.record;
+			this.resolvePoints = mode.record.profilePath
+				? () => (mode as { type: 'detail'; profileStorage: BrewProfileStorage; record: BrewRecord }).profileStorage.load(mode.record.profilePath!)
 				: async () => [];
 		}
 	}
@@ -82,7 +69,7 @@ export class BrewProfileModal extends Modal {
 		}
 
 		const footer = this.contentEl.createDiv({ cls: 'brew-profile-footer' });
-		if (this.record && this.recordService) {
+		if (this.mode.type === 'detail') {
 			const deleteBtn = footer.createEl('button', { text: '삭제', cls: 'mod-warning' });
 			deleteBtn.addEventListener('click', () => this.confirmDelete());
 			const rightGroup = footer.createDiv({ cls: 'brew-profile-footer-right' });
@@ -97,171 +84,36 @@ export class BrewProfileModal extends Modal {
 	}
 
 	private confirmDelete(): void {
-		if (!this.record || !this.recordService) return;
+		if (!this.record || this.mode.type !== 'detail') return;
 		const record = this.record;
+		const { recordService, profileStorage } = this.mode;
 		const modal = new ConfirmModal(this.app, '선택한 브루잉 기록을 삭제합니다. 삭제된 기록은 복구할 수 없습니다.', async () => {
-			if (record.profilePath && this.profileStorage) {
-				await this.profileStorage.delete(record.profilePath);
+			if (record.profilePath && profileStorage) {
+				await profileStorage.delete(record.profilePath);
 			}
-			await this.recordService!.remove(record.id);
+			await recordService.remove(record.id);
 			this.close();
 		});
 		modal.open();
 	}
 
 	private enterEditMode(): void {
-		if (!this.record) return;
+		if (!this.record || this.mode.type !== 'detail') return;
 		this.removeWheelHandler();
 		this.contentEl.empty();
 		this.modalEl.addClass('brew-profile-editing');
 		this.titleEl.setText('추출 수정');
 		this.contentEl.createDiv({ text: this.subtitle, cls: 'brew-profile-subtitle' });
-		this.renderForm(this.record);
-	}
-
-	private renderForm(record: BrewRecord): void {
-		const form = this.contentEl.createDiv({ cls: 'brew-edit-form' });
-
-		let currentMethod: BrewMethod = record.method;
-
-		const methodRow = form.createDiv({ cls: 'brew-edit-row' });
-		methodRow.createEl('label', { text: '방식' });
-		const methodSelect = methodRow.createEl('select');
-		for (const m of [{ v: 'filter' as const, l: '필터' }, { v: 'espresso' as const, l: '에스프레소' }]) {
-			const opt = methodSelect.createEl('option', { text: m.l, value: m.v });
-			if (m.v === record.method) opt.selected = true;
-		}
-
-		const tempRow = form.createDiv({ cls: 'brew-edit-row' });
-		tempRow.createEl('label', { text: '온도' });
-		const tempSelect = tempRow.createEl('select');
-		for (const t of [{ v: 'hot' as const, l: 'Hot' }, { v: 'iced' as const, l: 'Ice' }]) {
-			const opt = tempSelect.createEl('option', { text: t.l, value: t.v });
-			if (t.v === record.temp) opt.selected = true;
-		}
-
-		const grindStepper = createStepper(form, {
-			label: '분쇄도', initial: record.grindSize,
-			min: 0, max: 50, step: 0.1, pxPerStep: 10,
-			format: v => v.toFixed(1),
+		renderEditForm(this.contentEl, this.record, {
+			app: this.app,
+			filters: DEFAULT_FILTERS,
+			baskets: DEFAULT_BASKETS,
+			recordService: this.mode.recordService,
+			profileStorage: this.mode.profileStorage,
+			onSaved: (updated) => { this.record = updated; this.renderReadMode(); },
+			onDeleted: () => this.close(),
+			onCancel: () => this.renderReadMode(),
 		});
-
-		const doseStepper = createStepper(form, {
-			label: '원두(g)', initial: record.dose,
-			min: 0, max: 100, step: 0.1, pxPerStep: 10,
-			format: v => `${v.toFixed(1)}g`,
-		});
-
-		const filterGroup = form.createDiv({ cls: 'brew-edit-filter-fields' });
-
-		const waterTempStepper = createStepper(filterGroup, {
-			label: '물 온도(°C)', initial: record.method === 'filter' ? record.waterTemp : 93,
-			min: 0, max: 100, step: 1, pxPerStep: 5,
-			format: v => `${v}°C`,
-		});
-
-		const filterRow = filterGroup.createDiv({ cls: 'brew-edit-row' });
-		filterRow.createEl('label', { text: '필터' });
-		const filterSelect = filterRow.createEl('select');
-		for (const f of FILTERS) {
-			const opt = filterSelect.createEl('option', { text: f, value: f });
-			if (record.method === 'filter' && record.filter === f) opt.selected = true;
-		}
-
-		const espressoGroup = form.createDiv({ cls: 'brew-edit-espresso-fields' });
-
-		const drinkRow = espressoGroup.createDiv({ cls: 'brew-edit-row' });
-		drinkRow.createEl('label', { text: '음료' });
-		const drinkSelect = drinkRow.createEl('select');
-		for (const d of DRINKS) {
-			const opt = drinkSelect.createEl('option', { text: d.label, value: d.value });
-			if (record.method === 'espresso' && record.drink === d.value) opt.selected = true;
-		}
-
-		const basketRow = espressoGroup.createDiv({ cls: 'brew-edit-row' });
-		basketRow.createEl('label', { text: '바스켓' });
-		const basketSelect = basketRow.createEl('select');
-		for (const b of BASKETS) {
-			const opt = basketSelect.createEl('option', { text: b, value: b });
-			if (record.method === 'espresso' && record.basket === b) opt.selected = true;
-		}
-
-		const noteRow = form.createDiv({ cls: 'brew-edit-row brew-edit-note' });
-		noteRow.createEl('label', { text: '메모' });
-		const noteInput = noteRow.createEl('textarea');
-		noteInput.value = record.note ?? '';
-
-		const syncMethodVisibility = () => {
-			const isFilter = currentMethod === 'filter';
-			filterGroup.style.display = isFilter ? '' : 'none';
-			espressoGroup.style.display = isFilter ? 'none' : '';
-		};
-		methodSelect.addEventListener('change', () => {
-			currentMethod = methodSelect.value as BrewMethod;
-			syncMethodVisibility();
-		});
-		syncMethodVisibility();
-
-		const footer = this.contentEl.createDiv({ cls: 'brew-profile-footer' });
-		const rightGroup = footer.createDiv({ cls: 'brew-profile-footer-right' });
-		const saveBtn = rightGroup.createEl('button', { text: '저장', cls: 'mod-cta' });
-		saveBtn.addEventListener('click', async () => {
-			await this.saveEdit(
-				record,
-				currentMethod,
-				tempSelect.value as BrewTemp,
-				grindStepper.getValue(),
-				doseStepper.getValue(),
-				waterTempStepper.getValue(),
-				filterSelect.value,
-				drinkSelect.value as EspressoDrink,
-				basketSelect.value,
-				noteInput.value.trim() || undefined,
-			);
-		});
-		const cancelBtn = rightGroup.createEl('button', { text: '취소' });
-		cancelBtn.addEventListener('click', () => this.renderReadMode());
-	}
-
-	private async saveEdit(
-		original: BrewRecord,
-		method: BrewMethod,
-		temp: BrewTemp,
-		grindSize: number,
-		dose: number,
-		waterTemp: number,
-		filter: string,
-		drink: EspressoDrink,
-		basket: string,
-		note: string | undefined,
-	): Promise<void> {
-		if (!this.recordService) return;
-
-		const base = {
-			temp,
-			grindSize,
-			dose,
-			note,
-		};
-
-		let changes: Partial<BrewRecord>;
-		if (method === 'filter') {
-			changes = { ...base, method: 'filter' as const, waterTemp, filter };
-		} else {
-			changes = { ...base, method: 'espresso' as const, drink, basket };
-		}
-
-		if (method !== original.method) {
-			if (method === 'filter') {
-				changes = { ...changes, drink: undefined, basket: undefined } as any;
-			} else {
-				changes = { ...changes, waterTemp: undefined, filter: undefined } as any;
-			}
-		}
-
-		await this.recordService.update(original.id, changes);
-		this.record = { ...original, ...changes } as BrewRecord;
-		this.renderReadMode();
 	}
 
 	private removeWheelHandler(): void {
@@ -296,7 +148,7 @@ export class BrewProfileModal extends Modal {
 	}
 }
 
-class ConfirmModal extends Modal {
+export class ConfirmModal extends Modal {
 	private message: string;
 	private onConfirm: () => void;
 

@@ -7,17 +7,14 @@ import type { BrewProfileRecorder } from './BrewProfileRecorder';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import { BrewProfileChart } from './BrewProfileChart';
 import { BrewProfileModal } from './BrewProfileModal';
-import { createStepper, type StepperConfig } from './Stepper';
+import { createStepper } from './Stepper';
 import { Notice } from 'obsidian';
+import { DRINK_LABELS, METHOD_LABELS } from '../brew/constants';
+import { createToggleGroup, createSelectField } from './FormHelpers';
 
 export type FlowStep = 'method' | 'bean' | 'configure' | 'brewing' | 'saving';
 
-const METHOD_LABELS: Record<BrewMethod, string> = { filter: '필터', espresso: '에스프레소' };
 const TEMP_LABELS: Record<BrewTemp, string> = { hot: 'Hot', iced: 'Ice' };
-const FILTERS = ['하이플럭스', 'V60 기본'];  // TBD: vault note DB
-const GRINDERS: string[] = [];  // TBD: vault note DB
-const BASKETS = ['DH 18g', 'IMS SF 20g', 'IMS 20g', 'Torch 18g'];  // TBD: vault note DB
-const DRINK_LABELS: Record<EspressoDrink, string> = { shot: '샷', americano: '아메리카노', latte: '라떼' };
 
 export const STEP_CONFIG: Array<{ step: FlowStep; label: string }> = [
 	{ step: 'method', label: '추출 방식' },
@@ -41,6 +38,9 @@ export interface StepRenderContext {
 	expandStep: (step: FlowStep) => void;
 	animateContentChange: (step: FlowStep, mutation: () => void) => void;
 	profileStorage: BrewProfileStorage;
+	filters: string[];
+	baskets: string[];
+	grinders: string[];
 }
 
 export function renderStep(step: FlowStep, container: HTMLElement, ctx: StepRenderContext): void {
@@ -72,7 +72,8 @@ export function getStepSummary(step: FlowStep, sel: BrewFlowSelection): string {
 		}
 		case 'configure': {
 			if (sel.grindSize == null) return '';
-			const parts = [`${sel.grindSize}`, `${sel.dose}g`];
+			const fmt = (v: number) => parseFloat(v.toFixed(1));
+			const parts = [`${fmt(sel.grindSize!)}`, `${fmt(sel.dose!)}g`];
 			if (sel.method === 'filter' && sel.waterTemp) parts.push(`${sel.waterTemp}°C`);
 			if (sel.method === 'filter' && sel.filter) parts.push(sel.filter);
 			if (sel.method === 'espresso' && sel.basket) parts.push(sel.basket);
@@ -114,20 +115,12 @@ function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
 		sel.drink = selectedDrink ?? undefined;
 	};
 
-	const methodGroup = container.createDiv({ cls: 'brew-flow-toggle-group' });
-	const methods: BrewMethod[] = ['filter', 'espresso'];
-	const methodBtns = methods.map(m => {
-		const btn = methodGroup.createDiv({ cls: 'brew-flow-toggle', text: METHOD_LABELS[m] });
-		if (m === selectedMethod) btn.addClass('is-active');
-		btn.addEventListener('click', () => {
-			if (selectedMethod === m) {
-				selectedMethod = null;
-				btn.removeClass('is-active');
-			} else {
-				selectedMethod = m;
-				methodBtns.forEach(b => b.removeClass('is-active'));
-				btn.addClass('is-active');
-			}
+	createToggleGroup(
+		container,
+		[{ value: 'filter' as BrewMethod, label: METHOD_LABELS.filter }, { value: 'espresso' as BrewMethod, label: METHOD_LABELS.espresso }],
+		selectedMethod,
+		(val) => {
+			selectedMethod = val;
 			const show = selectedMethod === 'espresso';
 			if (!show) selectedDrink = null;
 			ctx.animateContentChange('method', () => {
@@ -135,53 +128,38 @@ function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
 			});
 			syncSelection();
 			tryAdvance();
-		});
-		return btn;
-	});
+		},
+	);
 
 	container.createEl('h4', { text: '온도' });
-	const tempGroup = container.createDiv({ cls: 'brew-flow-toggle-group' });
-	const temps: BrewTemp[] = ['hot', 'iced'];
-	const tempBtns = temps.map(t => {
-		const btn = tempGroup.createDiv({ cls: 'brew-flow-toggle', text: TEMP_LABELS[t] });
-		if (t === selectedTemp) btn.addClass('is-active');
-		btn.addEventListener('click', () => {
-			if (selectedTemp === t) {
-				selectedTemp = null;
-				btn.removeClass('is-active');
-			} else {
-				selectedTemp = t;
-				tempBtns.forEach(b => b.removeClass('is-active'));
-				btn.addClass('is-active');
-			}
+	createToggleGroup(
+		container,
+		[{ value: 'hot' as BrewTemp, label: TEMP_LABELS.hot }, { value: 'iced' as BrewTemp, label: TEMP_LABELS.iced }],
+		selectedTemp,
+		(val) => {
+			selectedTemp = val;
 			syncSelection();
 			tryAdvance();
-		});
-		return btn;
-	});
+		},
+	);
 
 	const drinkRow = container.createDiv({ cls: 'brew-flow-drink-row' });
 	drinkRow.style.display = selectedMethod === 'espresso' ? '' : 'none';
 	drinkRow.createEl('h4', { text: '음료' });
-	const drinkGroup = drinkRow.createDiv({ cls: 'brew-flow-toggle-group' });
-	const drinks: EspressoDrink[] = ['shot', 'americano', 'latte'];
-	const drinkBtns = drinks.map(d => {
-		const btn = drinkGroup.createDiv({ cls: 'brew-flow-toggle', text: DRINK_LABELS[d] });
-		if (d === selectedDrink) btn.addClass('is-active');
-		btn.addEventListener('click', () => {
-			if (selectedDrink === d) {
-				selectedDrink = null;
-				btn.removeClass('is-active');
-			} else {
-				selectedDrink = d;
-				drinkBtns.forEach(b => b.removeClass('is-active'));
-				btn.addClass('is-active');
-			}
+	createToggleGroup(
+		drinkRow,
+		[
+			{ value: 'shot' as EspressoDrink, label: DRINK_LABELS.shot },
+			{ value: 'americano' as EspressoDrink, label: DRINK_LABELS.americano },
+			{ value: 'latte' as EspressoDrink, label: DRINK_LABELS.latte },
+		],
+		selectedDrink,
+		(val) => {
+			selectedDrink = val;
 			syncSelection();
 			tryAdvance();
-		});
-		return btn;
-	});
+		},
+	);
 
 	const tryAdvance = () => {
 		const complete = !!selectedMethod && !!selectedTemp && (selectedMethod !== 'espresso' || !!selectedDrink);
@@ -272,43 +250,29 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	let waterTempStepper: ReturnType<typeof createStepper> | null = null;
 
 	if (isFilter) {
-		const filterGroup = form.createDiv();
-		filterGroup.createEl('label', { text: '필터' });
-		filterSelect = filterGroup.createEl('select');
-		for (const f of FILTERS) {
-			filterSelect.createEl('option', { text: f, value: f });
-		}
-		if (sel.filter) filterSelect.value = sel.filter;
+		filterSelect = createSelectField(form, '필터', ctx.filters, sel.filter ?? ctx.filters[0], (v) => { sel.filter = v; syncSummary(); });
 	}
 
 	if (isEspresso) {
-		const basketGroup = form.createDiv();
-		basketGroup.createEl('label', { text: '바스켓' });
-		basketSelect = basketGroup.createEl('select');
-		for (const b of BASKETS) {
-			basketSelect.createEl('option', { text: b, value: b });
-		}
-		if (sel.basket) basketSelect.value = sel.basket;
+		basketSelect = createSelectField(form, '바스켓', ctx.baskets, sel.basket ?? ctx.baskets[0], (v) => { sel.basket = v; syncSummary(); });
 	}
 
-	if (GRINDERS.length > 0) {
-		const grinderGroup = form.createDiv();
-		grinderGroup.createEl('label', { text: '그라인더' });
-		const grinderSelect = grinderGroup.createEl('select');
-		for (const g of GRINDERS) {
-			grinderSelect.createEl('option', { text: g, value: g });
-		}
+	if (ctx.grinders.length > 0) {
+		createSelectField(form, '그라인더', ctx.grinders, ctx.grinders[0], () => {});
 	}
 
+	const syncSummary = () => ctx.updateAccordion();
 	const grindStepper = createStepper(form, {
 		label: '분쇄도', initial: sel.grindSize ?? 0,
 		min: 0, max: 50, step: 0.1,
 		format: v => v.toFixed(1), pxPerStep: 8,
+		onChange: v => { sel.grindSize = v; syncSummary(); },
 	});
 	const doseStepper = createStepper(form, {
 		label: '원두량', initial: sel.dose ?? 0,
 		min: 0, max: 100, step: 0.1,
 		format: v => `${v.toFixed(1)}g`, pxPerStep: 8,
+		onChange: v => { sel.dose = v; syncSummary(); },
 	});
 
 	const applyLastRecord = (record: BrewRecord) => {
@@ -330,6 +294,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 			label: '물 온도', initial: sel.waterTemp ?? 93,
 			min: 0, max: 100, step: 1,
 			format: v => `${v}°C`, pxPerStep: 8,
+			onChange: v => { sel.waterTemp = v; syncSummary(); },
 		});
 
 		filterSelect!.addEventListener('change', async () => {
@@ -406,7 +371,7 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 		expandBtn.addEventListener('click', () => {
 			const pts = ctx.recorder.getPoints();
 			const bean = ctx.flowState.selection.bean ?? '';
-			new BrewProfileModal(ctx.plugin.app, bean, pts).open();
+			new BrewProfileModal(ctx.plugin.app, bean, { type: 'expand', points: pts }).open();
 		});
 		const chartContainer = chartWrapper.createDiv({ cls: 'brew-profile-container' });
 		const staticChart = new BrewProfileChart(chartContainer);
@@ -494,10 +459,11 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 			}
 			const record = ctx.flowState.buildRecord(note, profilePath);
 			await ctx.plugin.recordService.add(record);
+			ctx.plugin.pluginLogger?.log('FLOW', `record saved — ${record.method} ${record.beanName}`);
 			new Notice('저장 완료');
 			ctx.resetFlow();
 		} catch (err) {
-			console.error('Brew record save failed:', err);
+			ctx.plugin.pluginLogger?.log('FLOW', `record save failed: ${err}`);
 			new Notice('저장 실패');
 			doneBtn.disabled = false;
 			doneBtn.textContent = '저장';

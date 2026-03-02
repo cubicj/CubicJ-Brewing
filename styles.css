@@ -149,12 +149,12 @@
 
 /* Data manage modal */
 
-.modal:has(.cubicj-data-manage-modal) {
+.cubicj-data-manage-modal-container {
   max-width: 560px;
   padding: 0;
 }
 
-.modal:has(.cubicj-data-manage-modal) .modal-close-button {
+.cubicj-data-manage-modal-container .modal-close-button {
   z-index: 1;
 }
 
@@ -496,14 +496,13 @@
   width: 100%;
 }
 
-.cubicj-brewing-view .brew-flow-stepper {
-}
-.cubicj-brewing-view .brew-flow-stepper-controls {
+/* Stepper (shared: sidebar + modal) */
+.brew-flow-stepper-controls {
   display: flex;
   align-items: center;
   gap: 4px;
 }
-.cubicj-brewing-view .brew-flow-stepper-btn {
+.brew-flow-stepper-btn {
   flex: 0 0 auto;
   min-width: 36px;
   padding: 4px 8px;
@@ -512,20 +511,20 @@
   box-shadow: none;
   border-radius: var(--radius-s);
 }
-.cubicj-brewing-view .brew-flow-stepper-value {
+.brew-flow-stepper-value {
   flex: 1;
   text-align: center;
   font-weight: var(--font-semibold);
   font-size: var(--font-ui-medium);
   user-select: none;
 }
-.cubicj-brewing-view .brew-flow-stepper-value.is-draggable {
+.brew-flow-stepper-value.is-draggable {
   cursor: ew-resize;
 }
-.cubicj-brewing-view .brew-flow-stepper-value.is-dragging {
+.brew-flow-stepper-value.is-dragging {
   color: var(--text-accent);
 }
-.cubicj-brewing-view .brew-flow-stepper-input {
+.brew-flow-stepper-input {
   width: 100%;
   text-align: center;
   font-weight: var(--font-semibold);
@@ -557,13 +556,6 @@
 }
 
 /* Brewing active */
-
-.cubicj-brewing-view .brew-flow-notice {
-  text-align: center;
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
-  padding: 4px 0;
-}
 
 .cubicj-brewing-view .brew-flow-recipe-steps {
   margin: 8px 0;
@@ -605,13 +597,6 @@
 }
 
 /* Saving */
-
-.cubicj-brewing-view .brew-flow-result {
-  text-align: center;
-  font-size: 1.4em;
-  font-weight: 600;
-  padding: 12px 0;
-}
 
 .cubicj-brewing-view .brew-flow-section-label {
   margin: 8px 0 4px;
@@ -899,11 +884,6 @@
   height: auto;
   overflow-x: auto;
 }
-.brew-profile-modal .brew-profile-empty {
-  color: var(--text-muted);
-  text-align: center;
-  padding: 40px 0;
-}
 .brew-profile-modal .brew-profile-footer {
   display: flex;
   justify-content: space-between;
@@ -941,38 +921,6 @@
   resize: vertical;
 }
 /* Stepper in modal — clone sidebar stepper styles */
-.brew-profile-modal .brew-flow-stepper-controls {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.brew-profile-modal .brew-flow-stepper-btn {
-  flex: 0 0 auto;
-  min-width: 36px;
-  padding: 4px 8px;
-  font-size: var(--font-ui-small);
-  cursor: pointer;
-}
-.brew-profile-modal .brew-flow-stepper-value {
-  flex: 1;
-  text-align: center;
-  font-weight: var(--font-semibold);
-  font-size: var(--font-ui-medium);
-  user-select: none;
-}
-.brew-profile-modal .brew-flow-stepper-value.is-draggable {
-  cursor: ew-resize;
-}
-.brew-profile-modal .brew-flow-stepper-value.is-dragging {
-  color: var(--text-accent);
-}
-.brew-profile-modal .brew-flow-stepper-input {
-  width: 100%;
-  text-align: center;
-  font-weight: var(--font-semibold);
-  font-size: var(--font-ui-medium);
-  border: none;
-}
 .brew-profile-modal .brew-flow-stepper label {
   font-size: var(--font-ui-smaller);
   color: var(--text-muted);

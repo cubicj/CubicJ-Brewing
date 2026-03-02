@@ -30,6 +30,7 @@ export class DataManageModal extends Modal {
 	onOpen(): void {
 		const { contentEl } = this;
 		contentEl.addClass('cubicj-data-manage-modal');
+		this.modalEl.addClass('cubicj-data-manage-modal-container');
 
 		const tabBar = contentEl.createDiv({ cls: 'dm-tab-bar' });
 		for (const tab of this.tabs) {
