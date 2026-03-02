@@ -71,6 +71,24 @@ export class VaultDataService {
 		};
 	}
 
+	async createBeanNote(extraContent?: string): Promise<string> {
+		const folder = '3. Resources';
+		let name = '새 원두';
+		let path = `${folder}/${name}.md`;
+		let counter = 1;
+		while (this.app.vault.getAbstractFileByPath(path)) {
+			counter++;
+			name = `새 원두 ${counter}`;
+			path = `${folder}/${name}.md`;
+		}
+		const parts = [
+			'---', 'type: bean', 'roaster:', 'status: active', 'roast_date:', '---', '',
+		];
+		if (extraContent) parts.push(extraContent, '');
+		await this.app.vault.create(path, parts.join('\n'));
+		return path;
+	}
+
 	getDaysSinceRoast(bean: BeanInfo): number | null {
 		if (!bean.roastDate) return null;
 		const diff = Date.now() - new Date(bean.roastDate).getTime();

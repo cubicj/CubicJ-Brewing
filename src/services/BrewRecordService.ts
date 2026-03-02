@@ -14,7 +14,8 @@ export class BrewRecordService {
 	private async load(): Promise<BrewRecord[]> {
 		if (this.records) return this.records;
 		const raw = await this.adapter.read();
-		this.records = raw ? JSON.parse(raw) : [];
+		try { this.records = raw ? JSON.parse(raw) : []; }
+		catch { console.error('brew-records.json corrupt, resetting'); this.records = []; }
 		return this.records!;
 	}
 

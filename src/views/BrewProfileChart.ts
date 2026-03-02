@@ -216,6 +216,8 @@ export class BrewProfileChart {
 			cancelAnimationFrame(this.rafId);
 			this.rafId = 0;
 		}
+		this.detachWheel();
+		this.detachScrollControls();
 		if (this.recorder) {
 			this.render(this.recorder.getPoints());
 			this.recorder = null;

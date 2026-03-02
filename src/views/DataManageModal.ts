@@ -152,27 +152,7 @@ export class DataManageModal extends Modal {
 	}
 
 	private async createNewBean(): Promise<void> {
-		const folder = '3. Resources';
-		let name = '새 원두';
-		let path = `${folder}/${name}.md`;
-		let counter = 1;
-		while (this.app.vault.getAbstractFileByPath(path)) {
-			counter++;
-			name = `새 원두 ${counter}`;
-			path = `${folder}/${name}.md`;
-		}
-
-		const template = [
-			'---',
-			'type: bean',
-			'roaster:',
-			'status: active',
-			'roast_date:',
-			'---',
-			'',
-		].join('\n');
-
-		await this.app.vault.create(path, template);
+		const path = await this.plugin.vaultData.createBeanNote();
 		this.close();
 		await this.app.workspace.openLinkText(path, '');
 	}
