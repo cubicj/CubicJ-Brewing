@@ -6,6 +6,7 @@ export interface StepperConfig {
 	step: number;
 	format: (v: number) => string;
 	pxPerStep: number;
+	onChange?: (v: number) => void;
 }
 
 export function createStepper(container: HTMLElement, config: StepperConfig): { getValue: () => number; setValue: (v: number) => void } {
@@ -14,15 +15,19 @@ export function createStepper(container: HTMLElement, config: StepperConfig): { 
 	group.createEl('label', { text: config.label });
 	const controls = group.createDiv({ cls: 'brew-flow-stepper-controls' });
 
-	const clamp = (v: number) => Math.max(config.min, Math.min(config.max, v));
+	const precision = Math.max(0, -Math.floor(Math.log10(config.step)));
+	const round = (v: number) => parseFloat(v.toFixed(precision));
+	const clamp = (v: number) => Math.max(config.min, Math.min(config.max, round(v)));
 	const display = controls.createDiv({ cls: 'brew-flow-stepper-value is-draggable' });
-	const update = () => { display.textContent = config.format(value); };
+	let initialized = false;
+	const update = () => { display.textContent = config.format(value); if (initialized) config.onChange?.(value); };
 
 	const decBtn = controls.createEl('button', { text: '◀', cls: 'brew-flow-stepper-btn' });
 	controls.insertBefore(decBtn, display);
 	decBtn.addEventListener('click', () => { value = clamp(value - config.step); update(); });
 
 	update();
+	initialized = true;
 
 	const incBtn = controls.createEl('button', { text: '▶', cls: 'brew-flow-stepper-btn' });
 	incBtn.addEventListener('click', () => { value = clamp(value + config.step); update(); });

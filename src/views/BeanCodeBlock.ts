@@ -35,7 +35,7 @@ export class BeanCodeBlock {
 		newBtn.addEventListener('click', () => this.createNewBean());
 
 		const beans = this.vaultData.getAllBeans();
-		const active = [...beans.filter(b => b.status === 'active')].sort((a, b) => a.name.localeCompare(b.name));
+		const active = [...this.vaultData.getActiveBeans()].sort((a, b) => a.name.localeCompare(b.name));
 		const finished = [...beans.filter(b => b.status === 'finished')].sort((a, b) => a.name.localeCompare(b.name));
 
 		if (active.length > 0) {

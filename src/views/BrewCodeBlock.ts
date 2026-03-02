@@ -90,7 +90,7 @@ export class BrewCodeBlock {
 			setIcon(btn, 'list');
 			btn.addEventListener('click', () => {
 				const title = `${beanName} — ${this.formatDate(record.timestamp)}`;
-				new BrewProfileModal(this.app, title, record, this.profileStorage, this.recordService).open();
+				new BrewProfileModal(this.app, title, { type: 'detail', record, recordService: this.recordService, profileStorage: this.profileStorage }).open();
 			});
 		}
 	}
@@ -105,9 +105,4 @@ export class BrewCodeBlock {
 		return `${String(d.getFullYear()).slice(2)}-${month}-${day} · ${h % 12 || 12}:${min} ${ampm}`;
 	}
 
-	private formatTime(seconds: number): string {
-		const m = Math.floor(seconds / 60);
-		const s = Math.floor(seconds % 60);
-		return `${m}:${String(s).padStart(2, '0')}`;
-	}
 }

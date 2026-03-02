@@ -1,6 +1,7 @@
 import { Notice, Platform, Plugin } from 'obsidian';
 import type { AcaiaService, BleLogger } from './acaia/AcaiaService';
 import type { FileLogger } from './utils/FileLogger';
+import { PluginLogger } from './utils/PluginLogger';
 import { BrewRecordService, type StorageAdapter } from './services/BrewRecordService';
 import { BrewProfileStorage } from './services/BrewProfileStorage';
 import type { FileAdapter } from './services/FileAdapter';
@@ -8,18 +9,29 @@ import { VaultDataService } from './services/VaultDataService';
 import { BeanCodeBlock } from './views/BeanCodeBlock';
 import { BrewCodeBlock } from './views/BrewCodeBlock';
 
-const BLE_DEBUG = true;
+const BLE_PACKET_DEBUG = false;
+const PLUGIN_DEBUG = true;
 
 export default class CubicJBrewingPlugin extends Plugin {
   acaiaService: AcaiaService | null = null;
   recordService!: BrewRecordService;
   profileStorage!: BrewProfileStorage;
   vaultData!: VaultDataService;
+  pluginLogger: PluginLogger | null = null;
   private beforeUnloadHandler: (() => void) | null = null;
-  private bleLogger: FileLogger | null = null;
+  private blePacketLogger: FileLogger | null = null;
   private viewType: string | null = null;
 
   async onload() {
+    if (PLUGIN_DEBUG) {
+      const vaultIO = {
+        read: async (p: string) => this.app.vault.adapter.read(p),
+        write: async (p: string, c: string) => this.app.vault.adapter.write(p, c),
+      };
+      this.pluginLogger = new PluginLogger(vaultIO, `${this.manifest.dir}/plugin-debug.log`);
+      this.pluginLogger.start();
+    }
+    this.pluginLogger?.log('PLUGIN', 'onload');
     this.vaultData = new VaultDataService(this.app);
 
     const beanBlock = new BeanCodeBlock(this.app, this.vaultData);
@@ -74,24 +86,24 @@ export default class CubicJBrewingPlugin extends Plugin {
   private async initDesktop(): Promise<void> {
     const { AcaiaService } = await import('./acaia/AcaiaService');
     const { BrewingView, VIEW_TYPE_BREWING } = await import('./views/BrewingView');
-    const { FileLogger } = await import('./utils/FileLogger');
     this.viewType = VIEW_TYPE_BREWING;
 
+    const vaultAdapter = {
+      read: async (p: string) => this.app.vault.adapter.read(p),
+      write: async (p: string, c: string) => this.app.vault.adapter.write(p, c),
+    };
+
     let logger: BleLogger | undefined;
-    if (BLE_DEBUG) {
-      const logPath = `${this.manifest.dir}/ble-debug.log`;
-      this.bleLogger = new FileLogger(
-        {
-          read: async (p) => this.app.vault.adapter.read(p),
-          write: async (p, c) => this.app.vault.adapter.write(p, c),
-        },
-        logPath,
-        1000,
-        1000,
-      );
-      this.bleLogger.start();
-      this.bleLogger.log(`\n=== session ${new Date().toISOString()} ===`);
-      logger = this.bleLogger;
+    if (this.pluginLogger) {
+      const pl = this.pluginLogger;
+      logger = { log: (msg: string) => pl.log('BLE', msg) };
+    }
+
+    if (BLE_PACKET_DEBUG) {
+      const { FileLogger } = await import('./utils/FileLogger');
+      this.blePacketLogger = new FileLogger(vaultAdapter, `${this.manifest.dir}/ble-debug.log`, 1000, 1000);
+      this.blePacketLogger.start();
+      this.blePacketLogger.log(`\n=== session ${new Date().toISOString()} ===`);
     }
 
     this.acaiaService = new AcaiaService({ logger });
@@ -106,17 +118,20 @@ export default class CubicJBrewingPlugin extends Plugin {
 
     this.beforeUnloadHandler = () => {
       this.acaiaService?.destroy();
-      this.bleLogger?.stop();
+      this.pluginLogger?.stop();
+      this.blePacketLogger?.stop();
     };
     window.addEventListener('beforeunload', this.beforeUnloadHandler);
   }
 
   onunload() {
+    this.pluginLogger?.log('PLUGIN', 'onunload');
     if (this.beforeUnloadHandler) {
       window.removeEventListener('beforeunload', this.beforeUnloadHandler);
     }
     this.acaiaService?.destroy();
-    this.bleLogger?.stop();
+    this.pluginLogger?.stop();
+    this.blePacketLogger?.stop();
   }
 
   private async activateView(): Promise<void> {

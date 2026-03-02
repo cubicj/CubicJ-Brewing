@@ -15,6 +15,10 @@ export interface AcaiaServiceOptions {
   logger?: BleLogger;
 }
 
+class StaleConnectionError extends Error {
+  constructor() { super('Connection aborted (stale)'); }
+}
+
 export class AcaiaService extends EventEmitter {
   private _state: AcaiaState = 'idle';
   private nobleFactory: () => Noble | null;
@@ -61,8 +65,10 @@ export class AcaiaService extends EventEmitter {
     this.logger?.log(msg);
   }
 
-  private isStale(id: number): boolean {
-    return id !== this.connectId;
+
+
+  private assertNotStale(myId: number): void {
+    if (this.connectId !== myId) throw new StaleConnectionError();
   }
 
   get state(): AcaiaState {
@@ -90,108 +96,20 @@ export class AcaiaService extends EventEmitter {
     this.log(`connect() start — id=${myId}, state=${this._state}, reconnectAttempt=${this.reconnectAttempt}`);
 
     try {
-      this.noble = this.nobleFactory();
-      if (!this.noble) {
-        this.log('noble factory returned null');
-        this.emitError('Failed to load noble BLE library');
-        return;
-      }
-
+      const noble = this.initNoble();
       this.setState('scanning');
-      this.log(`noble.state=${this.noble.state}`);
 
-      if (this.noble.state !== 'poweredOn') {
-        this.log('waiting for poweredOn...');
-        const ready = await this.waitForPoweredOn();
-        if (!ready || this.isStale(myId)) {
-          this.log(`poweredOn wait done — ready=${ready}, stale=${this.isStale(myId)}`);
-          if (!this.isStale(myId)) this.emitError('BLE adapter not ready');
-          if (!this.isStale(myId)) this.setState('idle');
-          return;
-        }
-        this.log('poweredOn ready');
-      }
-
-      this.log('scanning for scale...');
-      const peripheral = await this.scanForScale();
-      if (!peripheral || this.isStale(myId)) {
-        if (this.isStale(myId)) { this.log(`scan returned but stale (id=${myId}, current=${this.connectId})`); return; }
-        this.log('scan done — no scale found');
-        this.emitError('No scale found (10s timeout)');
-        this.setState('idle');
-        return;
-      }
-      this.log(`scale found: ${peripheral.advertisement?.localName} (${peripheral.address})`);
+      await this.waitForPoweredOnOrThrow(noble, myId);
+      const peripheral = await this.scanForScaleOrThrow(noble, myId);
 
       this.peripheral = peripheral;
       const localName = peripheral.advertisement?.localName ?? '';
       this._scaleName = localName ? resolveModelName(localName) : null;
       this.setState('connecting');
 
-      if (peripheral.state === 'connected') {
-        this.log('peripheral already connected at BLE level, disconnecting first...');
-        try { await peripheral.disconnectAsync(); } catch {}
-      }
-
-      this.log('connectAsync...');
-      await this.connectWithCleanup(peripheral, 10000);
-      if (this.isStale(myId)) { this.log(`stale after connectAsync (id=${myId})`); return; }
-      this.log('connectAsync done');
-
-      peripheral.once('disconnect', () => {
-        this.handleDisconnect();
-      });
-
-      let characteristics: NobleCharacteristic[];
-      for (let discoverAttempt = 0; ; discoverAttempt++) {
-        try {
-          this.log(`discoverAsync... (attempt ${discoverAttempt + 1})`);
-          const result = await this.discoverWithCleanup(peripheral, 10000);
-          characteristics = result.characteristics;
-          break;
-        } catch (discoverErr: unknown) {
-          if (this.isStale(myId)) { this.log(`stale after discoverAsync (id=${myId})`); return; }
-          if (discoverAttempt >= 1) throw discoverErr;
-          const msg = discoverErr instanceof Error ? discoverErr.message : String(discoverErr);
-          this.log(`discover failed (attempt ${discoverAttempt + 1}): ${msg} — retrying after reconnect`);
-          try { await peripheral.disconnectAsync(); } catch {}
-          await new Promise(r => setTimeout(r, 500));
-          if (this.isStale(myId)) return;
-          this.log('reconnecting for discover retry...');
-          await this.connectWithCleanup(peripheral, 10000);
-          if (this.isStale(myId)) return;
-        }
-      }
-      if (this.isStale(myId)) { this.log(`stale after discoverAsync (id=${myId})`); return; }
-      this.log(`discover done — ${characteristics!.length} characteristics`);
-
-      this.writeChar = characteristics.find((c) => c.uuid === WRITE_UUID) ?? null;
-      this.notifyChar = characteristics.find((c) => c.uuid === NOTIFY_UUID) ?? null;
-
-      if (!this.writeChar || !this.notifyChar) {
-        this.log(`chars missing — write=${!!this.writeChar}, notify=${!!this.notifyChar}`);
-        this.emitError('Required BLE characteristics not found');
-        try { await peripheral.disconnectAsync(); } catch {}
-        this.cleanupConnection();
-        this.setState('idle');
-        return;
-      }
-
-      this.packetBuffer.onPacket = (packet) => this.handlePacket(packet);
-      this.notifyChar.on('data', (data: Buffer) => {
-        this.lastPacketTime = Date.now();
-        this.packetBuffer.push(data);
-      });
-      this.log('subscribing to notify...');
-      await this.withTimeout(this.notifyChar.subscribeAsync(), 5000, 'Notify subscribe');
-      if (this.isStale(myId)) { this.log(`stale after subscribe (id=${myId})`); return; }
-      this.log('notify subscribed');
-
-      this.log('sending handshake (identify + notifReq + getSettings)...');
-      await this.enqueueWrite(encodeIdentify());
-      await this.enqueueWrite(encodeNotificationRequest());
-      await this.enqueueWrite(encodeGetSettings());
-      this.log('handshake sent');
+      await this.establishConnection(peripheral, myId);
+      await this.setupNotifications(myId);
+      await this.performHandshake(myId);
 
       this.startHeartbeat();
       this.reconnectAttempt = 0;
@@ -199,16 +117,131 @@ export class AcaiaService extends EventEmitter {
       this.setState('connected');
       this.log('connection complete');
     } catch (err: unknown) {
+      if (err instanceof StaleConnectionError) {
+        this.log(`stale connect (id=${myId}, current=${this.connectId})`);
+        return;
+      }
       const msg = err instanceof Error ? err.message : String(err);
-      if (this.isStale(myId)) { this.log(`stale connect caught (id=${myId}): ${msg}`); return; }
       this.log(`connect() caught: ${msg}`);
       this.emitError(msg || 'Connection failed');
       this.cleanupConnection();
       this.setState('idle');
     } finally {
-      if (!this.isStale(myId)) this.connecting = false;
+      if (this.connectId === myId) this.connecting = false;
       this.log(`connect() finally — id=${myId}, current=${this.connectId}, state=${this._state}`);
     }
+  }
+
+  private initNoble(): Noble {
+    const noble = this.nobleFactory();
+    if (!noble) {
+      this.log('noble factory returned null');
+      this.emitError('Failed to load noble BLE library');
+      throw new Error('Noble unavailable');
+    }
+    this.noble = noble;
+    this.log(`noble.state=${noble.state}`);
+    return noble;
+  }
+
+  private async waitForPoweredOnOrThrow(noble: Noble, myId: number): Promise<void> {
+    if (noble.state === 'poweredOn') {
+      this.log('already poweredOn');
+      return;
+    }
+    this.log('waiting for poweredOn...');
+    const ready = await this.waitForPoweredOn();
+    this.assertNotStale(myId);
+    if (!ready) {
+      this.emitError('BLE adapter not ready');
+      this.setState('idle');
+      throw new StaleConnectionError();
+    }
+    this.log('poweredOn ready');
+  }
+
+  private async scanForScaleOrThrow(noble: Noble, myId: number): Promise<NoblePeripheral> {
+    this.log('scanning for scale...');
+    const peripheral = await this.scanForScale();
+    this.assertNotStale(myId);
+    if (!peripheral) {
+      this.log('scan done — no scale found');
+      this.emitError('No scale found (10s timeout)');
+      this.setState('idle');
+      throw new StaleConnectionError();
+    }
+    this.log(`scale found: ${peripheral.advertisement?.localName} (${peripheral.address})`);
+    return peripheral;
+  }
+
+  private async establishConnection(peripheral: NoblePeripheral, myId: number): Promise<void> {
+    if (peripheral.state === 'connected') {
+      this.log('peripheral already connected at BLE level, disconnecting first...');
+      try { await peripheral.disconnectAsync(); } catch {}
+    }
+
+    this.log('connectAsync...');
+    await this.connectWithCleanup(peripheral, 10000);
+    this.assertNotStale(myId);
+    this.log('connectAsync done');
+
+    peripheral.once('disconnect', () => this.handleDisconnect());
+
+    let characteristics: NobleCharacteristic[] | undefined;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        this.log(`discoverAsync... (attempt ${attempt + 1})`);
+        const result = await this.discoverWithCleanup(peripheral, 10000);
+        characteristics = result.characteristics;
+        break;
+      } catch (discoverErr: unknown) {
+        this.assertNotStale(myId);
+        if (attempt >= 1) throw discoverErr;
+        const msg = discoverErr instanceof Error ? discoverErr.message : String(discoverErr);
+        this.log(`discover failed (attempt ${attempt + 1}): ${msg} — retrying after reconnect`);
+        try { await peripheral.disconnectAsync(); } catch {}
+        await new Promise(r => setTimeout(r, 500));
+        this.assertNotStale(myId);
+        this.log('reconnecting for discover retry...');
+        await this.connectWithCleanup(peripheral, 10000);
+        this.assertNotStale(myId);
+      }
+    }
+    this.assertNotStale(myId);
+    this.log(`discover done — ${characteristics!.length} characteristics`);
+
+    this.writeChar = characteristics!.find((c) => c.uuid === WRITE_UUID) ?? null;
+    this.notifyChar = characteristics!.find((c) => c.uuid === NOTIFY_UUID) ?? null;
+
+    if (!this.writeChar || !this.notifyChar) {
+      this.log(`chars missing — write=${!!this.writeChar}, notify=${!!this.notifyChar}`);
+      this.emitError('Required BLE characteristics not found');
+      try { await peripheral.disconnectAsync(); } catch {}
+      this.cleanupConnection();
+      this.setState('idle');
+      throw new StaleConnectionError();
+    }
+  }
+
+  private async setupNotifications(myId: number): Promise<void> {
+    this.packetBuffer.onPacket = (packet) => this.handlePacket(packet);
+    this.notifyChar!.on('data', (data: Buffer) => {
+      this.lastPacketTime = Date.now();
+      this.packetBuffer.push(data);
+    });
+    this.log('subscribing to notify...');
+    await this.withTimeout(this.notifyChar!.subscribeAsync(), 5000, 'Notify subscribe');
+    this.assertNotStale(myId);
+    this.log('notify subscribed');
+  }
+
+  private async performHandshake(myId: number): Promise<void> {
+    this.assertNotStale(myId);
+    this.log('sending handshake (identify + notifReq + getSettings)...');
+    await this.enqueueWrite(encodeIdentify());
+    await this.enqueueWrite(encodeNotificationRequest());
+    await this.enqueueWrite(encodeGetSettings());
+    this.log('handshake sent');
   }
 
   async cancelConnect(): Promise<void> {

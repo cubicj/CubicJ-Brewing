@@ -19,6 +19,10 @@ export class FileLogger {
     this.buffer.push(`${ts}\t${message}`);
   }
 
+  logRaw(message: string): void {
+    this.buffer.push(message);
+  }
+
   async flush(): Promise<void> {
     if (this.buffer.length === 0) return;
     const chunk = this.buffer.splice(0);

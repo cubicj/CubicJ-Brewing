@@ -8,6 +8,7 @@ import { ScaleDisplayManager } from './ScaleDisplayManager';
 import { type FlowStep, renderStep, getStepSummary, type StepRenderContext } from './StepRenderers';
 import { AccordionManager } from './AccordionManager';
 import { BrewProfileRecorder } from './BrewProfileRecorder';
+import { DEFAULT_FILTERS, DEFAULT_BASKETS, DEFAULT_GRINDERS } from '../brew/constants';
 
 export const VIEW_TYPE_BREWING = 'cubicj-brewing';
 
@@ -34,6 +35,7 @@ export class BrewingView extends ItemView {
 	getIcon(): string { return 'coffee'; }
 
 	async onOpen(): Promise<void> {
+		this.log('onOpen');
 		const container = this.containerEl.children[1] as HTMLElement;
 		container.empty();
 		container.addClass('cubicj-brewing-view');
@@ -69,6 +71,7 @@ export class BrewingView extends ItemView {
 	}
 
 	async onClose(): Promise<void> {
+		this.log('onClose');
 		this.timerController.destroy();
 		const service = this.plugin.acaiaService;
 		for (const { event, fn } of this.listeners) {
@@ -110,6 +113,7 @@ export class BrewingView extends ItemView {
 	}
 
 	private resetFlow(): void {
+		this.log('resetFlow');
 		this.flowState.cancel();
 		this.brewingStarted = false;
 		this.recorder.reset();
@@ -133,11 +137,15 @@ export class BrewingView extends ItemView {
 			expandStep: (step) => this.accordion.expandStep(step),
 			animateContentChange: (step, mutation) => this.accordion.animateContentChange(step, mutation),
 			profileStorage: this.plugin.profileStorage,
+			filters: DEFAULT_FILTERS,
+			baskets: DEFAULT_BASKETS,
+			grinders: DEFAULT_GRINDERS,
 		};
 	}
 
 	private bindServiceEvents(): void {
 		this.listen('state', (state: AcaiaState) => {
+			this.log(`state → ${state}`);
 			this.scaleDisplay.updateHeader(state, this.plugin.acaiaService?.scaleName);
 			this.scaleDisplay.updateControls(state, () => this.timerController.resetToIdle());
 		});
@@ -160,6 +168,7 @@ export class BrewingView extends ItemView {
 		});
 
 		this.listen('error', (err: Error) => {
+			this.log(`error: ${err.message}`);
 			this.scaleDisplay.showError(err.message);
 		});
 	}
@@ -172,12 +181,19 @@ export class BrewingView extends ItemView {
 	private async handleConnectClick(): Promise<void> {
 		const service = this.plugin.acaiaService;
 		if (service.state === 'scanning' || service.state === 'connecting' || service.state === 'reconnecting') {
+			this.log('cancelConnect');
 			await service.cancelConnect();
 		} else if (service.state === 'connected') {
+			this.log('disconnect');
 			await service.disconnect();
 		} else {
+			this.log('connect');
 			await service.connect();
 		}
+	}
+
+	private log(msg: string): void {
+		this.plugin.pluginLogger?.log('VIEW', msg);
 	}
 
 }
