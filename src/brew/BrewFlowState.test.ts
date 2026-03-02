@@ -89,6 +89,32 @@ describe('BrewFlowState', () => {
 		expect(state.selection.method).toBeUndefined();
 	});
 
+	it('buildRecord includes grinder, dripper, and accessories', () => {
+		const state = new BrewFlowState();
+		state.startBrew();
+		state.selectMethod('filter', 'hot');
+		state.selectBean({ path: 'test.md', name: 'Test', roaster: '', status: 'active', roastDate: '2026-03-01' });
+		state.updateVariables({ grindSize: 15, dose: 18, waterTemp: 93, filter: 'HF', grinder: 'C40', dripper: 'V60' });
+		state.startBrewing();
+		state.finishBrewing(120, 280);
+		const record = state.buildRecord('test');
+		expect(record.grinder).toBe('C40');
+		expect(record.method === 'filter' && record.dripper).toBe('V60');
+	});
+
+	it('buildRecord includes accessories for espresso', () => {
+		const state = new BrewFlowState();
+		state.startBrew();
+		state.selectMethod('espresso', 'hot', 'americano');
+		state.selectBean({ path: 'test.md', name: 'Test', roaster: '', status: 'active', roastDate: '2026-03-01' });
+		state.updateVariables({ grindSize: 2, dose: 18, basket: 'IMS', grinder: 'K-Ultra', accessories: ['퍽스크린'] });
+		state.startBrewing();
+		state.finishBrewing(30, 36);
+		const record = state.buildRecord();
+		expect(record.grinder).toBe('K-Ultra');
+		expect(record.method === 'espresso' && record.accessories).toEqual(['퍽스크린']);
+	});
+
 	it('buildRecord creates FilterRecord', () => {
 		const state = new BrewFlowState();
 		state.startBrew();

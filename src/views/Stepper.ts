@@ -86,7 +86,9 @@ export function createStepper(container: HTMLElement, config: StepperConfig): { 
 	});
 
 	return {
+		el: group,
 		getValue: () => value,
 		setValue: (v: number) => { value = clamp(v); update(); },
+		destroy: () => group.remove(),
 	};
 }

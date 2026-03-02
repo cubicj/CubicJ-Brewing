@@ -28,6 +28,11 @@ export class BrewFlowState {
 			}
 			if (lastRecord.method === 'espresso') {
 				this.selection.basket = lastRecord.basket;
+				if (lastRecord.accessories) this.selection.accessories = lastRecord.accessories;
+			}
+			if (lastRecord.grinder) this.selection.grinder = lastRecord.grinder;
+			if (lastRecord.method === 'filter' && lastRecord.dripper) {
+				this.selection.dripper = lastRecord.dripper;
 			}
 		}
 		this.step = 'configure';
@@ -93,6 +98,7 @@ export class BrewFlowState {
 			roastDays: this.roastDays,
 			temp: s.temp!,
 			grindSize: s.grindSize!,
+			grinder: s.grinder,
 			dose: s.dose!,
 			time: s.time,
 			yield: s.yield,
@@ -102,8 +108,8 @@ export class BrewFlowState {
 		};
 
 		if (s.method === 'espresso') {
-			return { ...base, method: 'espresso', drink: s.drink!, basket: s.basket! };
+			return { ...base, method: 'espresso', drink: s.drink!, basket: s.basket!, accessories: s.accessories };
 		}
-		return { ...base, method: 'filter', waterTemp: s.waterTemp!, filter: s.filter! };
+		return { ...base, method: 'filter', waterTemp: s.waterTemp!, filter: s.filter!, dripper: s.dripper };
 	}
 }

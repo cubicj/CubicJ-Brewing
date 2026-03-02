@@ -33,6 +33,21 @@ export interface BrewProfilePoint {
 	w: number;
 }
 
+export interface GrinderConfig {
+	name: string;
+	step: number;
+	min: number;
+	max: number;
+}
+
+export interface EquipmentSettings {
+	grinders: GrinderConfig[];
+	drippers: string[];
+	filters: string[];
+	baskets: string[];
+	accessories: string[];
+}
+
 interface BrewRecordBase {
 	id: string;
 	timestamp: string;
@@ -42,6 +57,7 @@ interface BrewRecordBase {
 	method: BrewMethod;
 	temp: BrewTemp;
 	grindSize: number;
+	grinder?: string;
 	dose: number;
 	time?: number;
 	yield?: number;
@@ -54,12 +70,14 @@ export interface FilterRecord extends BrewRecordBase {
 	method: 'filter';
 	waterTemp: number;
 	filter: string;
+	dripper?: string;
 }
 
 export interface EspressoRecord extends BrewRecordBase {
 	method: 'espresso';
 	drink: EspressoDrink;
 	basket: string;
+	accessories?: string[];
 }
 
 export type BrewRecord = FilterRecord | EspressoRecord;
@@ -75,6 +93,9 @@ export interface BrewFlowSelection {
 	waterTemp?: number;
 	filter?: string;
 	basket?: string;
+	grinder?: string;
+	dripper?: string;
+	accessories?: string[];
 	recipe?: RecipeInfo;
 	time?: number;
 	yield?: number;
