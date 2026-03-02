@@ -32,6 +32,7 @@ export class TimerController {
 	async handleTimerClick(): Promise<void> {
 		switch (this.timerState) {
 			case 'idle':
+				await this.callbacks.resetTimer();
 				await this.callbacks.startTimer();
 				this.timerStartedAt = Date.now();
 				this.timerElapsedAtStop = 0;
