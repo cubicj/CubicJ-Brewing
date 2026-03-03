@@ -571,6 +571,13 @@
   width: 100%;
 }
 
+.cubicj-brewing-view .brew-flow-espresso-msg {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  text-align: center;
+  padding: 12px 0;
+}
+
 /* Brewing active */
 
 .cubicj-brewing-view .brew-flow-recipe-steps {
@@ -878,15 +885,42 @@
   color: var(--text-muted);
   font-size: var(--font-ui-small);
   margin-bottom: 12px;
+  line-height: 1.6;
+}
+.brew-profile-modal .brew-profile-subtitle-label {
+  color: var(--text-faint);
+}
+.brew-profile-modal .brew-detail-layout {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.brew-profile-modal .brew-detail-left {
+  flex: 3;
+  min-width: 0;
+}
+.brew-profile-modal .brew-detail-right {
+  flex: 2;
+  padding: 12px;
+  background: var(--background-primary-alt);
+  border-radius: var(--radius-s);
+}
+.brew-profile-modal .brew-detail-note {
+  margin-top: 4px;
+  white-space: pre-wrap;
+  line-height: 1.5;
 }
 .brew-profile-modal .brew-detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 8px 16px;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   padding: 12px;
   background: var(--background-primary-alt);
   border-radius: var(--radius-s);
+}
+.brew-profile-modal .brew-detail-grid:last-child {
+  margin-bottom: 0;
 }
 .brew-profile-modal .brew-detail-label {
   font-size: var(--font-ui-smaller);
@@ -1039,17 +1073,26 @@
 }
 
 /* Accessories checklist */
-.brew-flow-accessories {
+.cubicj-brewing-view .brew-flow-accessories {
   margin: 4px 0;
 }
-.brew-flow-accessories > label:first-child {
-  display: block;
-  margin-bottom: 4px;
+.cubicj-brewing-view .brew-flow-accessory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
 }
-.brew-flow-accessory-item {
+.cubicj-brewing-view .brew-flow-accessory-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 0;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-s);
   cursor: pointer;
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+  background: var(--background-modifier-form-field);
+}
+.cubicj-brewing-view .brew-flow-accessory-item:hover {
+  background: var(--background-modifier-hover);
 }

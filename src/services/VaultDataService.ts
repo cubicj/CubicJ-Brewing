@@ -1,5 +1,6 @@
 import type { App, TFile } from 'obsidian';
 import type { BeanInfo, RecipeInfo, RecipeStep } from '../brew/types';
+import { MS_PER_DAY } from '../brew/constants';
 
 export class VaultDataService {
 	constructor(private app: App, private beanFolder = '3. Resources') {}
@@ -82,7 +83,7 @@ export class VaultDataService {
 			path = `${folder}/${name}.md`;
 		}
 		const parts = [
-			'---', 'type: bean', 'roaster:', 'status: active', 'roast_date:', '---', '',
+			'---', 'type: bean', 'roaster:', 'status: active', 'roast_date:', 'roast_days:', '---', '',
 		];
 		if (extraContent) parts.push(extraContent, '');
 		await this.app.vault.create(path, parts.join('\n'));
@@ -92,6 +93,18 @@ export class VaultDataService {
 	getDaysSinceRoast(bean: BeanInfo): number | null {
 		if (!bean.roastDate) return null;
 		const diff = Date.now() - new Date(bean.roastDate).getTime();
-		return Math.floor(diff / 86400000);
+		return Math.floor(diff / MS_PER_DAY);
+	}
+
+	async refreshRoastDays(): Promise<void> {
+		const beans = this.getAllBeans();
+		for (const bean of beans) {
+			const days = this.getDaysSinceRoast(bean);
+			const file = this.app.vault.getAbstractFileByPath(bean.path);
+			if (!file || !('extension' in file)) continue;
+			await this.app.fileManager.processFrontMatter(file as TFile, (fm) => {
+				fm.roast_days = days;
+			});
+		}
 	}
 }

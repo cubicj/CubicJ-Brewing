@@ -1,4 +1,4 @@
-import { type FlowStep, STEP_CONFIG } from './StepRenderers';
+import { type FlowStep, STEP_CONFIG, STEP_ORDER } from './StepRenderers';
 
 interface AccordionCallbacks {
 	renderStep: (step: FlowStep, container: HTMLElement) => void;
@@ -151,19 +151,16 @@ export class AccordionManager {
 	}
 
 	focusStep(step: FlowStep): void {
-		const stepOrder: FlowStep[] = ['method', 'bean', 'configure', 'brewing', 'saving'];
 		this.expandedSteps.clear();
-		this.expandedSteps.add(stepOrder.indexOf(step));
+		this.expandedSteps.add(STEP_ORDER.indexOf(step));
 	}
 
 	expandStep(step: FlowStep): void {
-		const stepOrder: FlowStep[] = ['method', 'bean', 'configure', 'brewing', 'saving'];
-		this.expandedSteps.add(stepOrder.indexOf(step));
+		this.expandedSteps.add(STEP_ORDER.indexOf(step));
 	}
 
 	animateContentChange(step: FlowStep, mutation: () => void): void {
-		const stepOrder: FlowStep[] = ['method', 'bean', 'configure', 'brewing', 'saving'];
-		const idx = stepOrder.indexOf(step);
+		const idx = STEP_ORDER.indexOf(step);
 		const p = this.panels[idx];
 		if (!p || !this.expandedSteps.has(idx) || !p.body.classList.contains('is-open') || p.body.style.maxHeight !== 'none') {
 			mutation();

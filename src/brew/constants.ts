@@ -10,3 +10,5 @@ export const METHOD_LABELS: Record<BrewMethod, string> = {
 	filter: '필터',
 	espresso: '에스프레소',
 };
+
+export const MS_PER_DAY = 86400000;
