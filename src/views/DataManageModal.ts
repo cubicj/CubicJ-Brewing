@@ -158,7 +158,8 @@ export class DataManageModal extends Modal {
 	}
 
 	private async createNewBean(): Promise<void> {
-		const path = await this.plugin.vaultData.createBeanNote();
+		const extra = '### [[원두 데이터|원두 데이터로 돌아가기]]\n\n```brews\n```';
+		const path = await this.plugin.vaultData.createBeanNote(extra);
 		this.close();
 		await this.app.workspace.openLinkText(path, '');
 	}
