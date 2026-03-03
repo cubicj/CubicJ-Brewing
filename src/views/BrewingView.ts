@@ -141,6 +141,7 @@ export class BrewingView extends ItemView {
 			filters: this.plugin.equipment.filters,
 			baskets: this.plugin.equipment.baskets,
 			accessories: this.plugin.equipment.accessories,
+			updateSummaries: () => this.accordion.updateSummaries(),
 		};
 	}
 

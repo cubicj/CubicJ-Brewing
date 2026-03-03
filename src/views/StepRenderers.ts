@@ -44,6 +44,7 @@ export interface StepRenderContext {
 	filters: string[];
 	baskets: string[];
 	accessories: string[];
+	updateSummaries: () => void;
 }
 
 export function renderStep(step: FlowStep, container: HTMLElement, ctx: StepRenderContext): void {
@@ -162,20 +163,18 @@ function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
 		},
 	);
 
-	const tryAdvance = () => {
+	const tryAdvance = async () => {
 		const complete = !!selectedMethod && !!selectedTemp && (selectedMethod !== 'espresso' || !!selectedDrink);
 		if (complete) {
-			setTimeout(async () => {
-				ctx.flowState.selectMethod(selectedMethod!, selectedTemp!, selectedDrink ?? undefined);
-				const bean = ctx.flowState.selection.bean;
-				if (bean) {
-					const lastRecord = await ctx.plugin.recordService.getLastRecord(
-						bean.name, selectedMethod!, selectedTemp!,
-					);
-					ctx.flowState.selectBean(bean, lastRecord);
-				}
-				ctx.renderContent();
-			}, 150);
+			ctx.flowState.selectMethod(selectedMethod!, selectedTemp!, selectedDrink ?? undefined);
+			const bean = ctx.flowState.selection.bean;
+			if (bean) {
+				const lastRecord = await ctx.plugin.recordService.getLastRecord(
+					bean.name, selectedMethod!, selectedTemp!,
+				);
+				ctx.flowState.selectBean(bean, lastRecord);
+			}
+			ctx.renderContent();
 		} else if (ctx.flowState.step !== 'method') {
 			ctx.flowState.goToStep('method');
 			ctx.updateAccordion();
@@ -247,9 +246,11 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 			card.createDiv({ cls: 'brew-flow-last-record-meta', text: '-' });
 			return;
 		}
-		const parts = [`분쇄도 ${record.grindSize}`, `${record.dose}g`];
-		if (record.method === 'filter') parts.push(`${record.waterTemp}°C`);
-		if (record.method === 'espresso') parts.push(record.basket);
+		const parts: string[] = [];
+		if (record.roastDays != null) parts.push(`로스팅 ${record.roastDays}일차`);
+		parts.push(`분쇄도 ${record.grindSize}`, `도징량 ${record.dose}g`);
+		if (record.method === 'filter') parts.push(`물온도 ${record.waterTemp}°C`);
+		if (record.method === 'espresso') parts.push(`바스켓 ${record.basket}`);
 		card.createDiv({ cls: 'brew-flow-last-record-meta', text: parts.join(' · ') });
 	};
 
@@ -261,7 +262,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	let basketSelect: HTMLSelectElement | null = null;
 	let dripperSelect: HTMLSelectElement | null = null;
 	let waterTempStepper: ReturnType<typeof createStepper> | null = null;
-	const syncSummary = () => ctx.updateAccordion();
+	const syncSummary = () => ctx.updateSummaries();
 
 	const queryAndApplyDials = async () => {
 		const equip: { filter?: string; grinder?: string; dripper?: string } = {};
@@ -349,11 +350,12 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 		if (record.method === 'filter') {
 			sel.waterTemp = record.waterTemp;
 		}
-		grindStepper.setValue(record.grindSize);
-		doseStepper.setValue(record.dose);
+		grindStepper.setValue(record.grindSize, true);
+		doseStepper.setValue(record.dose, true);
 		if (record.method === 'filter') {
-			waterTempStepper?.setValue(record.waterTemp);
+			waterTempStepper?.setValue(record.waterTemp, true);
 		}
+		syncSummary();
 	};
 
 	if (isFilter) {

@@ -9,7 +9,9 @@ export interface StepperConfig {
 	onChange?: (v: number) => void;
 }
 
-export function createStepper(container: HTMLElement, config: StepperConfig): { getValue: () => number; setValue: (v: number) => void } {
+export function createStepper(container: HTMLElement, config: StepperConfig): {
+	el: HTMLElement; getValue: () => number; setValue: (v: number, silent?: boolean) => void; destroy: () => void;
+} {
 	let value = config.initial;
 	const group = container.createDiv({ cls: 'brew-flow-stepper' });
 	group.createEl('label', { text: config.label });
@@ -88,7 +90,11 @@ export function createStepper(container: HTMLElement, config: StepperConfig): { 
 	return {
 		el: group,
 		getValue: () => value,
-		setValue: (v: number) => { value = clamp(v); update(); },
+		setValue: (v: number, silent?: boolean) => {
+			value = clamp(v);
+			if (silent) display.textContent = config.format(value);
+			else update();
+		},
 		destroy: () => group.remove(),
 	};
 }
