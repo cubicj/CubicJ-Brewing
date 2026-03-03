@@ -64,6 +64,8 @@ interface BrewRecordBase {
 	recipe?: string;
 	note?: string;
 	profilePath?: string;
+	waterWeight?: number;
+	milkWeight?: number;
 }
 
 export interface FilterRecord extends BrewRecordBase {
@@ -100,4 +102,6 @@ export interface BrewFlowSelection {
 	time?: number;
 	yield?: number;
 	note?: string;
+	waterWeight?: number;
+	milkWeight?: number;
 }

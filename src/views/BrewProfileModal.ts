@@ -3,6 +3,7 @@ import { BrewProfileChart } from './BrewProfileChart';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import type { BrewRecordService } from '../services/BrewRecordService';
 import type { BrewProfilePoint, BrewRecord, EquipmentSettings } from '../brew/types';
+import { METHOD_LABELS } from '../brew/constants';
 import { renderEditForm } from './BrewRecordForm';
 
 export type ModalMode =
@@ -132,7 +133,10 @@ export class BrewProfileModal extends Modal {
 		};
 
 		const equipRow: [string, string][] = [];
-		if (record.grinder) equipRow.push(['그라인더', record.grinder]);
+		if (record.grinder) {
+			equipRow.push(['그라인더', record.grinder]);
+			equipRow.push(['분쇄도', fmtGrind(record.grindSize)]);
+		}
 		if (record.method === 'filter') {
 			if (record.dripper) equipRow.push(['드리퍼', record.dripper]);
 			equipRow.push(['필터', record.filter]);
@@ -144,14 +148,17 @@ export class BrewProfileModal extends Modal {
 		}
 
 		const dataRow: [string, string][] = [
+			['방식', `${METHOD_LABELS[record.method]}(${record.temp === 'iced' ? 'Ice' : 'Hot'})`],
 			['로스팅', record.roastDays !== null ? `${record.roastDays}일차` : '-'],
-			['분쇄도', fmtGrind(record.grindSize)],
-			['도징량', `${record.dose}g`],
 		];
+		if (!record.grinder) dataRow.push(['분쇄도', fmtGrind(record.grindSize)]);
+		dataRow.push(['도징량', `${record.dose}g`]);
 		if (record.method === 'filter' && record.waterTemp) dataRow.push(['물 온도', `${record.waterTemp}°C`]);
 		if (record.method === 'espresso') {
 			dataRow.push(['음료', record.drink === 'shot' ? '샷' : record.drink === 'americano' ? '아메리카노' : '라떼']);
 		}
+		if (record.waterWeight != null) dataRow.push(['가수', `${record.waterWeight}g`]);
+		if (record.milkWeight != null) dataRow.push(['우유', `${record.milkWeight}g`]);
 
 		const renderGrid = (items: [string, string][]) => {
 			const grid = this.contentEl.createDiv({ cls: 'brew-detail-grid' });

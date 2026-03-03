@@ -118,6 +118,8 @@ export class BrewFlowState {
 			recipe: s.recipe?.name,
 			note,
 			profilePath,
+			waterWeight: s.waterWeight,
+			milkWeight: s.milkWeight,
 		};
 
 		if (s.method === 'espresso') {
