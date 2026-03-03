@@ -50,6 +50,15 @@ export class BrewRecordService {
 		this.onChange?.();
 	}
 
+	async removeWithProfile(
+		id: string,
+		profilePath: string | undefined,
+		profileStorage: { delete(path: string): Promise<void> },
+	): Promise<void> {
+		if (profilePath) await profileStorage.delete(profilePath);
+		await this.remove(id);
+	}
+
 	async remove(id: string): Promise<void> {
 		const records = await this.load();
 		const idx = records.findIndex(r => r.id === id);

@@ -16,7 +16,6 @@ const copyToVault = {
       copyFileSync("manifest.json", `${VAULT_PLUGIN_DIR}/manifest.json`);
       const css = readFileSync("fonts.css", "utf8") + readFileSync("styles.css", "utf8");
       writeFileSync(`${VAULT_PLUGIN_DIR}/styles.css`, css);
-      copyFileSync("fonts/MatrixSansPrint-Regular.woff2", `${VAULT_PLUGIN_DIR}/MatrixSansPrint-Regular.woff2`);
     });
   },
 };

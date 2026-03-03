@@ -4,6 +4,7 @@ import type { BrewRecordService } from '../services/BrewRecordService';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import { DRINK_LABELS, METHOD_LABELS } from '../brew/constants';
 import { createStepper } from './Stepper';
+import { createAccessoryChecklist } from './FormHelpers';
 import { ConfirmModal } from './BrewProfileModal';
 
 export interface BrewRecordFormDeps {
@@ -116,24 +117,9 @@ export function renderEditForm(
 		if (record.method === 'espresso' && record.basket === b) opt.selected = true;
 	}
 
-	const accChecked = new Set(record.method === 'espresso' ? record.accessories ?? [] : []);
-	if (deps.equipment.accessories.length > 0) {
-		const accContainer = espressoGroup.createDiv({ cls: 'brew-flow-accessories' });
-		accContainer.createEl('label', { text: '악세서리' });
-		for (const acc of deps.equipment.accessories) {
-			const row = accContainer.createDiv({ cls: 'brew-flow-accessory-item' });
-			const cb = row.createEl('input', { type: 'checkbox' });
-			cb.checked = accChecked.has(acc);
-			row.createSpan({ text: acc });
-			cb.addEventListener('change', () => {
-				if (cb.checked) accChecked.add(acc);
-				else accChecked.delete(acc);
-			});
-			row.addEventListener('click', (e) => {
-				if (e.target !== cb) cb.click();
-			});
-		}
-	}
+	const accChecked = deps.equipment.accessories.length > 0
+		? createAccessoryChecklist(espressoGroup, deps.equipment.accessories, record.method === 'espresso' ? record.accessories ?? [] : [])
+		: new Set<string>();
 
 	const waterWeightStepper = createStepper(form, {
 		label: '가수', initial: record.waterWeight ?? 0,
@@ -177,10 +163,7 @@ export function renderEditForm(
 	const deleteBtn = footer.createEl('button', { text: '삭제', cls: 'mod-warning' });
 	deleteBtn.addEventListener('click', () => {
 		const modal = new ConfirmModal(deps.app, '선택한 브루잉 기록을 삭제합니다. 삭제된 기록은 복구할 수 없습니다.', async () => {
-			if (record.profilePath && deps.profileStorage) {
-				await deps.profileStorage.delete(record.profilePath);
-			}
-			await deps.recordService.remove(record.id);
+			await deps.recordService.removeWithProfile(record.id, record.profilePath, deps.profileStorage);
 			deps.onDeleted();
 		});
 		modal.open();

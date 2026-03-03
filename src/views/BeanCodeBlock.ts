@@ -1,6 +1,7 @@
 import type { App, MarkdownPostProcessorContext } from 'obsidian';
 import type { VaultDataService } from '../services/VaultDataService';
 import type { BeanInfo } from '../brew/types';
+import { BEAN_NOTE_EXTRA } from '../brew/constants';
 
 export class BeanCodeBlock {
 	private containers: WeakRef<HTMLElement>[] = [];
@@ -110,8 +111,7 @@ export class BeanCodeBlock {
 	}
 
 	private async createNewBean(): Promise<void> {
-		const extra = '### [[원두 데이터|원두 데이터로 돌아가기]]\n\n```brews\n```';
-		const path = await this.vaultData.createBeanNote(extra);
+		const path = await this.vaultData.createBeanNote(BEAN_NOTE_EXTRA);
 		await this.app.workspace.openLinkText(path, '');
 	}
 }

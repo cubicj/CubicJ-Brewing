@@ -1,6 +1,7 @@
 import { Modal, setIcon } from 'obsidian';
 import type CubicJBrewingPlugin from '../main';
 import type { BeanInfo, GrinderConfig, EquipmentSettings } from '../brew/types';
+import { BEAN_NOTE_EXTRA } from '../brew/constants';
 
 type TabId = 'bean' | 'recipe' | 'equip';
 
@@ -158,8 +159,7 @@ export class DataManageModal extends Modal {
 	}
 
 	private async createNewBean(): Promise<void> {
-		const extra = '### [[원두 데이터|원두 데이터로 돌아가기]]\n\n```brews\n```';
-		const path = await this.plugin.vaultData.createBeanNote(extra);
+		const path = await this.plugin.vaultData.createBeanNote(BEAN_NOTE_EXTRA);
 		this.close();
 		await this.app.workspace.openLinkText(path, '');
 	}
