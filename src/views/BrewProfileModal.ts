@@ -177,16 +177,16 @@ export class BrewProfileModal extends Modal {
 		const layout = this.contentEl.createDiv({ cls: 'brew-detail-layout' });
 
 		const left = layout.createDiv({ cls: 'brew-detail-left' });
-		const renderGrid = (parent: HTMLElement, items: [string, string][]) => {
-			const grid = parent.createDiv({ cls: 'brew-detail-grid' });
+		const cols = Math.max(dataRow.length, equipRow.length);
+		const grid = left.createDiv({ cls: 'brew-detail-grid' });
+		grid.style.setProperty('--cols', String(cols));
+		for (const items of [dataRow, equipRow]) {
 			for (const [label, value] of items) {
 				const cell = grid.createDiv({ cls: 'brew-detail-cell' });
 				cell.createDiv({ cls: 'brew-detail-label', text: label });
 				cell.createDiv({ cls: 'brew-detail-value', text: value });
 			}
-		};
-		renderGrid(left, dataRow);
-		if (equipRow.length > 0) renderGrid(left, equipRow);
+		}
 
 		const right = layout.createDiv({ cls: 'brew-detail-right' });
 		right.createDiv({ cls: 'brew-detail-label', text: '메모' });

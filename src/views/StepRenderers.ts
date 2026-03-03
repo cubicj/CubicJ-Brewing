@@ -370,21 +370,19 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	if (isEspresso && ctx.accessories.length > 0) {
 		const accGroup = form.createDiv({ cls: 'brew-flow-accessories' });
 		accGroup.createEl('label', { text: '악세서리' });
-		const accList = accGroup.createDiv({ cls: 'brew-flow-accessory-list' });
 		const selected = new Set(sel.accessories ?? []);
 		for (const acc of ctx.accessories) {
-			const row = accList.createDiv({ cls: 'brew-flow-accessory-item' });
-			const toggle = row.createDiv({ cls: 'checkbox-container' });
-			if (selected.has(acc)) toggle.addClass('is-enabled');
+			const row = accGroup.createDiv({ cls: 'brew-flow-accessory-item' });
+			const cb = row.createEl('input', { type: 'checkbox' });
+			cb.checked = selected.has(acc);
 			row.createSpan({ text: acc });
-			toggle.addEventListener('click', () => {
-				const enabled = toggle.hasClass('is-enabled');
-				if (enabled) { toggle.removeClass('is-enabled'); selected.delete(acc); }
-				else { toggle.addClass('is-enabled'); selected.add(acc); }
+			cb.addEventListener('change', () => {
+				if (cb.checked) selected.add(acc);
+				else selected.delete(acc);
 				sel.accessories = selected.size > 0 ? [...selected] : undefined;
 			});
 			row.addEventListener('click', (e) => {
-				if (e.target !== toggle && !toggle.contains(e.target as Node)) toggle.click();
+				if (e.target !== cb) cb.click();
 			});
 		}
 	}

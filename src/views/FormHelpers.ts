@@ -33,7 +33,7 @@ export function createSelectField(
 	selected: string,
 	onChange: (value: string) => void,
 ): HTMLSelectElement {
-	const group = container.createDiv();
+	const group = container.createDiv({ cls: 'brew-flow-field' });
 	group.createEl('label', { text: label });
 	const select = group.createEl('select');
 	for (const opt of options) {
