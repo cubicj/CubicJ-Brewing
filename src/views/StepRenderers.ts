@@ -10,7 +10,7 @@ import { BrewProfileModal } from './BrewProfileModal';
 import { createStepper } from './Stepper';
 import { Notice } from 'obsidian';
 import { DRINK_LABELS, METHOD_LABELS, MS_PER_DAY } from '../brew/constants';
-import { createToggleGroup, createSelectField } from './FormHelpers';
+import { createToggleGroup, createSelectField, attachScaleAutoBtn, createAccessoryChecklist } from './FormHelpers';
 
 export type FlowStep = 'method' | 'bean' | 'configure' | 'brewing' | 'saving';
 
@@ -337,12 +337,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 		onChange: v => { sel.dose = v; syncSummary(); },
 	});
 
-	const doseLabel = doseStepper.el.querySelector('label') as HTMLElement;
-	const scaleBtn = doseLabel.createEl('button', { text: 'auto', cls: 'brew-flow-stepper-scale-btn', attr: { 'aria-label': '저울 무게 가져오기' } });
-	scaleBtn.addEventListener('click', () => {
-		const weight = parseFloat(ctx.getWeightText());
-		if (!isNaN(weight)) doseStepper.setValue(weight);
-	});
+	attachScaleAutoBtn(doseStepper, ctx.getWeightText);
 
 	const applyDials = (record: BrewRecord) => {
 		sel.grindSize = record.grindSize;
@@ -368,23 +363,9 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	}
 
 	if (isEspresso && ctx.accessories.length > 0) {
-		const accGroup = form.createDiv({ cls: 'brew-flow-accessories' });
-		accGroup.createEl('label', { text: '악세서리' });
-		const selected = new Set(sel.accessories ?? []);
-		for (const acc of ctx.accessories) {
-			const row = accGroup.createDiv({ cls: 'brew-flow-accessory-item' });
-			const cb = row.createEl('input', { type: 'checkbox' });
-			cb.checked = selected.has(acc);
-			row.createSpan({ text: acc });
-			cb.addEventListener('change', () => {
-				if (cb.checked) selected.add(acc);
-				else selected.delete(acc);
-				sel.accessories = selected.size > 0 ? [...selected] : undefined;
-			});
-			row.addEventListener('click', (e) => {
-				if (e.target !== cb) cb.click();
-			});
-		}
+		createAccessoryChecklist(form, ctx.accessories, sel.accessories ?? [], (list) => {
+			sel.accessories = list.length > 0 ? list : undefined;
+		});
 	}
 
 	const recipes = ctx.plugin.vaultData.getAllRecipes();
@@ -542,14 +523,7 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 				else sel.waterWeight = v;
 			},
 		});
-		const weightLabel = weightStepper.el.querySelector('label') as HTMLElement;
-		const autoBtn = weightLabel.createEl(
-			'button', { text: 'auto', cls: 'brew-flow-stepper-scale-btn', attr: { 'aria-label': '저울 무게 가져오기' } },
-		);
-		autoBtn.addEventListener('click', () => {
-			const w = parseFloat(ctx.getWeightText());
-			if (!isNaN(w)) weightStepper.setValue(w);
-		});
+		attachScaleAutoBtn(weightStepper, ctx.getWeightText);
 	}
 
 	container.createEl('h4', { text: '메모', cls: 'brew-flow-section-label' });

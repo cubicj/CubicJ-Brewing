@@ -3,6 +3,7 @@ import type { BrewRecordService } from '../services/BrewRecordService';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import type { BrewRecord, EquipmentSettings } from '../brew/types';
 import { BrewProfileModal } from './BrewProfileModal';
+import { formatBrewDate } from '../utils/format';
 
 export class BrewCodeBlock {
 	private containers: WeakRef<HTMLElement>[] = [];
@@ -77,10 +78,9 @@ export class BrewCodeBlock {
 		for (const record of records) {
 			const tr = tbody.createEl('tr');
 			const dateTd = tr.createEl('td', { cls: 'brew-record-date' });
-			const d = new Date(record.timestamp);
-			dateTd.createDiv({ text: `${String(d.getFullYear()).slice(2)}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` });
-			const h = d.getHours();
-			dateTd.createDiv({ text: `${h % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}` });
+			const { date, time } = formatBrewDate(record.timestamp);
+			dateTd.createDiv({ text: date });
+			dateTd.createDiv({ text: time });
 			const method = record.method === 'espresso' ? '에스프레소' : '필터';
 			const temp = record.temp === 'iced' ? 'Ice' : 'Hot';
 			tr.createEl('td', { text: `${method}(${temp})` });
@@ -97,13 +97,8 @@ export class BrewCodeBlock {
 	}
 
 	private formatDate(iso: string): string {
-		const d = new Date(iso);
-		const month = String(d.getMonth() + 1).padStart(2, '0');
-		const day = String(d.getDate()).padStart(2, '0');
-		const h = d.getHours();
-		const min = String(d.getMinutes()).padStart(2, '0');
-		const ampm = h < 12 ? 'am' : 'pm';
-		return `${String(d.getFullYear()).slice(2)}-${month}-${day} · ${h % 12 || 12}:${min} ${ampm}`;
+		const { date, time } = formatBrewDate(iso);
+		return `${date} · ${time}`;
 	}
 
 }

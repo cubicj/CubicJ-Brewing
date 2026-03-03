@@ -16,17 +16,17 @@ export class VaultDataService {
 	}
 
 	async setRoastDate(path: string, date: string): Promise<void> {
-		const file = this.app.vault.getAbstractFileByPath(path);
-		if (!file || !('extension' in file)) return;
-		await this.app.fileManager.processFrontMatter(file as TFile, (fm) => {
+		const file = this.getTFile(path);
+		if (!file) return;
+		await this.app.fileManager.processFrontMatter(file, (fm) => {
 			fm.roast_date = date;
 		});
 	}
 
 	async setBeanStatus(path: string, status: 'active' | 'finished'): Promise<void> {
-		const file = this.app.vault.getAbstractFileByPath(path);
-		if (!file || !('extension' in file)) return;
-		await this.app.fileManager.processFrontMatter(file as TFile, (fm) => {
+		const file = this.getTFile(path);
+		if (!file) return;
+		await this.app.fileManager.processFrontMatter(file, (fm) => {
 			fm.status = status;
 		});
 	}
@@ -100,11 +100,16 @@ export class VaultDataService {
 		const beans = this.getAllBeans();
 		for (const bean of beans) {
 			const days = this.getDaysSinceRoast(bean);
-			const file = this.app.vault.getAbstractFileByPath(bean.path);
-			if (!file || !('extension' in file)) continue;
-			await this.app.fileManager.processFrontMatter(file as TFile, (fm) => {
+			const file = this.getTFile(bean.path);
+			if (!file) continue;
+			await this.app.fileManager.processFrontMatter(file, (fm) => {
 				fm.roast_days = days !== null ? `${days}일차` : null;
 			});
 		}
+	}
+
+	private getTFile(path: string): TFile | null {
+		const file = this.app.vault.getAbstractFileByPath(path);
+		return file && 'extension' in file ? file as TFile : null;
 	}
 }

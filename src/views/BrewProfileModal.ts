@@ -5,6 +5,7 @@ import type { BrewRecordService } from '../services/BrewRecordService';
 import type { BrewProfilePoint, BrewRecord, EquipmentSettings } from '../brew/types';
 import { METHOD_LABELS } from '../brew/constants';
 import { renderEditForm } from './BrewRecordForm';
+import { formatBrewDate } from '../utils/format';
 
 export type ModalMode =
 	| { type: 'detail'; record: BrewRecord; recordService: BrewRecordService; profileStorage: BrewProfileStorage; equipment: EquipmentSettings }
@@ -47,11 +48,8 @@ export class BrewProfileModal extends Modal {
 		this.titleEl.setText('추출 상세');
 		if (this.record) {
 			const sub = this.contentEl.createDiv({ cls: 'brew-profile-subtitle' });
-			const dt = new Date(this.record.timestamp);
-			const h = dt.getHours();
-			const ampm = h < 12 ? 'AM' : 'PM';
-			const h12 = h % 12 || 12;
-			const dateStr = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')} | ${ampm} ${h12}:${String(dt.getMinutes()).padStart(2, '0')}`;
+			const { date, time } = formatBrewDate(this.record.timestamp);
+			const dateStr = `20${date} | ${time}`;
 			sub.createEl('span', { cls: 'brew-profile-subtitle-label', text: '날짜/시간: ' });
 			sub.createEl('span', { text: dateStr });
 			sub.createEl('span', { cls: 'brew-profile-subtitle-sep', text: ' · ' });
@@ -102,10 +100,7 @@ export class BrewProfileModal extends Modal {
 		const record = this.record;
 		const { recordService, profileStorage } = this.mode;
 		const modal = new ConfirmModal(this.app, '선택한 브루잉 기록을 삭제합니다. 삭제된 기록은 복구할 수 없습니다.', async () => {
-			if (record.profilePath && profileStorage) {
-				await profileStorage.delete(record.profilePath);
-			}
-			await recordService.remove(record.id);
+			await recordService.removeWithProfile(record.id, record.profilePath, profileStorage);
 			this.close();
 		});
 		modal.open();
