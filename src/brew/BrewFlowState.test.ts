@@ -115,6 +115,58 @@ describe('BrewFlowState', () => {
 		expect(record.method === 'espresso' && record.accessories).toEqual(['퍽스크린']);
 	});
 
+	it('selectBean clears stale equipment from previous selection', () => {
+		const state = new BrewFlowState();
+		state.startBrew();
+		state.selectMethod('filter', 'hot');
+		state.selectBean(
+			{ path: 'a.md', name: 'A', roaster: '', status: 'active', roastDate: null },
+			{ id: '1', timestamp: '', bean: 'A', roastDate: '', roastDays: null, method: 'filter', temp: 'hot', grindSize: 15, dose: 18, waterTemp: 93, filter: 'HF', dripper: 'V60', grinder: 'C40' } as any,
+		);
+		expect(state.selection.filter).toBe('HF');
+		expect(state.selection.grinder).toBe('C40');
+
+		state.selectBean(
+			{ path: 'b.md', name: 'B', roaster: '', status: 'active', roastDate: null },
+		);
+		expect(state.selection.filter).toBeUndefined();
+		expect(state.selection.grinder).toBeUndefined();
+		expect(state.selection.grindSize).toBeUndefined();
+	});
+
+	it('deselectBean clears equipment fields', () => {
+		const state = new BrewFlowState();
+		state.startBrew();
+		state.selectMethod('filter', 'hot');
+		state.selectBean(
+			{ path: 'a.md', name: 'A', roaster: '', status: 'active', roastDate: null },
+			{ id: '1', timestamp: '', bean: 'A', roastDate: '', roastDays: null, method: 'filter', temp: 'hot', grindSize: 15, dose: 18, waterTemp: 93, filter: 'HF', grinder: 'C40' } as any,
+		);
+		state.deselectBean();
+		expect(state.selection.filter).toBeUndefined();
+		expect(state.selection.grinder).toBeUndefined();
+		expect(state.selection.grindSize).toBeUndefined();
+		expect(state.selection.dose).toBeUndefined();
+	});
+
+	it('selectBean after method switch clears other method equipment', () => {
+		const state = new BrewFlowState();
+		state.startBrew();
+		state.selectMethod('filter', 'hot');
+		state.selectBean(
+			{ path: 'a.md', name: 'A', roaster: '', status: 'active', roastDate: null },
+			{ id: '1', timestamp: '', bean: 'A', roastDate: '', roastDays: null, method: 'filter', temp: 'hot', grindSize: 15, dose: 18, waterTemp: 93, filter: 'HF', dripper: 'V60' } as any,
+		);
+		expect(state.selection.filter).toBe('HF');
+
+		state.selectMethod('espresso', 'hot', 'shot');
+		state.selectBean(
+			{ path: 'a.md', name: 'A', roaster: '', status: 'active', roastDate: null },
+		);
+		expect(state.selection.filter).toBeUndefined();
+		expect(state.selection.dripper).toBeUndefined();
+	});
+
 	it('buildRecord creates FilterRecord', () => {
 		const state = new BrewFlowState();
 		state.startBrew();

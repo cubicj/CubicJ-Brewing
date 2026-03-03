@@ -150,7 +150,7 @@ describe('AcaiaService reconnect', () => {
 });
 
 describe('AcaiaService write health', () => {
-  it('triggers disconnect after 3 consecutive write failures', async () => {
+  it('triggers disconnect after 6 consecutive write failures', async () => {
     const writeChar = createMockWriteChar();
     const notifyChar = createMockNotifyChar();
     const peripheral = createMockPeripheral(writeChar, notifyChar);
@@ -164,8 +164,10 @@ describe('AcaiaService write health', () => {
 
     writeChar.writeAsync = vi.fn().mockRejectedValue(new Error('write failed'));
 
-    (service as any).writeQueue.push(Buffer.from([0x01]), Buffer.from([0x02]), Buffer.from([0x03]));
-    await (service as any).processQueue();
+    for (let i = 0; i < 6; i++) {
+      (service as any).writeQueue.push(Buffer.from([0x01]));
+      await (service as any).processQueue();
+    }
 
     expect(service.state).not.toBe('connected');
 

@@ -36,7 +36,7 @@ export class AcaiaService extends EventEmitter {
   private connectAborted = false;
   private disconnecting = false;
   private consecutiveWriteFailures = 0;
-  private static readonly MAX_WRITE_FAILURES = 3;
+  private static readonly MAX_WRITE_FAILURES = 6;
   private static readonly SILENCE_WARN_MS = 5000;
   private static readonly SILENCE_DEAD_MS = 8000;
   private static readonly MAX_RECONNECT_ATTEMPTS = 3;
@@ -553,12 +553,12 @@ export class AcaiaService extends EventEmitter {
         this.consecutiveWriteFailures++;
         const msg = err instanceof Error ? err.message : String(err);
         this.log(`write fail #${this.consecutiveWriteFailures} — ${msg}`);
+        this.writeQueue = [];
         if (this.consecutiveWriteFailures >= AcaiaService.MAX_WRITE_FAILURES) {
           this.log(`write health threshold reached (${AcaiaService.MAX_WRITE_FAILURES}), disconnecting`);
-          this.writeQueue = [];
           this.handleDisconnect();
-          break;
         }
+        break;
       }
       await new Promise(r => setTimeout(r, 50));
     }

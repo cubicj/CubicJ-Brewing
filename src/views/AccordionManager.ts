@@ -48,13 +48,12 @@ export class AccordionManager {
 		this.update();
 	}
 
-	update(): void {
+	updateSummaries(): void {
 		for (let i = 0; i < STEP_CONFIG.length; i++) {
 			const config = STEP_CONFIG[i];
-			const { panel, header, indicator, titleArea, body } = this.panels[i];
+			const { panel, header, indicator, titleArea } = this.panels[i];
 			const hasData = !!this.callbacks.getStepSummary(config.step);
 			const isExpanded = this.expandedSteps.has(i);
-			const wasOpen = body.classList.contains('is-open');
 
 			panel.className = 'brew-accordion-panel';
 			header.className = 'brew-accordion-header';
@@ -77,6 +76,16 @@ export class AccordionManager {
 					titleArea.createSpan({ cls: 'brew-accordion-summary', text: summary });
 				}
 			}
+		}
+	}
+
+	update(): void {
+		this.updateSummaries();
+		for (let i = 0; i < STEP_CONFIG.length; i++) {
+			const config = STEP_CONFIG[i];
+			const { body } = this.panels[i];
+			const isExpanded = this.expandedSteps.has(i);
+			const wasOpen = body.classList.contains('is-open');
 
 			if (isExpanded) {
 				const prevOnEnd = this.accordionEndListeners.get(body);

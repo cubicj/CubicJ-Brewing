@@ -16,8 +16,21 @@ export class BrewFlowState {
 		this.step = 'bean';
 	}
 
+	private clearEquipment(): void {
+		this.selection.lastRecord = undefined;
+		this.selection.grindSize = undefined;
+		this.selection.dose = undefined;
+		this.selection.waterTemp = undefined;
+		this.selection.filter = undefined;
+		this.selection.dripper = undefined;
+		this.selection.grinder = undefined;
+		this.selection.basket = undefined;
+		this.selection.accessories = undefined;
+	}
+
 	selectBean(bean: BeanInfo, lastRecord?: BrewRecord): void {
 		this.selection.bean = bean;
+		this.clearEquipment();
 		this.selection.lastRecord = lastRecord;
 		if (lastRecord) {
 			this.selection.grindSize = lastRecord.grindSize;
@@ -40,7 +53,7 @@ export class BrewFlowState {
 
 	deselectBean(): void {
 		this.selection.bean = undefined;
-		this.selection.lastRecord = undefined;
+		this.clearEquipment();
 		this.step = 'bean';
 	}
 
