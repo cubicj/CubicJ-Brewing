@@ -132,20 +132,42 @@ export function renderEditForm(
 		}
 	}
 
+	const waterWeightStepper = createStepper(form, {
+		label: '가수', initial: record.waterWeight ?? 0,
+		min: 0, max: 1000, step: 0.1, pxPerStep: 10,
+		format: v => `${v.toFixed(1)}g`,
+	});
+	const milkWeightStepper = createStepper(form, {
+		label: '우유', initial: record.milkWeight ?? 0,
+		min: 0, max: 1000, step: 0.1, pxPerStep: 10,
+		format: v => `${v.toFixed(1)}g`,
+	});
+
 	const noteRow = form.createDiv({ cls: 'brew-edit-row brew-edit-note' });
 	noteRow.createEl('label', { text: '메모' });
 	const noteInput = noteRow.createEl('textarea');
 	noteInput.value = record.note ?? '';
 
+	const syncWeightVisibility = () => {
+		const isFilter = currentMethod === 'filter';
+		const drink = drinkSelect.value as EspressoDrink;
+		const showWater = isFilter || (!isFilter && drink === 'americano');
+		const showMilk = !isFilter && drink === 'latte';
+		waterWeightStepper.el.style.display = showWater ? '' : 'none';
+		milkWeightStepper.el.style.display = showMilk ? '' : 'none';
+	};
+
 	const syncMethodVisibility = () => {
 		const isFilter = currentMethod === 'filter';
 		filterGroup.style.display = isFilter ? '' : 'none';
 		espressoGroup.style.display = isFilter ? 'none' : '';
+		syncWeightVisibility();
 	};
 	methodSelect.addEventListener('change', () => {
 		currentMethod = methodSelect.value as BrewMethod;
 		syncMethodVisibility();
 	});
+	drinkSelect.addEventListener('change', () => syncWeightVisibility());
 	syncMethodVisibility();
 
 	const footer = container.createDiv({ cls: 'brew-profile-footer' });
@@ -166,12 +188,16 @@ export function renderEditForm(
 	saveBtn.addEventListener('click', async () => {
 		const method = currentMethod;
 		const temp = tempSelect.value as BrewTemp;
+		const ww = waterWeightStepper.getValue();
+		const mw = milkWeightStepper.getValue();
 		const base = {
 			temp,
 			grindSize: grindStepper.getValue(),
 			dose: doseStepper.getValue(),
 			grinder: grinderSelect?.value || undefined,
 			note: noteInput.value.trim() || undefined,
+			waterWeight: ww > 0 ? ww : undefined,
+			milkWeight: mw > 0 ? mw : undefined,
 		};
 
 		let changes: Partial<BrewRecord>;

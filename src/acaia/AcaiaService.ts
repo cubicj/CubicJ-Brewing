@@ -50,6 +50,7 @@ export class AcaiaService extends EventEmitter {
 
   constructor(options?: AcaiaServiceOptions) {
     super();
+    this.on('error', () => {});
     this.logger = options?.logger;
     this.nobleFactory = options?.nobleFactory ?? (() => {
       try {

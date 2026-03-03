@@ -344,6 +344,13 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 		onChange: v => { sel.dose = v; syncSummary(); },
 	});
 
+	const doseLabel = doseStepper.el.querySelector('label') as HTMLElement;
+	const scaleBtn = doseLabel.createEl('button', { text: 'auto', cls: 'brew-flow-stepper-scale-btn', attr: { 'aria-label': '저울 무게 가져오기' } });
+	scaleBtn.addEventListener('click', () => {
+		const weight = parseFloat(ctx.getWeightText());
+		if (!isNaN(weight)) doseStepper.setValue(weight);
+	});
+
 	const applyDials = (record: BrewRecord) => {
 		sel.grindSize = record.grindSize;
 		sel.dose = record.dose;
@@ -451,7 +458,7 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 		expandBtn.setAttribute('aria-label', '확대');
 		expandBtn.addEventListener('click', () => {
 			const pts = ctx.recorder.getPoints();
-			const bean = ctx.flowState.selection.bean ?? '';
+			const bean = ctx.flowState.selection.bean?.name ?? '';
 			new BrewProfileModal(ctx.plugin.app, bean, { type: 'expand', points: pts }).open();
 		});
 		const chartContainer = chartWrapper.createDiv({ cls: 'brew-profile-container' });
@@ -507,6 +514,30 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 		});
 	}
 
+	const needsWater = sel.method === 'filter' || (sel.method === 'espresso' && sel.drink === 'americano');
+	const needsMilk = sel.method === 'espresso' && sel.drink === 'latte';
+	if (needsWater || needsMilk) {
+		const weightForm = container.createDiv({ cls: 'brew-flow-form' });
+		const label = needsMilk ? '우유' : '가수';
+		const weightStepper = createStepper(weightForm, {
+			label, initial: 0,
+			min: 0, max: 1000, step: 0.1,
+			format: v => `${v.toFixed(1)}g`, pxPerStep: 8,
+			onChange: v => {
+				if (needsMilk) sel.milkWeight = v;
+				else sel.waterWeight = v;
+			},
+		});
+		const weightLabel = weightStepper.el.querySelector('label') as HTMLElement;
+		const autoBtn = weightLabel.createEl(
+			'button', { text: 'auto', cls: 'brew-flow-stepper-scale-btn', attr: { 'aria-label': '저울 무게 가져오기' } },
+		);
+		autoBtn.addEventListener('click', () => {
+			const w = parseFloat(ctx.getWeightText());
+			if (!isNaN(w)) weightStepper.setValue(w);
+		});
+	}
+
 	container.createEl('h4', { text: '메모', cls: 'brew-flow-section-label' });
 	const noteEl = container.createEl('textarea', { cls: 'brew-flow-note' });
 	noteEl.placeholder = '';
@@ -541,7 +572,7 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 			}
 			const record = ctx.flowState.buildRecord(note, profilePath);
 			await ctx.plugin.recordService.add(record);
-			ctx.plugin.pluginLogger?.log('FLOW', `record saved — ${record.method} ${record.beanName}`);
+			ctx.plugin.pluginLogger?.log('FLOW', `record saved — ${record.method} ${record.bean}`);
 			new Notice('저장 완료');
 			ctx.resetFlow();
 		} catch (err) {
