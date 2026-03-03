@@ -12,6 +12,7 @@ import type { EquipmentSettings } from './brew/types';
 
 const BLE_PACKET_DEBUG = false;
 const PLUGIN_DEBUG = true;
+const DATA_DIR = 'cubicj-brewing';
 
 export default class CubicJBrewingPlugin extends Plugin {
   acaiaService: AcaiaService | null = null;
@@ -48,18 +49,6 @@ export default class CubicJBrewingPlugin extends Plugin {
       }),
     );
 
-    const recordsPath = `${this.manifest.dir}/brew-records.json`;
-    const adapter: StorageAdapter = {
-      read: async () => {
-        try { return await this.app.vault.adapter.read(recordsPath); }
-        catch { return null; }
-      },
-      write: async (content) => {
-        await this.app.vault.adapter.write(recordsPath, content);
-      },
-    };
-    this.recordService = new BrewRecordService(adapter);
-
     const fileAdapter: FileAdapter = {
       read: async (path) => {
         try { return await this.app.vault.adapter.read(path); }
@@ -74,8 +63,31 @@ export default class CubicJBrewingPlugin extends Plugin {
       remove: async (path) => {
         await this.app.vault.adapter.remove(path);
       },
+      exists: async (path) => {
+        return await this.app.vault.adapter.exists(path);
+      },
+      list: async (path) => {
+        try {
+          const listed = await this.app.vault.adapter.list(path);
+          return listed.files.map(f => f.split('/').pop()!);
+        } catch { return []; }
+      },
     };
-    this.profileStorage = new BrewProfileStorage(this.manifest.dir, fileAdapter);
+
+    const recordsPath = `${DATA_DIR}/brew-records.json`;
+    const adapter: StorageAdapter = {
+      read: async () => {
+        try { return await this.app.vault.adapter.read(recordsPath); }
+        catch { return null; }
+      },
+      write: async (content) => {
+        await this.app.vault.adapter.mkdir(DATA_DIR);
+        await this.app.vault.adapter.write(recordsPath, content);
+      },
+    };
+    this.recordService = new BrewRecordService(adapter);
+
+    this.profileStorage = new BrewProfileStorage(DATA_DIR, fileAdapter);
 
     const brewBlock = new BrewCodeBlock(this.app, this.recordService, this.profileStorage, () => this.equipment);
     brewBlock.register((lang, handler) => this.registerMarkdownCodeBlockProcessor(lang, handler));

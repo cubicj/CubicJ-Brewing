@@ -118,16 +118,19 @@ export function renderEditForm(
 
 	const accChecked = new Set(record.method === 'espresso' ? record.accessories ?? [] : []);
 	if (deps.equipment.accessories.length > 0) {
-		const accContainer = espressoGroup.createDiv({ cls: 'brew-edit-row brew-flow-accessories' });
+		const accContainer = espressoGroup.createDiv({ cls: 'brew-flow-accessories' });
 		accContainer.createEl('label', { text: '악세서리' });
 		for (const acc of deps.equipment.accessories) {
-			const lbl = accContainer.createEl('label', { cls: 'brew-flow-accessory-item' });
-			const cb = lbl.createEl('input', { type: 'checkbox' });
+			const row = accContainer.createDiv({ cls: 'brew-flow-accessory-item' });
+			const cb = row.createEl('input', { type: 'checkbox' });
 			cb.checked = accChecked.has(acc);
-			lbl.appendText(acc);
+			row.createSpan({ text: acc });
 			cb.addEventListener('change', () => {
 				if (cb.checked) accChecked.add(acc);
 				else accChecked.delete(acc);
+			});
+			row.addEventListener('click', (e) => {
+				if (e.target !== cb) cb.click();
 			});
 		}
 	}

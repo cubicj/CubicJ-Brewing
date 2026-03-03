@@ -491,8 +491,8 @@
   margin-bottom: 2px;
 }
 
-.cubicj-brewing-view .brew-flow-form input,
-.cubicj-brewing-view .brew-flow-form select {
+.cubicj-brewing-view .brew-flow-field select,
+.cubicj-brewing-view .brew-flow-recipe-select select {
   width: 100%;
 }
 
@@ -912,15 +912,11 @@
 }
 .brew-profile-modal .brew-detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 8px 16px;
-  margin-bottom: 8px;
+  grid-template-columns: repeat(var(--cols, 3), auto);
+  gap: 12px 16px;
   padding: 12px;
   background: var(--background-primary-alt);
   border-radius: var(--radius-s);
-}
-.brew-profile-modal .brew-detail-grid:last-child {
-  margin-bottom: 0;
 }
 .brew-profile-modal .brew-detail-label {
   font-size: var(--font-ui-smaller);
@@ -953,6 +949,11 @@
   flex-direction: column;
   gap: 8px;
   margin-top: 12px;
+}
+.brew-profile-modal .brew-edit-espresso-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .brew-profile-modal .brew-edit-row {
   display: flex;
@@ -1072,27 +1073,26 @@
   justify-content: flex-end;
 }
 
-/* Accessories checklist */
-.cubicj-brewing-view .brew-flow-accessories {
-  margin: 4px 0;
-}
-.cubicj-brewing-view .brew-flow-accessory-list {
+/* Accessories checklist (shared: sidebar + modal) */
+.brew-flow-accessories {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-top: 4px;
 }
-.cubicj-brewing-view .brew-flow-accessory-item {
+.brew-flow-accessories > label {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  margin-bottom: 0;
+}
+.brew-flow-accessory-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: var(--radius-s);
+  gap: 6px;
   cursor: pointer;
   font-size: var(--font-ui-small);
   color: var(--text-normal);
-  background: var(--background-modifier-form-field);
 }
-.cubicj-brewing-view .brew-flow-accessory-item:hover {
-  background: var(--background-modifier-hover);
+.brew-flow-accessory-item input[type="checkbox"] {
+  margin: 0;
+  flex-shrink: 0;
 }

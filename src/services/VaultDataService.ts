@@ -103,7 +103,7 @@ export class VaultDataService {
 			const file = this.app.vault.getAbstractFileByPath(bean.path);
 			if (!file || !('extension' in file)) continue;
 			await this.app.fileManager.processFrontMatter(file as TFile, (fm) => {
-				fm.roast_days = days;
+				fm.roast_days = days !== null ? `${days}일차` : null;
 			});
 		}
 	}
