@@ -23,6 +23,7 @@ export class BrewingView extends ItemView {
 	private timerController!: TimerController;
 	private brewingStarted = false;
 	private recorder = new BrewProfileRecorder();
+	private savingRoRef = { current: null as ResizeObserver | null };
 
 	constructor(leaf: WorkspaceLeaf, plugin: CubicJBrewingPlugin) {
 		super(leaf);
@@ -72,6 +73,10 @@ export class BrewingView extends ItemView {
 	async onClose(): Promise<void> {
 		this.log('onClose');
 		this.timerController.destroy();
+		if (this.savingRoRef.current) {
+			this.savingRoRef.current.disconnect();
+			this.savingRoRef.current = null;
+		}
 		const service = this.plugin.acaiaService;
 		for (const { event, fn } of this.listeners) {
 			service.removeListener(event, fn);
@@ -142,6 +147,7 @@ export class BrewingView extends ItemView {
 			baskets: this.plugin.equipment.baskets,
 			accessories: this.plugin.equipment.accessories,
 			updateSummaries: () => this.accordion.updateSummaries(),
+			savingRo: this.savingRoRef,
 		};
 	}
 
