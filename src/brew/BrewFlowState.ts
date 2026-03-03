@@ -1,4 +1,7 @@
 import type { BrewMethod, BrewTemp, EspressoDrink, BeanInfo, RecipeInfo, BrewRecord, BrewFlowStep, BrewFlowSelection } from './types';
+import { MS_PER_DAY } from './constants';
+
+const FLOW_ORDER: BrewFlowStep[] = ['idle', 'method', 'bean', 'configure', 'brewing', 'saving'];
 
 export class BrewFlowState {
 	step: BrewFlowStep = 'idle';
@@ -76,16 +79,14 @@ export class BrewFlowState {
 	}
 
 	goBack(): void {
-		const order: BrewFlowStep[] = ['idle', 'method', 'bean', 'configure', 'brewing', 'saving'];
-		const idx = order.indexOf(this.step);
-		if (idx > 1) this.step = order[idx - 1];
+		const idx = FLOW_ORDER.indexOf(this.step);
+		if (idx > 1) this.step = FLOW_ORDER[idx - 1];
 		else if (idx === 1) this.step = 'idle';
 	}
 
 	goToStep(step: BrewFlowStep): void {
-		const order: BrewFlowStep[] = ['idle', 'method', 'bean', 'configure', 'brewing', 'saving'];
-		const targetIdx = order.indexOf(step);
-		const currentIdx = order.indexOf(this.step);
+		const targetIdx = FLOW_ORDER.indexOf(step);
+		const currentIdx = FLOW_ORDER.indexOf(this.step);
 		if (targetIdx < currentIdx) this.step = step;
 	}
 
@@ -98,7 +99,7 @@ export class BrewFlowState {
 		const bean = this.selection.bean;
 		if (!bean?.roastDate) return null;
 		const diff = Date.now() - new Date(bean.roastDate).getTime();
-		return Math.floor(diff / 86400000);
+		return Math.floor(diff / MS_PER_DAY);
 	}
 
 	buildRecord(note?: string, profilePath?: string): BrewRecord {

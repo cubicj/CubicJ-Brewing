@@ -45,7 +45,21 @@ export class BrewProfileModal extends Modal {
 		this.modalEl.addClass('brew-profile-modal');
 		this.modalEl.removeClass('brew-profile-editing');
 		this.titleEl.setText('추출 상세');
-		this.contentEl.createDiv({ text: this.subtitle, cls: 'brew-profile-subtitle' });
+		if (this.record) {
+			const sub = this.contentEl.createDiv({ cls: 'brew-profile-subtitle' });
+			const dt = new Date(this.record.timestamp);
+			const h = dt.getHours();
+			const ampm = h < 12 ? 'AM' : 'PM';
+			const h12 = h % 12 || 12;
+			const dateStr = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')} | ${ampm} ${h12}:${String(dt.getMinutes()).padStart(2, '0')}`;
+			sub.createEl('span', { cls: 'brew-profile-subtitle-label', text: '날짜/시간: ' });
+			sub.createEl('span', { text: dateStr });
+			sub.createEl('span', { cls: 'brew-profile-subtitle-sep', text: ' · ' });
+			sub.createEl('span', { cls: 'brew-profile-subtitle-label', text: '원두: ' });
+			sub.createEl('span', { text: this.record.bean });
+		} else {
+			this.contentEl.createDiv({ text: this.subtitle, cls: 'brew-profile-subtitle' });
+		}
 
 		if (this.record) {
 			this.renderDetails(this.record);
@@ -160,17 +174,23 @@ export class BrewProfileModal extends Modal {
 		if (record.waterWeight != null) dataRow.push(['가수', `${record.waterWeight}g`]);
 		if (record.milkWeight != null) dataRow.push(['우유', `${record.milkWeight}g`]);
 
-		const renderGrid = (items: [string, string][]) => {
-			const grid = this.contentEl.createDiv({ cls: 'brew-detail-grid' });
+		const layout = this.contentEl.createDiv({ cls: 'brew-detail-layout' });
+
+		const left = layout.createDiv({ cls: 'brew-detail-left' });
+		const renderGrid = (parent: HTMLElement, items: [string, string][]) => {
+			const grid = parent.createDiv({ cls: 'brew-detail-grid' });
 			for (const [label, value] of items) {
 				const cell = grid.createDiv({ cls: 'brew-detail-cell' });
 				cell.createDiv({ cls: 'brew-detail-label', text: label });
 				cell.createDiv({ cls: 'brew-detail-value', text: value });
 			}
 		};
+		renderGrid(left, dataRow);
+		if (equipRow.length > 0) renderGrid(left, equipRow);
 
-		renderGrid(dataRow);
-		if (equipRow.length > 0) renderGrid(equipRow);
+		const right = layout.createDiv({ cls: 'brew-detail-right' });
+		right.createDiv({ cls: 'brew-detail-label', text: '메모' });
+		right.createDiv({ cls: 'brew-detail-note', text: record.note || '-' });
 	}
 }
 

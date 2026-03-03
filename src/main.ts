@@ -81,6 +81,8 @@ export default class CubicJBrewingPlugin extends Plugin {
     brewBlock.register((lang, handler) => this.registerMarkdownCodeBlockProcessor(lang, handler));
     this.recordService.onChange = () => brewBlock.refreshAll();
 
+    this.app.workspace.onLayoutReady(() => this.vaultData.refreshRoastDays());
+
     if (Platform.isDesktop) {
       await this.initDesktop();
     }
@@ -139,8 +141,15 @@ export default class CubicJBrewingPlugin extends Plugin {
 
   async loadEquipment(): Promise<void> {
     const data = await this.loadData() ?? {};
-    if (data.equipment) {
-      this.equipment = data.equipment;
+    const eq = data.equipment;
+    if (eq && typeof eq === 'object' && !Array.isArray(eq)) {
+      const keys: (keyof EquipmentSettings)[] = ['grinders', 'drippers', 'filters', 'baskets', 'accessories'];
+      const valid = keys.every(k => Array.isArray(eq[k]));
+      if (valid) {
+        this.equipment = eq as EquipmentSettings;
+      } else {
+        this.pluginLogger?.log('PLUGIN', 'data.json equipment schema mismatch, using defaults');
+      }
     }
   }
 

@@ -9,7 +9,7 @@ import { BrewProfileChart } from './BrewProfileChart';
 import { BrewProfileModal } from './BrewProfileModal';
 import { createStepper } from './Stepper';
 import { Notice } from 'obsidian';
-import { DRINK_LABELS, METHOD_LABELS } from '../brew/constants';
+import { DRINK_LABELS, METHOD_LABELS, MS_PER_DAY } from '../brew/constants';
 import { createToggleGroup, createSelectField } from './FormHelpers';
 
 export type FlowStep = 'method' | 'bean' | 'configure' | 'brewing' | 'saving';
@@ -23,6 +23,8 @@ export const STEP_CONFIG: Array<{ step: FlowStep; label: string }> = [
 	{ step: 'brewing', label: '브루잉' },
 	{ step: 'saving', label: '메모' },
 ];
+
+export const STEP_ORDER: FlowStep[] = STEP_CONFIG.map(c => c.step);
 
 export interface StepRenderContext {
 	flowState: BrewFlowState;
@@ -69,7 +71,7 @@ export function getStepSummary(step: FlowStep, sel: BrewFlowSelection): string {
 			if (!sel.bean) return '';
 			const parts = [sel.bean.name];
 			if (sel.bean.roastDate) {
-				const days = Math.floor((Date.now() - new Date(sel.bean.roastDate).getTime()) / 86400000);
+				const days = Math.floor((Date.now() - new Date(sel.bean.roastDate).getTime()) / MS_PER_DAY);
 				if (days >= 0) parts.push(`${days}일차`);
 			}
 			return parts.join(' · ');
@@ -90,15 +92,6 @@ export function getStepSummary(step: FlowStep, sel: BrewFlowSelection): string {
 		case 'saving':
 			return '';
 	}
-}
-
-function createFormField(container: HTMLElement, label: string, type: string, value: string): HTMLInputElement {
-	const group = container.createDiv();
-	group.createEl('label', { text: label });
-	const input = group.createEl('input', { type });
-	input.value = value;
-	if (type === 'number') input.step = 'any';
-	return input;
 }
 
 
@@ -322,7 +315,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 				grindStepper.destroy();
 				grindStepper = createStepper(form, {
 					label: '분쇄도', initial: 0,
-					...grindStepperConfig, pxPerStep: 8,
+					...grindStepperConfig, pxPerStep: 12,
 					onChange: grindOnChange,
 				});
 				form.insertBefore(grindStepper.el, doseStepper.el);
@@ -334,13 +327,13 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	const grindOnChange = (v: number) => { sel.grindSize = v; syncSummary(); };
 	let grindStepper = createStepper(form, {
 		label: '분쇄도', initial: sel.grindSize ?? 0,
-		...grindStepperConfig, pxPerStep: 8,
+		...grindStepperConfig, pxPerStep: 12,
 		onChange: grindOnChange,
 	});
 	const doseStepper = createStepper(form, {
 		label: '도징량', initial: sel.dose ?? 0,
 		min: 0, max: 100, step: 0.1,
-		format: v => `${v.toFixed(1)}g`, pxPerStep: 8,
+		format: v => `${v.toFixed(1)}g`, pxPerStep: 12,
 		onChange: v => { sel.dose = v; syncSummary(); },
 	});
 
@@ -369,7 +362,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 		waterTempStepper = createStepper(form, {
 			label: '물 온도', initial: sel.waterTemp ?? 93,
 			min: 0, max: 100, step: 1,
-			format: v => `${v}°C`, pxPerStep: 8,
+			format: v => `${v}°C`, pxPerStep: 12,
 			onChange: v => { sel.waterTemp = v; syncSummary(); },
 		});
 	}
@@ -377,16 +370,21 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	if (isEspresso && ctx.accessories.length > 0) {
 		const accGroup = form.createDiv({ cls: 'brew-flow-accessories' });
 		accGroup.createEl('label', { text: '악세서리' });
+		const accList = accGroup.createDiv({ cls: 'brew-flow-accessory-list' });
 		const selected = new Set(sel.accessories ?? []);
 		for (const acc of ctx.accessories) {
-			const label = accGroup.createEl('label', { cls: 'brew-flow-accessory-item' });
-			const cb = label.createEl('input', { type: 'checkbox' });
-			cb.checked = selected.has(acc);
-			label.appendText(acc);
-			cb.addEventListener('change', () => {
-				if (cb.checked) selected.add(acc);
-				else selected.delete(acc);
+			const row = accList.createDiv({ cls: 'brew-flow-accessory-item' });
+			const toggle = row.createDiv({ cls: 'checkbox-container' });
+			if (selected.has(acc)) toggle.addClass('is-enabled');
+			row.createSpan({ text: acc });
+			toggle.addEventListener('click', () => {
+				const enabled = toggle.hasClass('is-enabled');
+				if (enabled) { toggle.removeClass('is-enabled'); selected.delete(acc); }
+				else { toggle.addClass('is-enabled'); selected.add(acc); }
 				sel.accessories = selected.size > 0 ? [...selected] : undefined;
+			});
+			row.addEventListener('click', (e) => {
+				if (e.target !== toggle && !toggle.contains(e.target as Node)) toggle.click();
 			});
 		}
 	}
@@ -430,7 +428,21 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 
 function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 	container.addClass('brew-flow-active-brew');
+	const isEspresso = ctx.flowState.selection.method === 'espresso';
 	const scaleConnected = ctx.plugin.acaiaService.state === 'connected';
+
+	if (isEspresso) {
+		container.createDiv({ cls: 'brew-flow-espresso-msg', text: '추출이 끝나면 완료를 눌러주세요.' });
+		const controls = container.createDiv({ cls: 'brewing-controls' });
+		const doneBtn = controls.createEl('button', { text: '추출 완료', cls: 'brewing-ctrl-btn brew-flow-stop-btn' });
+		doneBtn.addEventListener('click', () => {
+			ctx.flowState.finishBrewing(undefined, undefined);
+			ctx.setBrewingStarted(false);
+			ctx.expandStep('saving');
+			ctx.updateAccordion();
+		});
+		return;
+	}
 
 	const recipe = ctx.flowState.selection.recipe;
 	if (recipe && recipe.steps.length > 0) {
@@ -504,13 +516,17 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 
 	if (!sel.time && sel.method === 'espresso') {
 		const manualForm = container.createDiv({ cls: 'brew-flow-form' });
-		const timeInput = createFormField(manualForm, '시간 (초)', 'number', '');
-		const yieldInput = createFormField(manualForm, '추출량 (g)', 'number', '');
-		timeInput.addEventListener('change', () => {
-			ctx.flowState.updateVariables({ time: parseFloat(timeInput.value) || undefined });
+		createStepper(manualForm, {
+			label: '시간', initial: 0,
+			min: 0, max: 120, step: 1,
+			format: v => `${v}초`, pxPerStep: 6,
+			onChange: v => { ctx.flowState.updateVariables({ time: v || undefined }); },
 		});
-		yieldInput.addEventListener('change', () => {
-			ctx.flowState.updateVariables({ yield: parseFloat(yieldInput.value) || undefined });
+		createStepper(manualForm, {
+			label: '추출량', initial: 0,
+			min: 0, max: 200, step: 0.1,
+			format: v => `${v.toFixed(1)}g`, pxPerStep: 12,
+			onChange: v => { ctx.flowState.updateVariables({ yield: v || undefined }); },
 		});
 	}
 
@@ -522,7 +538,7 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 		const weightStepper = createStepper(weightForm, {
 			label, initial: 0,
 			min: 0, max: 1000, step: 0.1,
-			format: v => `${v.toFixed(1)}g`, pxPerStep: 8,
+			format: v => `${v.toFixed(1)}g`, pxPerStep: 12,
 			onChange: v => {
 				if (needsMilk) sel.milkWeight = v;
 				else sel.waterWeight = v;
