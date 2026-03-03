@@ -2,7 +2,7 @@ import type { App, TFile } from 'obsidian';
 import type { BeanInfo, RecipeInfo, RecipeStep } from '../brew/types';
 
 export class VaultDataService {
-	constructor(private app: App) {}
+	constructor(private app: App, private beanFolder = '3. Resources') {}
 
 	getActiveBeans(): BeanInfo[] {
 		return this.getAllBeans().filter(b => b.status === 'active');
@@ -72,7 +72,7 @@ export class VaultDataService {
 	}
 
 	async createBeanNote(extraContent?: string): Promise<string> {
-		const folder = '3. Resources';
+		const folder = this.beanFolder;
 		let name = '새 원두';
 		let path = `${folder}/${name}.md`;
 		let counter = 1;

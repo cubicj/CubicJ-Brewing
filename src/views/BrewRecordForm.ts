@@ -184,9 +184,9 @@ export function renderEditForm(
 
 		if (method !== record.method) {
 			if (method === 'filter') {
-				changes = { ...changes, drink: undefined, basket: undefined, accessories: undefined } as any;
+				changes = { ...changes, drink: undefined, basket: undefined, accessories: undefined } as Partial<BrewRecord>;
 			} else {
-				changes = { ...changes, waterTemp: undefined, filter: undefined, dripper: undefined } as any;
+				changes = { ...changes, waterTemp: undefined, filter: undefined, dripper: undefined } as Partial<BrewRecord>;
 			}
 		}
 
