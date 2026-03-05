@@ -1,9 +1,8 @@
 import { EventEmitter } from 'events';
 import { AcaiaState, AcaiaEvents, ButtonEvent, NOBLE_PATH, SCALE_PREFIXES, WRITE_UUID, NOTIFY_UUID, Noble, NoblePeripheral, NobleCharacteristic, resolveModelName } from './types';
 import {
-  encode,
   encodeIdentify, encodeHeartbeat, encodeNotificationRequest,
-  encodeTare, encodeTimerControl, encodeGetSettings,
+  encodeTare, encodeTimerControl, encodeGetSettings, encodePowerOff,
   decodeWeight, decodeTimer, decodeSettings, PacketBuffer,
 } from './protocol';
 
@@ -83,16 +82,6 @@ export class AcaiaService extends EventEmitter {
 
   get scaleName(): string | null {
     return this._scaleName;
-  }
-
-  getSnapshot(): { weight: number; stable: boolean; battery: number; timerRunning: boolean; settingsRaw: string | null } {
-    return {
-      weight: this._lastWeight,
-      stable: this._lastStable,
-      battery: this._lastBattery,
-      timerRunning: this.scaleTimerRunning,
-      settingsRaw: this._lastSettingsRaw,
-    };
   }
 
   get currentReconnectAttempt(): number {
@@ -321,19 +310,23 @@ export class AcaiaService extends EventEmitter {
     await this.enqueueWrite(encodeTimerControl('reset'));
   }
 
-  async sendRaw(msgType: number, payload: number[] = [0]): Promise<void> {
+  async powerOff(): Promise<void> {
     if (this._state !== 'connected') return;
-    await this.enqueueWrite(encode(msgType, payload));
-  }
-
-  pauseHeartbeat(): void {
-    this.log('heartbeat paused (explorer)');
+    this.log('powerOff() — stopping heartbeat, sending power off command');
+    this.userDisconnected = true;
+    this.cancelReconnect();
     this.stopTimers();
-  }
-
-  resumeHeartbeat(): void {
-    this.log('heartbeat resumed (explorer)');
-    if (this._state === 'connected') this.startHeartbeat();
+    this.writeQueue = [];
+    if (this.writeChar) {
+      try {
+        await this.writeChar.writeAsync(encodePowerOff(), true);
+        this.log('powerOff command written (msgType=24)');
+      } catch (e) {
+        this.log(`powerOff write failed: ${e}`);
+      }
+    }
+    await new Promise(r => setTimeout(r, 500));
+    this.disconnect();
   }
 
   destroy(): void {

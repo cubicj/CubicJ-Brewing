@@ -46,6 +46,10 @@ export function encodeGetSettings(): Buffer {
   return encode(6, Array(16).fill(0));
 }
 
+export function encodePowerOff(): Buffer {
+  return encode(24, [0]);
+}
+
 export interface WeightResult {
   weight: number;
   stable: boolean;

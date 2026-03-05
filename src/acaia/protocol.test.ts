@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  encode, encodeIdentify, encodeHeartbeat, encodeNotificationRequest, encodeTare, encodeTimerControl, encodeGetSettings,
+  encode, encodeIdentify, encodeHeartbeat, encodeNotificationRequest, encodeTare, encodeTimerControl, encodeGetSettings, encodePowerOff,
   decodeWeight, decodeTimer, decodeSettings, PacketBuffer,
 } from './protocol';
 
@@ -61,6 +61,13 @@ describe('command helpers', () => {
     const result = encodeGetSettings();
     expect(result[2]).toBe(6);
     expect(result.length).toBe(5 + 16);
+  });
+
+  it('encodePowerOff sends msgType 24 with payload [0]', () => {
+    const result = encodePowerOff();
+    expect(result[2]).toBe(24);
+    expect(result.length).toBe(6);
+    expect(result[3]).toBe(0);
   });
 });
 
