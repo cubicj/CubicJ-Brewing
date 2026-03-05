@@ -814,8 +814,7 @@
   font-size: var(--font-ui-smaller);
 }
 .block-language-brews .brew-record-note {
-  white-space: normal;
-  min-width: 200px;
+  max-width: 300px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -930,6 +929,26 @@
 .brew-profile-modal .brew-profile-container {
   height: auto;
   overflow-x: auto;
+}
+.brew-profile-modal .brew-espresso-stats {
+  display: flex;
+  gap: 24px;
+  padding: 24px;
+  background: var(--background-primary-alt);
+  border-radius: var(--radius-s);
+  justify-content: center;
+}
+.brew-profile-modal .brew-espresso-stat {
+  text-align: center;
+}
+.brew-profile-modal .brew-espresso-stat-label {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.brew-profile-modal .brew-espresso-stat-value {
+  font-size: var(--font-ui-large);
+  font-weight: var(--font-semibold);
 }
 .brew-profile-modal .brew-profile-footer {
   display: flex;

@@ -179,8 +179,10 @@ export class BrewProfileChart {
 		const w = this.canvas.clientWidth;
 		if (w > 0) {
 			this.canvas.width = w * devicePixelRatio;
-			if (this.staticPoints) this.render(this.staticPoints);
-			else if (!this.recorder) this.render([]);
+			if (this.staticPoints) {
+				this.fitTimeScale(this.staticPoints);
+				this.render(this.staticPoints);
+			} else if (!this.recorder) this.render([]);
 		}
 	}
 
@@ -230,9 +232,18 @@ export class BrewProfileChart {
 		if (this.scrollable) {
 			this.applyScrollableWidth(points);
 		} else {
+			this.fitTimeScale(points);
 			this.attachViewWheel(points);
 			this.render(points);
 		}
+	}
+
+	private fitTimeScale(points: BrewProfilePoint[]): void {
+		const maxT = points.length > 0 ? points[points.length - 1].t : 0;
+		if (maxT <= 0) return;
+		const dpr = devicePixelRatio;
+		const plotW = this.canvas.width - (PADDING.left + PADDING.right) * dpr;
+		this.timeScale = plotW / (maxT * dpr);
 	}
 
 	destroy(): void {

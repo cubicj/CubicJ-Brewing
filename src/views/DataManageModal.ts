@@ -113,9 +113,11 @@ export class DataManageModal extends Modal {
 
 		row.createDiv({ cls: 'dm-row-name', text: bean.name });
 
-		const days = this.plugin.vaultData.getDaysSinceRoast(bean);
-		if (days !== null) {
-			row.createSpan({ cls: 'dm-row-days', text: `로스팅 ${days}일차` });
+		if (bean.status === 'active') {
+			const days = this.plugin.vaultData.getDaysSinceRoast(bean);
+			if (days !== null) {
+				row.createSpan({ cls: 'dm-row-days', text: `로스팅 ${days}일차` });
+			}
 		}
 
 		const actions = row.createDiv({ cls: 'dm-row-actions' });
