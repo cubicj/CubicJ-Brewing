@@ -133,28 +133,28 @@ export default class CubicJBrewingPlugin extends Plugin {
       return leaves.length > 0 ? (leaves[0].view as BrewingView) : null;
     };
 
-    this.addCommand({ id: 'tare', name: 'Tare', checkCallback: (checking) => {
+    this.addCommand({ id: 'tare', name: '영점 맞추기', checkCallback: (checking) => {
       const view = getView();
       if (!view) return false;
       if (!checking) view.tare();
       return true;
     }});
 
-    this.addCommand({ id: 'auto-fill', name: 'Auto fill weight', checkCallback: (checking) => {
+    this.addCommand({ id: 'auto-fill', name: '무게 자동 입력', checkCallback: (checking) => {
       const view = getView();
       if (!view) return false;
       if (!checking) view.autoFill();
       return true;
     }});
 
-    this.addCommand({ id: 'toggle-brewing', name: 'Start / Stop brewing', checkCallback: (checking) => {
+    this.addCommand({ id: 'toggle-brewing', name: '브루잉 시작 / 중지', checkCallback: (checking) => {
       const view = getView();
       if (!view) return false;
       if (!checking) view.toggleBrewing();
       return true;
     }});
 
-    this.addCommand({ id: 'power-off-scale', name: 'Power off scale', checkCallback: (checking) => {
+    this.addCommand({ id: 'power-off-scale', name: '저울 전원 끄기', checkCallback: (checking) => {
       const view = getView();
       if (!view || this.acaiaService?.state !== 'connected') return false;
       if (!checking) view.powerOff();
