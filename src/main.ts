@@ -127,6 +127,32 @@ export default class CubicJBrewingPlugin extends Plugin {
 
     this.registerView(VIEW_TYPE_BREWING, (leaf) => new BrewingView(leaf, this));
 
+    const getView = (): BrewingView | null => {
+      const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_BREWING);
+      return leaves.length > 0 ? (leaves[0].view as BrewingView) : null;
+    };
+
+    this.addCommand({ id: 'tare', name: 'Tare', checkCallback: (checking) => {
+      const view = getView();
+      if (!view) return false;
+      if (!checking) view.tare();
+      return true;
+    }});
+
+    this.addCommand({ id: 'auto-fill', name: 'Auto fill weight', checkCallback: (checking) => {
+      const view = getView();
+      if (!view) return false;
+      if (!checking) view.autoFill();
+      return true;
+    }});
+
+    this.addCommand({ id: 'toggle-brewing', name: 'Start / Stop brewing', checkCallback: (checking) => {
+      const view = getView();
+      if (!view) return false;
+      if (!checking) view.toggleBrewing();
+      return true;
+    }});
+
     this.addRibbonIcon('coffee', 'CubicJ Brewing', () => {
       this.activateView();
     });

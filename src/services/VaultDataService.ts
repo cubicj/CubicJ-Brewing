@@ -20,6 +20,12 @@ export class VaultDataService {
 		if (!file) return;
 		await this.app.fileManager.processFrontMatter(file, (fm) => {
 			fm.roast_date = date;
+			if (date) {
+				const diff = Date.now() - new Date(date).getTime();
+				fm.roast_days = `${Math.floor(diff / MS_PER_DAY)}일차`;
+			} else {
+				fm.roast_days = null;
+			}
 		});
 	}
 

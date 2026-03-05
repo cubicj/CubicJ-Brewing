@@ -81,7 +81,8 @@ export class BrewCodeBlock {
 			const { date, time } = formatBrewDate(record.timestamp);
 			dateTd.createDiv({ text: date });
 			dateTd.createDiv({ text: time });
-			const method = record.method === 'espresso' ? '에스프레소' : '필터';
+			const drinkLabels: Record<string, string> = { shot: '에스프레소', americano: '아메리카노', latte: '카페라떼' };
+			const method = record.method === 'espresso' ? (drinkLabels[record.drink ?? 'shot'] ?? '에스프레소') : '필터';
 			const temp = record.temp === 'iced' ? 'Ice' : 'Hot';
 			tr.createEl('td', { text: `${method}(${temp})` });
 			tr.createEl('td', { text: record.note ?? '', cls: 'brew-record-note' });

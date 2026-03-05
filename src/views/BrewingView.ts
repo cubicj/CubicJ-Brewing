@@ -84,6 +84,26 @@ export class BrewingView extends ItemView {
 		this.listeners = [];
 	}
 
+	tare(): void {
+		if (this.plugin.acaiaService?.state === 'connected') {
+			this.plugin.acaiaService.tare();
+		}
+	}
+
+	autoFill(): void {
+		const container = this.containerEl.children[1] as HTMLElement;
+		const btns = container.querySelectorAll('.brew-flow-stepper-scale-btn') as NodeListOf<HTMLButtonElement>;
+		if (btns.length > 0) btns[btns.length - 1].click();
+	}
+
+	toggleBrewing(): void {
+		const container = this.containerEl.children[1] as HTMLElement;
+		const startBtn = container.querySelector('.brew-flow-start-btn') as HTMLButtonElement | null;
+		if (startBtn) { startBtn.click(); return; }
+		const stopBtn = container.querySelector('.brew-flow-stop-btn') as HTMLButtonElement | null;
+		if (stopBtn) stopBtn.click();
+	}
+
 	private buildToolbar(container: HTMLElement): void {
 		const toolbar = container.createDiv({ cls: 'brewing-toolbar' });
 
