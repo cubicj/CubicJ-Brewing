@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import { AcaiaState, AcaiaEvents, ButtonEvent, NOBLE_PATH, SCALE_PREFIXES, WRITE_UUID, NOTIFY_UUID, Noble, NoblePeripheral, NobleCharacteristic, resolveModelName } from './types';
 import {
+  encode,
   encodeIdentify, encodeHeartbeat, encodeNotificationRequest,
   encodeTare, encodeTimerControl, encodeGetSettings,
   decodeWeight, decodeTimer, decodeSettings, PacketBuffer,
@@ -47,6 +48,10 @@ export class AcaiaService extends EventEmitter {
   private connectId = 0;
   private _scaleName: string | null = null;
   private logger?: BleLogger;
+  private _lastWeight = 0;
+  private _lastStable = false;
+  private _lastBattery = 0;
+  private _lastSettingsRaw: string | null = null;
 
   constructor(options?: AcaiaServiceOptions) {
     super();
@@ -78,6 +83,16 @@ export class AcaiaService extends EventEmitter {
 
   get scaleName(): string | null {
     return this._scaleName;
+  }
+
+  getSnapshot(): { weight: number; stable: boolean; battery: number; timerRunning: boolean; settingsRaw: string | null } {
+    return {
+      weight: this._lastWeight,
+      stable: this._lastStable,
+      battery: this._lastBattery,
+      timerRunning: this.scaleTimerRunning,
+      settingsRaw: this._lastSettingsRaw,
+    };
   }
 
   get currentReconnectAttempt(): number {
@@ -306,6 +321,21 @@ export class AcaiaService extends EventEmitter {
     await this.enqueueWrite(encodeTimerControl('reset'));
   }
 
+  async sendRaw(msgType: number, payload: number[] = [0]): Promise<void> {
+    if (this._state !== 'connected') return;
+    await this.enqueueWrite(encode(msgType, payload));
+  }
+
+  pauseHeartbeat(): void {
+    this.log('heartbeat paused (explorer)');
+    this.stopTimers();
+  }
+
+  resumeHeartbeat(): void {
+    this.log('heartbeat resumed (explorer)');
+    if (this._state === 'connected') this.startHeartbeat();
+  }
+
   destroy(): void {
     this.log(`destroy() — state=${this._state}, id=${this.connectId}`);
     this.connectId++;
@@ -382,6 +412,7 @@ export class AcaiaService extends EventEmitter {
   }
 
   private handlePacket(packet: Buffer): void {
+    this.emit('rawPacket', packet.toString('hex'));
     if (packet.length < 3 || packet[0] !== 0xef || packet[1] !== 0xdd) return;
 
     const cmd = packet[2];
@@ -397,6 +428,8 @@ export class AcaiaService extends EventEmitter {
         if (innerType === 5 && offset + 7 <= packet.length) {
           const w = decodeWeight(packet, offset + 1);
           this.emit('weight', w.weight, w.stable);
+          this._lastWeight = w.weight;
+          this._lastStable = w.stable;
           offset += 7;
         } else if (innerType === 7 && offset + 4 <= packet.length) {
           this.emit('timer', decodeTimer(packet, offset + 1));
@@ -410,6 +443,8 @@ export class AcaiaService extends EventEmitter {
       }
     } else if (cmd === 8 && packet.length >= 10) {
       const settings = decodeSettings(packet, 3);
+      this._lastSettingsRaw = packet.subarray(3).toString('hex');
+      this._lastBattery = settings.battery;
       this.emit('battery', settings.battery);
       if (settings.timerRunning !== this.scaleTimerRunning) {
         this.scaleTimerRunning = settings.timerRunning;
