@@ -178,8 +178,8 @@ export class BrewingView extends ItemView {
 			this.scaleDisplay.updateControls(state, () => this.timerController.resetToIdle());
 		});
 
-		this.listen('weight', (grams: number) => {
-			this.scaleDisplay.updateWeight(grams);
+		this.listen('weight', (grams: number, stable: boolean) => {
+			this.scaleDisplay.updateWeight(grams, stable);
 			if (this.recorder.isRecording) this.recorder.record(grams);
 		});
 

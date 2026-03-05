@@ -21,6 +21,7 @@ export class ScaleDisplayManager {
 	private scaleBatteryEl!: HTMLElement;
 	private scaleDataEl!: HTMLElement;
 	private weightEl!: HTMLElement;
+	private stabilityDot!: HTMLElement;
 	private timerEl!: HTMLElement;
 	private tareBtn!: HTMLButtonElement;
 	private timerBtn!: HTMLButtonElement;
@@ -45,7 +46,9 @@ export class ScaleDisplayManager {
 
 		const dataSection = container.createDiv({ cls: 'brewing-data' });
 		this.timerEl = dataSection.createDiv({ cls: 'brewing-timer', text: '0:00' });
-		this.weightEl = dataSection.createDiv({ cls: 'brewing-weight', text: '--' });
+		const weightWrap = dataSection.createDiv({ cls: 'brewing-weight-wrap' });
+		this.weightEl = weightWrap.createSpan({ cls: 'brewing-weight', text: '--' });
+		this.stabilityDot = weightWrap.createSpan({ cls: 'brewing-stability-dot' });
 
 		const controls = container.createDiv({ cls: 'brewing-controls brewing-scale-controls' });
 		this.timerBtn = controls.createEl('button', { text: '\u23FB', cls: 'brewing-ctrl-btn brewing-btn-icon' });
@@ -144,8 +147,9 @@ export class ScaleDisplayManager {
 		}
 	}
 
-	updateWeight(grams: number): void {
+	updateWeight(grams: number, stable: boolean): void {
 		this.weightEl.textContent = grams.toFixed(1);
+		this.stabilityDot.toggleClass('is-stable', stable);
 	}
 
 	updateBattery(percent: number): void {

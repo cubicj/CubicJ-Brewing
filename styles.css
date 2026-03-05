@@ -81,6 +81,27 @@
   letter-spacing: 0.05em;
 }
 
+.cubicj-brewing-view .brewing-weight-wrap {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 0;
+}
+
+.cubicj-brewing-view .brewing-stability-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-bottom: 4px;
+  margin-left: 2px;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.cubicj-brewing-view .brewing-stability-dot.is-stable {
+  background: #00e676;
+}
+
 .cubicj-brewing-view .brewing-weight {
   font-family: 'MatrixSansPrint', monospace !important;
   font-feature-settings: 'zero' 1;

@@ -8,7 +8,7 @@ export interface ButtonEvent {
 
 export interface AcaiaEvents {
   state: (state: AcaiaState) => void;
-  weight: (grams: number) => void;
+  weight: (grams: number, stable: boolean) => void;
   timer: (seconds: number) => void;
   battery: (percent: number) => void;
   button: (event: ButtonEvent) => void;
