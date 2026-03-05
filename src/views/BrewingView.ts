@@ -17,6 +17,7 @@ export class BrewingView extends ItemView {
 	private flowState = new BrewFlowState();
 
 	private scaleConnectBtn!: HTMLButtonElement;
+	private scalePowerOffBtn!: HTMLButtonElement;
 	private scaleDisplay!: ScaleDisplayManager;
 	private accordion!: AccordionManager;
 
@@ -43,7 +44,7 @@ export class BrewingView extends ItemView {
 		this.buildToolbar(container);
 
 		const svc = this.plugin.acaiaService;
-		this.scaleDisplay = new ScaleDisplayManager(this.scaleConnectBtn, {
+		this.scaleDisplay = new ScaleDisplayManager(this.scaleConnectBtn, this.scalePowerOffBtn, {
 			onTimerClick: () => this.timerController.handleTimerClick(),
 			onTare: () => svc.tare(),
 			isConnected: () => svc.state === 'connected',
@@ -96,6 +97,12 @@ export class BrewingView extends ItemView {
 		if (btns.length > 0) btns[btns.length - 1].click();
 	}
 
+	powerOff(): void {
+		if (this.plugin.acaiaService?.state === 'connected') {
+			this.plugin.acaiaService.powerOff();
+		}
+	}
+
 	toggleBrewing(): void {
 		const container = this.containerEl.children[1] as HTMLElement;
 		const startBtn = container.querySelector('.brew-flow-start-btn') as HTMLButtonElement | null;
@@ -109,6 +116,10 @@ export class BrewingView extends ItemView {
 
 		this.scaleConnectBtn = toolbar.createEl('button', { text: '저울 연결', cls: 'brewing-toolbar-btn' });
 		this.scaleConnectBtn.addEventListener('click', () => this.handleConnectClick());
+
+		this.scalePowerOffBtn = toolbar.createEl('button', { text: '전원 끄기', cls: 'brewing-toolbar-btn brewing-power-off-btn' });
+		this.scalePowerOffBtn.addEventListener('click', () => this.powerOff());
+		this.scalePowerOffBtn.style.display = 'none';
 
 		const rightGroup = toolbar.createDiv({ cls: 'brewing-toolbar-right' });
 

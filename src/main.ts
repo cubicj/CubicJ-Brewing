@@ -126,52 +126,6 @@ export default class CubicJBrewingPlugin extends Plugin {
 
     this.acaiaService = new AcaiaService({ logger });
 
-    if (PLUGIN_DEBUG) {
-      const { BleExplorer } = await import('./acaia/BleExplorer');
-      let explorer: InstanceType<typeof BleExplorer> | null = null;
-
-      this.addCommand({
-        id: 'ble-explorer-scan',
-        name: 'BLE Explorer: Scan',
-        callback: async () => {
-          if (!this.acaiaService || this.acaiaService.state !== 'connected') {
-            new Notice('Scale not connected');
-            return;
-          }
-          if (explorer) {
-            new Notice('Scan already running');
-            return;
-          }
-          const logPath = `${DATA_DIR}/ble-explorer.log`;
-          explorer = new BleExplorer(
-            this.acaiaService,
-            (content) => this.fileAdapter.write(logPath, content),
-            () => this.fileAdapter.read(logPath),
-          );
-          new Notice('BLE Explorer: scan started');
-          try {
-            await explorer.scan();
-            new Notice('BLE Explorer: scan complete');
-          } catch (e) {
-            new Notice(`BLE Explorer: error — ${e}`);
-          } finally {
-            explorer = null;
-          }
-        },
-      });
-
-      this.addCommand({
-        id: 'ble-explorer-stop',
-        name: 'BLE Explorer: Stop',
-        callback: () => {
-          if (explorer) {
-            explorer.stop();
-            new Notice('BLE Explorer: stopping...');
-          }
-        },
-      });
-    }
-
     this.registerView(VIEW_TYPE_BREWING, (leaf) => new BrewingView(leaf, this));
 
     const getView = (): BrewingView | null => {
@@ -197,6 +151,13 @@ export default class CubicJBrewingPlugin extends Plugin {
       const view = getView();
       if (!view) return false;
       if (!checking) view.toggleBrewing();
+      return true;
+    }});
+
+    this.addCommand({ id: 'power-off-scale', name: 'Power off scale', checkCallback: (checking) => {
+      const view = getView();
+      if (!view || this.acaiaService?.state !== 'connected') return false;
+      if (!checking) view.powerOff();
       return true;
     }});
 

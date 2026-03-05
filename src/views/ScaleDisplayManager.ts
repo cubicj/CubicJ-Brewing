@@ -28,6 +28,7 @@ export class ScaleDisplayManager {
 
 	constructor(
 		private connectBtn: HTMLButtonElement,
+		private powerOffBtn: HTMLButtonElement,
 		private callbacks: ScaleDisplayCallbacks,
 	) {}
 
@@ -77,6 +78,7 @@ export class ScaleDisplayManager {
 		this.scaleStatusEl.removeClass('brewing-error');
 
 		this.scaleNameEl.textContent = '';
+		this.powerOffBtn.style.display = 'none';
 
 		switch (state) {
 			case 'idle':
@@ -98,6 +100,7 @@ export class ScaleDisplayManager {
 				this.scaleStatusEl.textContent = '연결됨';
 				if (scaleName) this.scaleNameEl.textContent = `· ${scaleName}`;
 				this.connectBtn.textContent = '해제';
+				this.powerOffBtn.style.display = '';
 				break;
 			case 'disconnected':
 				this.scaleStatusEl.textContent = '연결 끊김';
