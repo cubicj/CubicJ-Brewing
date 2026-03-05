@@ -46,12 +46,18 @@ export function encodeGetSettings(): Buffer {
   return encode(6, Array(16).fill(0));
 }
 
-export function decodeWeight(data: Buffer, offset: number): number {
+export interface WeightResult {
+  weight: number;
+  stable: boolean;
+}
+
+export function decodeWeight(data: Buffer, offset: number): WeightResult {
   let value = ((data[offset + 1] & 0xff) << 8) | (data[offset] & 0xff);
   const unit = data[offset + 4] & 0xff;
   value /= Math.pow(10, unit);
   if ((data[offset + 5] & 0x02) === 0x02) value *= -1;
-  return value;
+  const stable = (data[offset + 5] & 0x01) === 0;
+  return { weight: value, stable };
 }
 
 export function decodeTimer(data: Buffer, offset: number): number {

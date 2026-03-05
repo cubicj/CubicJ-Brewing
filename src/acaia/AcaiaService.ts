@@ -142,6 +142,16 @@ export class AcaiaService extends EventEmitter {
     }
     this.noble = noble;
     this.log(`noble.state=${noble.state}`);
+
+    noble.on('stateChange', (state: string) => {
+      this.log(`noble stateChange: ${state}`);
+      if (state === 'poweredOff') {
+        this.log('Bluetooth adapter powered off — cleaning up');
+        this.emitError('Bluetooth adapter turned off');
+        this.disconnect();
+      }
+    });
+
     return noble;
   }
 
@@ -331,24 +341,43 @@ export class AcaiaService extends EventEmitter {
 
   private scanForScale(timeoutMs = 10000): Promise<NoblePeripheral | null> {
     return new Promise((resolve) => {
-      const timer = setTimeout(() => {
-        this.noble!.stopScanning();
+      let discoverCount = 0;
+
+      const cleanup = () => {
         this.noble!.removeListener('discover', onDiscover);
+        this.noble!.stopScanning();
+      };
+
+      const timer = setTimeout(() => {
+        cleanup();
+        this.log(`scan timeout — ${discoverCount} peripherals seen, no scale`);
         resolve(null);
       }, timeoutMs);
 
       const onDiscover = (p: NoblePeripheral) => {
+        discoverCount++;
         const name = p.advertisement?.localName || '';
-        if (SCALE_PREFIXES.includes(name.substring(0, 5).toUpperCase())) {
+        const addr = p.address || p.id || '??';
+        const prefix5 = name.substring(0, 5).toUpperCase();
+
+        if (SCALE_PREFIXES.includes(prefix5)) {
           clearTimeout(timer);
-          this.noble.stopScanning();
-          this.noble.removeListener('discover', onDiscover);
+          cleanup();
           resolve(p);
+        } else {
+          this.log(`scan: skipped "${name}" (${addr})`);
         }
       };
 
       this.noble.on('discover', onDiscover);
-      this.noble.startScanning([], false);
+      try {
+        this.noble.startScanning([], false);
+      } catch (scanErr: unknown) {
+        const msg = scanErr instanceof Error ? scanErr.message : String(scanErr);
+        this.log(`startScanning error: ${msg}`);
+        clearTimeout(timer);
+        resolve(null);
+      }
     });
   }
 
@@ -366,7 +395,8 @@ export class AcaiaService extends EventEmitter {
         const innerType = packet[offset];
 
         if (innerType === 5 && offset + 7 <= packet.length) {
-          this.emit('weight', decodeWeight(packet, offset + 1));
+          const w = decodeWeight(packet, offset + 1);
+          this.emit('weight', w.weight, w.stable);
           offset += 7;
         } else if (innerType === 7 && offset + 4 <= packet.length) {
           this.emit('timer', decodeTimer(packet, offset + 1));
@@ -399,21 +429,21 @@ export class AcaiaService extends EventEmitter {
 
     if (p0 === 0 && p1 === 5) {
       event = { type: 'tare' };
-      if (typeOffset + 9 <= packet.length) event.weight = decodeWeight(packet, typeOffset + 3);
+      if (typeOffset + 9 <= packet.length) event.weight = decodeWeight(packet, typeOffset + 3).weight;
     } else if (p0 === 8) {
       event = { type: 'timer_start' };
-      if (p1 === 5 && typeOffset + 9 <= packet.length) event.weight = decodeWeight(packet, typeOffset + 3);
+      if (p1 === 5 && typeOffset + 9 <= packet.length) event.weight = decodeWeight(packet, typeOffset + 3).weight;
     } else if (p0 === 10) {
       event = { type: 'timer_stop' };
       if (p1 === 7 && typeOffset + 7 <= packet.length) {
         event.timer = decodeTimer(packet, typeOffset + 3);
-        if (typeOffset + 13 <= packet.length) event.weight = decodeWeight(packet, typeOffset + 7);
+        if (typeOffset + 13 <= packet.length) event.weight = decodeWeight(packet, typeOffset + 7).weight;
       }
     } else if (p0 === 9) {
       event = { type: 'timer_reset' };
       if (p1 === 7 && typeOffset + 7 <= packet.length) {
         event.timer = decodeTimer(packet, typeOffset + 3);
-        if (typeOffset + 13 <= packet.length) event.weight = decodeWeight(packet, typeOffset + 7);
+        if (typeOffset + 13 <= packet.length) event.weight = decodeWeight(packet, typeOffset + 7).weight;
       }
     }
 

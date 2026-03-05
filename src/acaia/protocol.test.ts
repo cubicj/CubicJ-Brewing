@@ -67,22 +67,44 @@ describe('command helpers', () => {
 describe('decodeWeight', () => {
   it('decodes standard weight from protocol spec example', () => {
     const payload = Buffer.from([0xdf, 0x06, 0x00, 0x00, 0x01, 0x00]);
-    expect(decodeWeight(payload, 0)).toBeCloseTo(175.9);
+    const result = decodeWeight(payload, 0);
+    expect(result.weight).toBeCloseTo(175.9);
+    expect(result.stable).toBe(true);
   });
 
   it('handles negative weight', () => {
     const payload = Buffer.from([0xdf, 0x06, 0x00, 0x00, 0x01, 0x02]);
-    expect(decodeWeight(payload, 0)).toBeCloseTo(-175.9);
+    const result = decodeWeight(payload, 0);
+    expect(result.weight).toBeCloseTo(-175.9);
+    expect(result.stable).toBe(true);
   });
 
   it('handles unit=2 (0.01g resolution)', () => {
     const payload = Buffer.from([0x57, 0x13, 0x00, 0x00, 0x02, 0x00]);
-    expect(decodeWeight(payload, 0)).toBeCloseTo(49.51);
+    const result = decodeWeight(payload, 0);
+    expect(result.weight).toBeCloseTo(49.51);
+    expect(result.stable).toBe(true);
   });
 
   it('applies offset parameter', () => {
     const payload = Buffer.from([0x00, 0x00, 0xdf, 0x06, 0x00, 0x00, 0x01, 0x00]);
-    expect(decodeWeight(payload, 2)).toBeCloseTo(175.9);
+    const result = decodeWeight(payload, 2);
+    expect(result.weight).toBeCloseTo(175.9);
+    expect(result.stable).toBe(true);
+  });
+
+  it('detects unstable weight (bit 0 set)', () => {
+    const payload = Buffer.from([0xdf, 0x06, 0x00, 0x00, 0x01, 0x01]);
+    const result = decodeWeight(payload, 0);
+    expect(result.weight).toBeCloseTo(175.9);
+    expect(result.stable).toBe(false);
+  });
+
+  it('detects unstable negative weight (bits 0+1 set)', () => {
+    const payload = Buffer.from([0xdf, 0x06, 0x00, 0x00, 0x01, 0x03]);
+    const result = decodeWeight(payload, 0);
+    expect(result.weight).toBeCloseTo(-175.9);
+    expect(result.stable).toBe(false);
   });
 });
 
