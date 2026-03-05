@@ -23,6 +23,7 @@ export default class CubicJBrewingPlugin extends Plugin {
   pluginLogger: PluginLogger | null = null;
   private beforeUnloadHandler: (() => void) | null = null;
   private blePacketLogger: FileLogger | null = null;
+  private fileAdapter!: FileAdapter;
   private viewType: string | null = null;
 
   async onload() {
@@ -49,7 +50,7 @@ export default class CubicJBrewingPlugin extends Plugin {
       }),
     );
 
-    const fileAdapter: FileAdapter = {
+    this.fileAdapter = {
       read: async (path) => {
         try { return await this.app.vault.adapter.read(path); }
         catch { return null; }
@@ -87,7 +88,7 @@ export default class CubicJBrewingPlugin extends Plugin {
     };
     this.recordService = new BrewRecordService(adapter);
 
-    this.profileStorage = new BrewProfileStorage(DATA_DIR, fileAdapter);
+    this.profileStorage = new BrewProfileStorage(DATA_DIR, this.fileAdapter);
 
     const brewBlock = new BrewCodeBlock(this.app, this.recordService, this.profileStorage, () => this.equipment);
     brewBlock.register((lang, handler) => this.registerMarkdownCodeBlockProcessor(lang, handler));
@@ -124,6 +125,52 @@ export default class CubicJBrewingPlugin extends Plugin {
     }
 
     this.acaiaService = new AcaiaService({ logger });
+
+    if (PLUGIN_DEBUG) {
+      const { BleExplorer } = await import('./acaia/BleExplorer');
+      let explorer: InstanceType<typeof BleExplorer> | null = null;
+
+      this.addCommand({
+        id: 'ble-explorer-scan',
+        name: 'BLE Explorer: Scan',
+        callback: async () => {
+          if (!this.acaiaService || this.acaiaService.state !== 'connected') {
+            new Notice('Scale not connected');
+            return;
+          }
+          if (explorer) {
+            new Notice('Scan already running');
+            return;
+          }
+          const logPath = `${DATA_DIR}/ble-explorer.log`;
+          explorer = new BleExplorer(
+            this.acaiaService,
+            (content) => this.fileAdapter.write(logPath, content),
+            () => this.fileAdapter.read(logPath),
+          );
+          new Notice('BLE Explorer: scan started');
+          try {
+            await explorer.scan();
+            new Notice('BLE Explorer: scan complete');
+          } catch (e) {
+            new Notice(`BLE Explorer: error — ${e}`);
+          } finally {
+            explorer = null;
+          }
+        },
+      });
+
+      this.addCommand({
+        id: 'ble-explorer-stop',
+        name: 'BLE Explorer: Stop',
+        callback: () => {
+          if (explorer) {
+            explorer.stop();
+            new Notice('BLE Explorer: stopping...');
+          }
+        },
+      });
+    }
 
     this.registerView(VIEW_TYPE_BREWING, (leaf) => new BrewingView(leaf, this));
 
