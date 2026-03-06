@@ -14,8 +14,14 @@ export class BrewProfileStorage {
 
 	async load(profilePath: string): Promise<BrewProfilePoint[]> {
 		const raw = await this.adapter.read(`${this.baseDir}/${profilePath}`);
-		try { return raw ? JSON.parse(raw) : []; }
+		if (!raw) return [];
+		let parsed: unknown;
+		try { parsed = JSON.parse(raw); }
 		catch { console.error(`Profile ${profilePath} corrupt`); return []; }
+		if (!Array.isArray(parsed)) return [];
+		return parsed.filter((p: any) =>
+			p && typeof p === 'object' && typeof p.t === 'number' && typeof p.w === 'number'
+		) as BrewProfilePoint[];
 	}
 
 	async delete(profilePath: string): Promise<void> {

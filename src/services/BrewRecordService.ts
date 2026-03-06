@@ -14,9 +14,30 @@ export class BrewRecordService {
 	private async load(): Promise<BrewRecord[]> {
 		if (this.records) return this.records;
 		const raw = await this.adapter.read();
-		try { this.records = raw ? JSON.parse(raw) : []; }
-		catch { console.error('brew-records.json corrupt, resetting'); this.records = []; }
-		return this.records!;
+		if (!raw) { this.records = []; return this.records; }
+		let parsed: unknown;
+		try { parsed = JSON.parse(raw); }
+		catch {
+			console.error('brew-records.json corrupt — backing up raw data');
+			await this.adapter.write(raw + '\n// BACKUP ' + new Date().toISOString());
+			this.records = [];
+			return this.records;
+		}
+		if (!Array.isArray(parsed)) {
+			console.error('brew-records.json is not an array — resetting');
+			this.records = [];
+			return this.records;
+		}
+		const valid = parsed.filter((r: any) =>
+			r && typeof r === 'object' && typeof r.id === 'string' &&
+			typeof r.timestamp === 'string' && typeof r.bean === 'string' &&
+			(r.method === 'filter' || r.method === 'espresso')
+		);
+		if (valid.length < parsed.length) {
+			console.warn(`brew-records.json: ${parsed.length - valid.length} invalid records filtered out`);
+		}
+		this.records = valid as BrewRecord[];
+		return this.records;
 	}
 
 	private async save(): Promise<void> {
