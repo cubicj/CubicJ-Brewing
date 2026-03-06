@@ -217,6 +217,8 @@ export class BrewingView extends ItemView {
 		this.listeners.push({ event, fn });
 	}
 
+	async toggleConnect(): Promise<void> { return this.handleConnectClick(); }
+
 	private async handleConnectClick(): Promise<void> {
 		const service = this.plugin.acaiaService!;
 		if (service.state === 'scanning' || service.state === 'connecting' || service.state === 'reconnecting') {

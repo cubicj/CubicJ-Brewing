@@ -16,20 +16,26 @@ function wallClock(): string {
 
 export class PluginLogger {
 	private fileLogger: FileLogger;
+	private categories: Set<string>;
 
-	constructor(adapter: Adapter, filePath: string) {
+	constructor(adapter: Adapter, filePath: string, categories: string[] = []) {
 		this.fileLogger = new FileLogger(adapter, filePath, 2000, 2000);
+		this.categories = new Set(categories);
 	}
 
 	start(): void {
 		this.fileLogger.start();
-		this.log('PLUGIN', `=== session ${new Date().toISOString()} ===`);
+		this.logRaw(`=== session ${new Date().toISOString()} ===`);
 	}
 
 	log(category: string, message: string): void {
+		if (this.categories.size > 0 && !this.categories.has(category)) return;
 		const line = `[${wallClock()}] [${category}] ${message}`;
 		this.fileLogger.logRaw(line);
-		console.log(`[CubicJ] ${line}`);
+	}
+
+	logRaw(message: string): void {
+		this.fileLogger.logRaw(message);
 	}
 
 	async stop(): Promise<void> {
