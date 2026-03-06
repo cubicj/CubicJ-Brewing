@@ -1,3 +1,9 @@
+export interface LogConfig {
+	enabled: boolean;
+	categories: string[];
+	packetLog: boolean;
+}
+
 export type BrewMethod = 'filter' | 'espresso';
 export type BrewTemp = 'hot' | 'iced';
 export type EspressoDrink = 'shot' | 'americano' | 'latte';

@@ -8,10 +8,8 @@ import type { FileAdapter } from './services/FileAdapter';
 import { VaultDataService } from './services/VaultDataService';
 import { BeanCodeBlock } from './views/BeanCodeBlock';
 import { BrewCodeBlock } from './views/BrewCodeBlock';
-import type { EquipmentSettings } from './brew/types';
+import type { EquipmentSettings, LogConfig } from './brew/types';
 
-const BLE_PACKET_DEBUG = false;
-const PLUGIN_DEBUG = true;
 const DATA_DIR = 'cubicj-brewing';
 
 export default class CubicJBrewingPlugin extends Plugin {
@@ -21,23 +19,24 @@ export default class CubicJBrewingPlugin extends Plugin {
   vaultData!: VaultDataService;
   equipment: EquipmentSettings = { grinders: [], drippers: [], filters: [], baskets: [], accessories: [] };
   pluginLogger: PluginLogger | null = null;
+  private logConfig: LogConfig = { enabled: true, categories: [], packetLog: false };
   private beforeUnloadHandler: (() => void) | null = null;
   private blePacketLogger: FileLogger | null = null;
   private fileAdapter!: FileAdapter;
   private viewType: string | null = null;
 
   async onload() {
-    if (PLUGIN_DEBUG) {
+    this.vaultData = new VaultDataService(this.app);
+    await this.loadPluginData();
+    if (this.logConfig.enabled) {
       const vaultIO = {
         read: async (p: string) => this.app.vault.adapter.read(p),
         write: async (p: string, c: string) => this.app.vault.adapter.write(p, c),
       };
-      this.pluginLogger = new PluginLogger(vaultIO, `${this.manifest.dir}/plugin-debug.log`);
+      this.pluginLogger = new PluginLogger(vaultIO, `${this.manifest.dir}/plugin-debug.log`, this.logConfig.categories);
       this.pluginLogger.start();
     }
     this.pluginLogger?.log('PLUGIN', 'onload');
-    this.vaultData = new VaultDataService(this.app);
-    await this.loadEquipment();
 
     const beanBlock = new BeanCodeBlock(this.app, this.vaultData);
     beanBlock.register((lang, handler) => this.registerMarkdownCodeBlockProcessor(lang, handler));
@@ -117,9 +116,9 @@ export default class CubicJBrewingPlugin extends Plugin {
       logger = { log: (msg: string) => pl.log('BLE', msg) };
     }
 
-    if (BLE_PACKET_DEBUG) {
+    if (this.logConfig.packetLog) {
       const { FileLogger } = await import('./utils/FileLogger');
-      this.blePacketLogger = new FileLogger(vaultAdapter, `${this.manifest.dir}/ble-debug.log`, 1000, 1000);
+      this.blePacketLogger = new FileLogger(vaultAdapter, `${this.manifest.dir}/ble-debug.log`, 1000, 5000);
       this.blePacketLogger.start();
       this.blePacketLogger.log(`\n=== session ${new Date().toISOString()} ===`);
     }
@@ -154,6 +153,13 @@ export default class CubicJBrewingPlugin extends Plugin {
       return true;
     }});
 
+    this.addCommand({ id: 'toggle-connect', name: '저울 연결 / 해제', checkCallback: (checking) => {
+      const view = getView();
+      if (!view) return false;
+      if (!checking) view.toggleConnect();
+      return true;
+    }});
+
     this.addCommand({ id: 'power-off-scale', name: '저울 전원 끄기', checkCallback: (checking) => {
       const view = getView();
       if (!view || this.acaiaService?.state !== 'connected') return false;
@@ -185,7 +191,7 @@ export default class CubicJBrewingPlugin extends Plugin {
     this.blePacketLogger?.stop();
   }
 
-  async loadEquipment(): Promise<void> {
+  async loadPluginData(): Promise<void> {
     const data = await this.loadData() ?? {};
     const eq = data.equipment;
     if (eq && typeof eq === 'object' && !Array.isArray(eq)) {
@@ -196,6 +202,14 @@ export default class CubicJBrewingPlugin extends Plugin {
       } else {
         this.pluginLogger?.log('PLUGIN', 'data.json equipment schema mismatch, using defaults');
       }
+    }
+    const lc = data.logConfig;
+    if (lc && typeof lc === 'object' && !Array.isArray(lc)) {
+      this.logConfig = {
+        enabled: typeof lc.enabled === 'boolean' ? lc.enabled : true,
+        categories: Array.isArray(lc.categories) ? lc.categories : [],
+        packetLog: typeof lc.packetLog === 'boolean' ? lc.packetLog : false,
+      };
     }
   }
 
