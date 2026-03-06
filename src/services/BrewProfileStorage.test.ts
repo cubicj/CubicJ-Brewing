@@ -73,4 +73,23 @@ describe('BrewProfileStorage', () => {
 		const loaded = await storage.load(path);
 		expect(loaded).toEqual([]);
 	});
+
+	it('filters out invalid points on load', async () => {
+		const path = 'brew-profiles/test.json';
+		adapter.files.set(`${baseDir}/${path}`, JSON.stringify([
+			{ t: 0, w: 0 },
+			{ garbage: true },
+			{ t: 1, w: 10 },
+			'not an object',
+		]));
+		const loaded = await storage.load(path);
+		expect(loaded).toEqual([{ t: 0, w: 0 }, { t: 1, w: 10 }]);
+	});
+
+	it('handles non-array profile data', async () => {
+		const path = 'brew-profiles/test.json';
+		adapter.files.set(`${baseDir}/${path}`, '{"not": "array"}');
+		const loaded = await storage.load(path);
+		expect(loaded).toEqual([]);
+	});
 });

@@ -408,7 +408,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 	container.addClass('brew-flow-active-brew');
 	const isEspresso = ctx.flowState.selection.method === 'espresso';
-	const scaleConnected = ctx.plugin.acaiaService.state === 'connected';
+	const scaleConnected = ctx.plugin.acaiaService?.state === 'connected';
 
 	if (isEspresso) {
 		container.createDiv({ cls: 'brew-flow-espresso-msg', text: '추출이 끝나면 완료를 눌러주세요.' });

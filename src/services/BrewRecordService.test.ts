@@ -152,4 +152,32 @@ describe('BrewRecordService', () => {
 		expect(records[0].timestamp).toBe('2026-03-02T10:00:00Z');
 		expect(records[1].timestamp).toBe('2026-03-01T10:00:00Z');
 	});
+
+	it('filters out invalid records on load', async () => {
+		adapter.data = JSON.stringify([
+			makeFilter(),
+			{ garbage: true },
+			{ id: '1', timestamp: 'x', bean: 'b' },
+			makeFilter(),
+		]);
+		const svc = new BrewRecordService(adapter);
+		const records = await svc.getAll();
+		expect(records).toHaveLength(2);
+	});
+
+	it('handles corrupt JSON without data loss', async () => {
+		adapter.data = '{broken json';
+		const svc = new BrewRecordService(adapter);
+		const records = await svc.getAll();
+		expect(records).toEqual([]);
+		expect(adapter.data).toContain('BACKUP');
+		expect(adapter.data).toContain('{broken json');
+	});
+
+	it('handles non-array JSON', async () => {
+		adapter.data = '{"not": "array"}';
+		const svc = new BrewRecordService(adapter);
+		const records = await svc.getAll();
+		expect(records).toEqual([]);
+	});
 });

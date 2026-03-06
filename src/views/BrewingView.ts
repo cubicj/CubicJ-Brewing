@@ -43,7 +43,7 @@ export class BrewingView extends ItemView {
 
 		this.buildToolbar(container);
 
-		const svc = this.plugin.acaiaService;
+		const svc = this.plugin.acaiaService!;
 		this.scaleDisplay = new ScaleDisplayManager(this.scaleConnectBtn, this.scalePowerOffBtn, {
 			onTimerClick: () => this.timerController.handleTimerClick(),
 			onTare: () => svc.tare(),
@@ -78,7 +78,7 @@ export class BrewingView extends ItemView {
 			this.savingRoRef.current.disconnect();
 			this.savingRoRef.current = null;
 		}
-		const service = this.plugin.acaiaService;
+		const service = this.plugin.acaiaService!;
 		for (const { event, fn } of this.listeners) {
 			service.removeListener(event, fn);
 		}
@@ -213,12 +213,12 @@ export class BrewingView extends ItemView {
 	}
 
 	private listen(event: string, fn: (...args: any[]) => void): void {
-		this.plugin.acaiaService.on(event, fn);
+		this.plugin.acaiaService!.on(event, fn);
 		this.listeners.push({ event, fn });
 	}
 
 	private async handleConnectClick(): Promise<void> {
-		const service = this.plugin.acaiaService;
+		const service = this.plugin.acaiaService!;
 		if (service.state === 'scanning' || service.state === 'connecting' || service.state === 'reconnecting') {
 			this.log('cancelConnect');
 			await service.cancelConnect();

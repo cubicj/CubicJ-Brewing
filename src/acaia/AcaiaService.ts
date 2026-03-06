@@ -354,11 +354,11 @@ export class AcaiaService extends EventEmitter {
       const onState = (state: string) => {
         if (state === 'poweredOn') {
           clearTimeout(timer);
-          this.noble.removeListener('stateChange', onState);
+          this.noble!.removeListener('stateChange', onState);
           resolve(true);
         }
       };
-      this.noble.on('stateChange', onState);
+      this.noble!.on('stateChange', onState);
     });
   }
 
@@ -392,9 +392,9 @@ export class AcaiaService extends EventEmitter {
         }
       };
 
-      this.noble.on('discover', onDiscover);
+      this.noble!.on('discover', onDiscover);
       try {
-        this.noble.startScanning([], false);
+        this.noble!.startScanning([], false);
       } catch (scanErr: unknown) {
         const msg = scanErr instanceof Error ? scanErr.message : String(scanErr);
         this.log(`startScanning error: ${msg}`);

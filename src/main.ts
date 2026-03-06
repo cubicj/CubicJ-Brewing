@@ -128,9 +128,9 @@ export default class CubicJBrewingPlugin extends Plugin {
 
     this.registerView(VIEW_TYPE_BREWING, (leaf) => new BrewingView(leaf, this));
 
-    const getView = (): BrewingView | null => {
+    const getView = (): InstanceType<typeof BrewingView> | null => {
       const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_BREWING);
-      return leaves.length > 0 ? (leaves[0].view as BrewingView) : null;
+      return leaves.length > 0 ? (leaves[0].view as InstanceType<typeof BrewingView>) : null;
     };
 
     this.addCommand({ id: 'tare', name: '영점 맞추기', checkCallback: (checking) => {

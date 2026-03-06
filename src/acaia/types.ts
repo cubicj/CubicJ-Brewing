@@ -25,6 +25,7 @@ export interface NobleCharacteristic {
 
 export interface NoblePeripheral {
   uuid: string;
+  id?: string;
   address: string;
   state: string;
   advertisement: { localName?: string };
@@ -42,8 +43,12 @@ export interface NoblePeripheral {
 
 export interface Noble {
   state: string;
-  on(event: string, listener: (...args: unknown[]) => void): this;
-  removeListener(event: string, listener: (...args: unknown[]) => void): this;
+  on(event: 'stateChange', listener: (state: string) => void): this;
+  on(event: 'discover', listener: (peripheral: NoblePeripheral) => void): this;
+  on(event: string, listener: (...args: any[]) => void): this;
+  removeListener(event: 'stateChange', listener: (state: string) => void): this;
+  removeListener(event: 'discover', listener: (peripheral: NoblePeripheral) => void): this;
+  removeListener(event: string, listener: (...args: any[]) => void): this;
   removeAllListeners(): this;
   startScanning(serviceUUIDs: string[], allowDuplicates: boolean): void;
   startScanningAsync(serviceUUIDs: string[], allowDuplicates: boolean): Promise<void>;

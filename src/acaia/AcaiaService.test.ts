@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { AcaiaService } from './AcaiaService';
-import { AcaiaState } from './types';
+import { AcaiaState, Noble } from './types';
 
 function createMockWriteChar() {
   return {
@@ -23,6 +23,9 @@ function createMockNotifyChar() {
 function createMockPeripheral(writeChar = createMockWriteChar(), notifyChar = createMockNotifyChar()) {
   const onceCallbacks: Record<string, Function> = {};
   return {
+    uuid: 'test-uuid',
+    address: '00:00:00:00:00:00',
+    state: 'disconnected',
     advertisement: { localName: 'PEARLS-TEST' },
     connectAsync: vi.fn().mockResolvedValue(undefined),
     disconnectAsync: vi.fn().mockResolvedValue(undefined),
@@ -51,10 +54,12 @@ function createMockNoble(peripheral: ReturnType<typeof createMockPeripheral>) {
       cbs.forEach(cb => cb(peripheral));
     }),
     stopScanning: vi.fn(),
+    startScanningAsync: vi.fn().mockResolvedValue(undefined),
+    stopScanningAsync: vi.fn().mockResolvedValue(undefined),
     removeAllListeners: vi.fn(),
     removeListener: vi.fn(),
     _listeners: listeners,
-  };
+  } as unknown as Noble & { _listeners: Record<string, Function[]> };
 }
 
 function collectStates(service: AcaiaService): AcaiaState[] {
