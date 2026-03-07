@@ -1,0 +1,6 @@
+main.js
+node_modules/
+Temp/
+fonts/
+scripts/
+*.log

@@ -9,8 +9,14 @@ export interface StepperConfig {
 	onChange?: (v: number) => void;
 }
 
-export function createStepper(container: HTMLElement, config: StepperConfig): {
-	el: HTMLElement; getValue: () => number; setValue: (v: number, silent?: boolean) => void; destroy: () => void;
+export function createStepper(
+	container: HTMLElement,
+	config: StepperConfig,
+): {
+	el: HTMLElement;
+	getValue: () => number;
+	setValue: (v: number, silent?: boolean) => void;
+	destroy: () => void;
 } {
 	let value = config.initial;
 	const group = container.createDiv({ cls: 'brew-flow-stepper' });
@@ -22,24 +28,33 @@ export function createStepper(container: HTMLElement, config: StepperConfig): {
 	const clamp = (v: number) => Math.max(config.min, Math.min(config.max, round(v)));
 	const display = controls.createDiv({ cls: 'brew-flow-stepper-value is-draggable' });
 	let initialized = false;
-	const update = () => { display.textContent = config.format(value); if (initialized) config.onChange?.(value); };
+	const update = () => {
+		display.textContent = config.format(value);
+		if (initialized) config.onChange?.(value);
+	};
 
 	const decBtn = controls.createEl('button', { text: '◀', cls: 'brew-flow-stepper-btn' });
 	controls.insertBefore(decBtn, display);
-	decBtn.addEventListener('click', () => { value = clamp(value - config.step); update(); });
+	decBtn.addEventListener('click', () => {
+		value = clamp(value - config.step);
+		update();
+	});
 
 	update();
 	initialized = true;
 
 	const incBtn = controls.createEl('button', { text: '▶', cls: 'brew-flow-stepper-btn' });
-	incBtn.addEventListener('click', () => { value = clamp(value + config.step); update(); });
+	incBtn.addEventListener('click', () => {
+		value = clamp(value + config.step);
+		update();
+	});
 
 	let dragStartX = 0;
 	let dragStartVal = 0;
-	let dragged = false;
+	let _dragged = false;
 	const onMove = (e: MouseEvent) => {
 		const dx = e.clientX - dragStartX;
-		if (Math.abs(dx) > 3) dragged = true;
+		if (Math.abs(dx) > 3) _dragged = true;
 		const raw = dragStartVal + (dx / config.pxPerStep) * config.step;
 		value = clamp(Math.round(raw / config.step) * config.step);
 		update();
@@ -53,7 +68,7 @@ export function createStepper(container: HTMLElement, config: StepperConfig): {
 		e.preventDefault();
 		dragStartX = e.clientX;
 		dragStartVal = value;
-		dragged = false;
+		_dragged = false;
 		display.addClass('is-dragging');
 		document.addEventListener('mousemove', onMove);
 		document.addEventListener('mouseup', onUp);
@@ -83,7 +98,11 @@ export function createStepper(container: HTMLElement, config: StepperConfig): {
 		input.addEventListener('blur', commit);
 		input.addEventListener('keydown', (e) => {
 			if (e.key === 'Enter') commit();
-			if (e.key === 'Escape') { editing = false; input.remove(); update(); }
+			if (e.key === 'Escape') {
+				editing = false;
+				input.remove();
+				update();
+			}
 		});
 	});
 

@@ -25,8 +25,8 @@ class InMemoryFileAdapter implements FileAdapter {
 	async list(path: string): Promise<string[]> {
 		const prefix = path.endsWith('/') ? path : path + '/';
 		return [...this.files.keys()]
-			.filter(k => k.startsWith(prefix))
-			.map(k => k.slice(prefix.length).split('/')[0])
+			.filter((k) => k.startsWith(prefix))
+			.map((k) => k.slice(prefix.length).split('/')[0])
 			.filter((v, i, a) => a.indexOf(v) === i);
 	}
 }
@@ -55,7 +55,10 @@ describe('BrewProfileStorage', () => {
 	});
 
 	it('loads saved profile', async () => {
-		const points: BrewProfilePoint[] = [{ t: 0, w: 0 }, { t: 1, w: 10 }];
+		const points: BrewProfilePoint[] = [
+			{ t: 0, w: 0 },
+			{ t: 1, w: 10 },
+		];
 		const path = await storage.save('2026-03-01T14:00:00.000Z', points);
 		const loaded = await storage.load(path);
 		expect(loaded).toEqual(points);
@@ -76,14 +79,15 @@ describe('BrewProfileStorage', () => {
 
 	it('filters out invalid points on load', async () => {
 		const path = 'brew-profiles/test.json';
-		adapter.files.set(`${baseDir}/${path}`, JSON.stringify([
-			{ t: 0, w: 0 },
-			{ garbage: true },
-			{ t: 1, w: 10 },
-			'not an object',
-		]));
+		adapter.files.set(
+			`${baseDir}/${path}`,
+			JSON.stringify([{ t: 0, w: 0 }, { garbage: true }, { t: 1, w: 10 }, 'not an object']),
+		);
 		const loaded = await storage.load(path);
-		expect(loaded).toEqual([{ t: 0, w: 0 }, { t: 1, w: 10 }]);
+		expect(loaded).toEqual([
+			{ t: 0, w: 0 },
+			{ t: 1, w: 10 },
+		]);
 	});
 
 	it('handles non-array profile data', async () => {

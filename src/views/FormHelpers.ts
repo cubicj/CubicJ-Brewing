@@ -12,7 +12,7 @@ export function createToggleGroup<T extends string>(
 		if (item.value === selected) btn.addClass('is-active');
 		btn.addEventListener('click', () => {
 			const deselecting = btn.hasClass('is-active');
-			buttons.forEach(b => b.removeClass('is-active'));
+			buttons.forEach((b) => b.removeClass('is-active'));
 			if (deselecting) {
 				onChange(null);
 			} else {
@@ -50,7 +50,8 @@ export function attachScaleAutoBtn(
 ): void {
 	const label = stepper.el.querySelector('label') as HTMLElement;
 	const btn = label.createEl('button', {
-		text: 'auto', cls: 'brew-flow-stepper-scale-btn',
+		text: 'auto',
+		cls: 'brew-flow-stepper-scale-btn',
 		attr: { 'aria-label': '저울 무게 가져오기' },
 	});
 	btn.addEventListener('click', () => {

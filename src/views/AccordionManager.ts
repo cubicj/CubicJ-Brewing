@@ -7,7 +7,13 @@ interface AccordionCallbacks {
 }
 
 export class AccordionManager {
-	private panels: Array<{ panel: HTMLElement; header: HTMLElement; indicator: HTMLElement; titleArea: HTMLElement; body: HTMLElement }> = [];
+	private panels: Array<{
+		panel: HTMLElement;
+		header: HTMLElement;
+		indicator: HTMLElement;
+		titleArea: HTMLElement;
+		body: HTMLElement;
+	}> = [];
 	private expandedSteps = new Set<number>();
 	private accordionEndListeners = new WeakMap<HTMLElement, (e: TransitionEvent) => void>();
 
@@ -162,7 +168,12 @@ export class AccordionManager {
 	animateContentChange(step: FlowStep, mutation: () => void): void {
 		const idx = STEP_ORDER.indexOf(step);
 		const p = this.panels[idx];
-		if (!p || !this.expandedSteps.has(idx) || !p.body.classList.contains('is-open') || p.body.style.maxHeight !== 'none') {
+		if (
+			!p ||
+			!this.expandedSteps.has(idx) ||
+			!p.body.classList.contains('is-open') ||
+			p.body.style.maxHeight !== 'none'
+		) {
 			mutation();
 			return;
 		}

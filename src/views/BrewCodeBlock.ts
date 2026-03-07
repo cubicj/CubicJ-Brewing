@@ -15,7 +15,12 @@ export class BrewCodeBlock {
 		private getEquipment: () => EquipmentSettings,
 	) {}
 
-	register(registerFn: (lang: string, handler: (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void) => void): void {
+	register(
+		registerFn: (
+			lang: string,
+			handler: (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void,
+		) => void,
+	): void {
 		registerFn('brews', (_source, el, ctx) => {
 			this.containers.push(new WeakRef(el));
 			this.renderAsync(el, ctx.sourcePath);
@@ -23,7 +28,7 @@ export class BrewCodeBlock {
 	}
 
 	refreshAll(): void {
-		this.containers = this.containers.filter(ref => {
+		this.containers = this.containers.filter((ref) => {
 			const el = ref.deref();
 			if (!el || !el.isConnected) return false;
 			const path = el.dataset.sourcePath;
@@ -36,7 +41,7 @@ export class BrewCodeBlock {
 		el.dataset.sourcePath = sourcePath;
 		let beanName = this.resolveBeanName(sourcePath);
 		if (!beanName) {
-			await new Promise(r => setTimeout(r, 500));
+			await new Promise((r) => setTimeout(r, 500));
 			beanName = this.resolveBeanName(sourcePath);
 		}
 		if (!beanName) {
@@ -92,7 +97,13 @@ export class BrewCodeBlock {
 			setIcon(btn, 'list');
 			btn.addEventListener('click', () => {
 				const title = `${beanName} — ${this.formatDate(record.timestamp)}`;
-				new BrewProfileModal(this.app, title, { type: 'detail', record, recordService: this.recordService, profileStorage: this.profileStorage, equipment: this.getEquipment() }).open();
+				new BrewProfileModal(this.app, title, {
+					type: 'detail',
+					record,
+					recordService: this.recordService,
+					profileStorage: this.profileStorage,
+					equipment: this.getEquipment(),
+				}).open();
 			});
 		}
 	}
@@ -101,5 +112,4 @@ export class BrewCodeBlock {
 		const { date, time } = formatBrewDate(iso);
 		return `${date} · ${time}`;
 	}
-
 }

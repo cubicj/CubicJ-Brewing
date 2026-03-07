@@ -1,667 +1,675 @@
 .cubicj-brewing-view .brewing-scale-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 32px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--background-modifier-border);
-  font-size: var(--font-ui-smaller);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	min-height: 32px;
+	padding: 6px 0;
+	border-bottom: 1px solid var(--background-modifier-border);
+	font-size: var(--font-ui-smaller);
 }
 
 .cubicj-brewing-view .brewing-scale-info {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-muted);
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--text-muted);
 }
 
 .cubicj-brewing-view .brewing-scale-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--text-faint);
-  flex-shrink: 0;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--text-faint);
+	flex-shrink: 0;
 }
 
 .cubicj-brewing-view .brewing-scale-dot.is-connected {
-  background: var(--color-green);
+	background: var(--color-green);
 }
 
 .cubicj-brewing-view .brewing-scale-dot.is-disconnected {
-  background: var(--color-red);
+	background: var(--color-red);
 }
 
 .cubicj-brewing-view .brewing-scale-dot.is-busy {
-  background: var(--color-yellow);
-  animation: brewing-pulse 1s ease-in-out infinite;
+	background: var(--color-yellow);
+	animation: brewing-pulse 1s ease-in-out infinite;
 }
 
 @keyframes brewing-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.3;
+	}
 }
 
-
 .cubicj-brewing-view .brewing-scale-data {
-  border-bottom: 1px solid var(--background-modifier-border);
-  padding-bottom: 8px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	padding-bottom: 8px;
 }
 
 .cubicj-brewing-view .brewing-scale-controls {
-  justify-content: center;
-  border-top: none;
-  padding-top: 4px;
+	justify-content: center;
+	border-top: none;
+	padding-top: 4px;
 }
 
 .cubicj-brewing-view .brewing-content-area {
-  flex: 1;
-  overflow-y: auto;
-  padding-top: var(--size-4-2);
+	flex: 1;
+	overflow-y: auto;
+	padding-top: var(--size-4-2);
 }
 
-
 .cubicj-brewing-view .brewing-data {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 16px 12px;
-  gap: 8px;
-  background: #0a0a0a;
-  border-radius: 8px;
-  margin: 4px 0;
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	padding: 16px 12px;
+	gap: 8px;
+	background: #0a0a0a;
+	border-radius: 8px;
+	margin: 4px 0;
 }
 
 .cubicj-brewing-view .brewing-timer {
-  font-family: 'MatrixSansPrint4x6', 'MatrixSansPrint', monospace !important;
-  font-feature-settings: 'zero' 1;
-  font-size: 3.8em;
-  font-variant-numeric: tabular-nums;
-  color: #e8e8e8;
-  line-height: 1;
-  letter-spacing: 0.05em;
+	font-family: 'MatrixSansPrint4x6', 'MatrixSansPrint', monospace !important;
+	font-feature-settings: 'zero' 1;
+	font-size: 3.8em;
+	font-variant-numeric: tabular-nums;
+	color: #e8e8e8;
+	line-height: 1;
+	letter-spacing: 0.05em;
 }
 
 .cubicj-brewing-view .brewing-weight-wrap {
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-end;
-  gap: 0;
+	display: flex;
+	align-items: flex-end;
+	justify-content: flex-end;
+	gap: 0;
 }
 
 .cubicj-brewing-view .brewing-stability-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-bottom: 4px;
-  margin-left: 2px;
-  background: transparent;
-  flex-shrink: 0;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	margin-bottom: 4px;
+	margin-left: 2px;
+	background: transparent;
+	flex-shrink: 0;
 }
 
 .cubicj-brewing-view .brewing-stability-dot.is-stable {
-  background: #00e676;
+	background: #00e676;
 }
 
 .cubicj-brewing-view .brewing-weight {
-  font-family: 'MatrixSansPrint', monospace !important;
-  font-feature-settings: 'zero' 1;
-  font-size: 4.4em;
-  font-variant-numeric: tabular-nums;
-  color: #e8e8e8;
-  line-height: 1;
-  letter-spacing: 0.05em;
-  text-align: right;
+	font-family: 'MatrixSansPrint', monospace !important;
+	font-feature-settings: 'zero' 1;
+	font-size: 4.4em;
+	font-variant-numeric: tabular-nums;
+	color: #e8e8e8;
+	line-height: 1;
+	letter-spacing: 0.05em;
+	text-align: right;
 }
 
 .cubicj-brewing-view .brewing-btn-icon {
-  font-size: 1.4em;
-  min-width: 3em;
-  padding: 4px 12px;
+	font-size: 1.4em;
+	min-width: 3em;
+	padding: 4px 12px;
 }
 
 .cubicj-brewing-view .brewing-dimmed {
-  opacity: 0.3;
+	opacity: 0.3;
 }
 
 .cubicj-brewing-view .brewing-error {
-  color: var(--text-error);
+	color: var(--text-error);
 }
 
 .cubicj-brewing-view .brewing-controls {
-  display: flex;
-  gap: 8px;
-  border-top: 1px solid var(--background-modifier-border);
-  padding-top: 8px;
+	display: flex;
+	gap: 8px;
+	border-top: 1px solid var(--background-modifier-border);
+	padding-top: 8px;
 }
 
 .cubicj-brewing-view .brewing-ctrl-btn {
-  flex: 1;
+	flex: 1;
 }
 
 /* Toolbar */
 
 .cubicj-brewing-view .brewing-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--size-2-3);
-  padding: var(--size-2-3) 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-2-3);
+	padding: var(--size-2-3) 0;
 }
 
 .cubicj-brewing-view .brewing-toolbar-right {
-  display: flex;
-  gap: var(--size-2-3);
-  margin-left: auto;
+	display: flex;
+	gap: var(--size-2-3);
+	margin-left: auto;
 }
 
 .cubicj-brewing-view .brewing-toolbar-btn {
-  font-size: var(--font-ui-small);
-  padding: var(--size-2-1) var(--size-4-2);
-  border-radius: var(--radius-s);
-  border: var(--border-width) solid var(--background-modifier-border);
-  background: var(--background-primary-alt);
-  color: var(--text-muted);
-  cursor: pointer;
+	font-size: var(--font-ui-small);
+	padding: var(--size-2-1) var(--size-4-2);
+	border-radius: var(--radius-s);
+	border: var(--border-width) solid var(--background-modifier-border);
+	background: var(--background-primary-alt);
+	color: var(--text-muted);
+	cursor: pointer;
 }
 
 .cubicj-brewing-view .brewing-toolbar-btn:hover {
-  color: var(--text-normal);
-  background: var(--background-modifier-hover);
+	color: var(--text-normal);
+	background: var(--background-modifier-hover);
 }
 
 /* Data manage modal */
 
 .cubicj-data-manage-modal-container {
-  max-width: 560px;
-  padding: 0;
+	max-width: 560px;
+	padding: 0;
 }
 
 .cubicj-data-manage-modal-container .modal-close-button {
-  z-index: 1;
+	z-index: 1;
 }
 
 .cubicj-data-manage-modal {
-  padding: var(--size-4-3);
-  padding-top: 0;
+	padding: var(--size-4-3);
+	padding-top: 0;
 }
 
 .cubicj-data-manage-modal .dm-tab-bar {
-  display: flex;
-  position: relative;
-  border-bottom: var(--border-width) solid var(--background-modifier-border);
-  margin-bottom: var(--size-4-3);
-  padding-top: var(--size-4-6);
+	display: flex;
+	position: relative;
+	border-bottom: var(--border-width) solid var(--background-modifier-border);
+	margin-bottom: var(--size-4-3);
+	padding-top: var(--size-4-6);
 }
 
 .cubicj-data-manage-modal .dm-tab-indicator {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 2px;
-  background: var(--interactive-accent);
-  will-change: transform;
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	height: 2px;
+	background: var(--interactive-accent);
+	will-change: transform;
 }
 
 .cubicj-data-manage-modal .dm-tab-btn {
-  flex: 1;
-  padding: var(--size-4-2) var(--size-4-3);
-  background: none;
-  border: none;
-  box-shadow: none;
-  outline: none;
-  border-radius: 0;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: var(--font-ui-medium);
-  font-weight: var(--font-medium);
-  transition: color 0.15s ease;
+	flex: 1;
+	padding: var(--size-4-2) var(--size-4-3);
+	background: none;
+	border: none;
+	box-shadow: none;
+	outline: none;
+	border-radius: 0;
+	color: var(--text-muted);
+	cursor: pointer;
+	font-size: var(--font-ui-medium);
+	font-weight: var(--font-medium);
+	transition: color 0.15s ease;
 }
 
 .cubicj-data-manage-modal .dm-tab-btn:hover {
-  color: var(--text-normal);
+	color: var(--text-normal);
 }
 
 .cubicj-data-manage-modal .dm-tab-btn.is-active {
-  color: var(--text-normal);
+	color: var(--text-normal);
 }
 
 .cubicj-data-manage-modal .dm-tab-content {
-  padding: 0;
+	padding: 0;
 }
 
 .cubicj-data-manage-modal .dm-bean-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-2-3);
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-3);
 }
 
 .cubicj-data-manage-modal .dm-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--size-4-2);
-  border-radius: var(--radius-m);
-  border: var(--border-width) solid var(--background-modifier-border);
-  background: var(--background-primary-alt);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--size-4-2);
+	border-radius: var(--radius-m);
+	border: var(--border-width) solid var(--background-modifier-border);
+	background: var(--background-primary-alt);
 }
 
 .cubicj-data-manage-modal .dm-row.is-finished {
-  opacity: 0.5;
+	opacity: 0.5;
 }
 
 .cubicj-data-manage-modal .dm-row-name {
-  flex: 1;
-  min-width: 0;
-  font-weight: var(--font-semibold);
+	flex: 1;
+	min-width: 0;
+	font-weight: var(--font-semibold);
 }
 
 .cubicj-data-manage-modal .dm-row-days {
-  font-size: 0.85em;
-  color: var(--text-muted);
-  margin-right: var(--size-4-2);
+	font-size: 0.85em;
+	color: var(--text-muted);
+	margin-right: var(--size-4-2);
 }
 
 .cubicj-data-manage-modal .dm-row-actions {
-  display: flex;
-  gap: var(--size-2-2);
-  flex-shrink: 0;
+	display: flex;
+	gap: var(--size-2-2);
+	flex-shrink: 0;
 }
 
 .cubicj-data-manage-modal .dm-btn {
-  padding: var(--size-2-1) var(--size-2-3);
-  border-radius: var(--radius-s);
-  border: var(--border-width) solid var(--background-modifier-border);
-  background: var(--background-primary);
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: var(--font-ui-smaller);
+	padding: var(--size-2-1) var(--size-2-3);
+	border-radius: var(--radius-s);
+	border: var(--border-width) solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-muted);
+	cursor: pointer;
+	font-size: var(--font-ui-smaller);
 }
 
 .cubicj-data-manage-modal .dm-btn:hover {
-  color: var(--text-normal);
-  background: var(--background-modifier-hover);
+	color: var(--text-normal);
+	background: var(--background-modifier-hover);
 }
 .cubicj-data-manage-modal .dm-btn-muted {
-  opacity: 0.6;
+	opacity: 0.6;
 }
 .cubicj-data-manage-modal .dm-btn-accent {
-  color: var(--text-on-accent);
-  background: var(--interactive-accent);
-  border-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+	background: var(--interactive-accent);
+	border-color: var(--interactive-accent);
 }
 .cubicj-data-manage-modal .dm-btn-accent:hover {
-  background: var(--interactive-accent-hover);
+	background: var(--interactive-accent-hover);
 }
 .cubicj-data-manage-modal .dm-date-input {
-  padding: var(--size-2-1) var(--size-2-2);
-  font-size: var(--font-ui-smaller);
-  border-radius: var(--radius-s);
-  border: var(--border-width) solid var(--interactive-accent);
+	padding: var(--size-2-1) var(--size-2-2);
+	font-size: var(--font-ui-smaller);
+	border-radius: var(--radius-s);
+	border: var(--border-width) solid var(--interactive-accent);
 }
 
 .cubicj-data-manage-modal .dm-date-row {
-  display: flex;
-  align-items: center;
-  gap: var(--size-2-2);
-  margin-top: var(--size-2-2);
-  padding-top: var(--size-2-2);
-  border-top: var(--border-width) solid var(--background-modifier-border);
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	margin-top: var(--size-2-2);
+	padding-top: var(--size-2-2);
+	border-top: var(--border-width) solid var(--background-modifier-border);
 }
 
-.cubicj-data-manage-modal .dm-date-row input[type="date"] {
-  flex: 1;
-  padding: var(--size-2-1) var(--size-2-2);
-  border-radius: var(--radius-s);
-  border: var(--border-width) solid var(--background-modifier-border);
-  background: var(--background-primary);
-  color: var(--text-normal);
-  font-size: var(--font-ui-smaller);
+.cubicj-data-manage-modal .dm-date-row input[type='date'] {
+	flex: 1;
+	padding: var(--size-2-1) var(--size-2-2);
+	border-radius: var(--radius-s);
+	border: var(--border-width) solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: var(--font-ui-smaller);
 }
 
 .cubicj-data-manage-modal .dm-add-btn {
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-  border-color: var(--interactive-accent);
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-color: var(--interactive-accent);
 }
 
 .cubicj-data-manage-modal .dm-add-btn:hover {
-  background: var(--interactive-accent-hover);
-  color: var(--text-on-accent);
+	background: var(--interactive-accent-hover);
+	color: var(--text-on-accent);
 }
 
 .cubicj-data-manage-modal .dm-divider {
-  font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
-  padding: var(--size-2-2) 0;
-  border-bottom: var(--border-width) solid var(--background-modifier-border);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+	padding: var(--size-2-2) 0;
+	border-bottom: var(--border-width) solid var(--background-modifier-border);
 }
 
 .cubicj-data-manage-modal .dm-status-btn {
-  font-size: var(--font-ui-smaller);
+	font-size: var(--font-ui-smaller);
 }
 
 .cubicj-data-manage-modal .dm-empty {
-  color: var(--text-faint);
-  font-size: var(--font-ui-small);
-  text-align: center;
-  padding: var(--size-4-8) var(--size-4-4);
+	color: var(--text-faint);
+	font-size: var(--font-ui-small);
+	text-align: center;
+	padding: var(--size-4-8) var(--size-4-4);
 }
 
 /* Brew flow accordion */
 
 .cubicj-brewing-view .brew-accordion-panel {
-  margin-bottom: var(--size-2-3);
-  border-radius: var(--radius-m);
-  border: var(--border-width) solid var(--background-modifier-border);
-  background: var(--background-primary-alt);
-  overflow: hidden;
+	margin-bottom: var(--size-2-3);
+	border-radius: var(--radius-m);
+	border: var(--border-width) solid var(--background-modifier-border);
+	background: var(--background-primary-alt);
+	overflow: hidden;
 }
 
 .cubicj-brewing-view .brew-accordion-header {
-  display: flex;
-  align-items: center;
-  gap: var(--size-4-2);
-  padding: var(--size-4-2) var(--size-4-3);
-  font-size: var(--font-ui-small);
-  cursor: pointer;
-  transition: background 0.15s ease;
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	padding: var(--size-4-2) var(--size-4-3);
+	font-size: var(--font-ui-small);
+	cursor: pointer;
+	transition: background 0.15s ease;
 }
 
 .cubicj-brewing-view .brew-accordion-header:hover {
-  background: var(--background-modifier-hover);
+	background: var(--background-modifier-hover);
 }
 
 .cubicj-brewing-view .brew-accordion-indicator {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 600;
-  border: 1.5px solid var(--text-faint);
-  color: var(--text-faint);
-  transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	font-size: 11px;
+	font-weight: 600;
+	border: 1.5px solid var(--text-faint);
+	color: var(--text-faint);
+	transition:
+		background 0.25s ease,
+		color 0.25s ease,
+		border-color 0.25s ease;
 }
 
 .cubicj-brewing-view .brew-accordion-indicator.is-done {
-  background: var(--color-green);
-  color: #fff;
-  border-color: var(--color-green);
+	background: var(--color-green);
+	color: #fff;
+	border-color: var(--color-green);
 }
 
 .cubicj-brewing-view .brew-accordion-title-area {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  gap: var(--size-4-2);
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	align-items: baseline;
+	gap: var(--size-4-2);
 }
 
 .cubicj-brewing-view .brew-accordion-title {
-  flex-shrink: 0;
-  font-weight: 500;
+	flex-shrink: 0;
+	font-weight: 500;
 }
 
 .cubicj-brewing-view .brew-accordion-summary {
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .cubicj-brewing-view .brew-accordion-body {
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transition: max-height 0.35s ease, height 0.35s ease, opacity 0.3s ease;
+	max-height: 0;
+	opacity: 0;
+	overflow: hidden;
+	transition:
+		max-height 0.35s ease,
+		height 0.35s ease,
+		opacity 0.3s ease;
 }
 
 .cubicj-brewing-view .brew-accordion-body.is-open {
-  opacity: 1;
+	opacity: 1;
 }
 
 .cubicj-brewing-view .brew-accordion-body-inner {
-  padding: var(--size-4-2) var(--size-4-3) var(--size-4-3);
+	padding: var(--size-4-2) var(--size-4-3) var(--size-4-3);
 }
 
 .cubicj-brewing-view .brew-flow-last-record-meta {
-  color: var(--text-muted);
+	color: var(--text-muted);
 }
 
 .cubicj-brewing-view .brew-flow-method h4,
 .cubicj-brewing-view .brew-flow-bean h4 {
-  margin: 8px 0 4px;
-  font-size: var(--font-ui-small);
-  color: var(--text-muted);
+	margin: 8px 0 4px;
+	font-size: var(--font-ui-small);
+	color: var(--text-muted);
 }
 
 .cubicj-brewing-view .brew-flow-toggle-group {
-  display: flex;
-  gap: 4px;
-  margin: 4px 0;
+	display: flex;
+	gap: 4px;
+	margin: 4px 0;
 }
 
 .cubicj-brewing-view .brew-flow-toggle {
-  flex: 1;
-  text-align: center;
-  padding: 6px;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: var(--font-ui-small);
+	flex: 1;
+	text-align: center;
+	padding: 6px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: var(--font-ui-small);
 }
 
 .cubicj-brewing-view .brew-flow-toggle:hover {
-  background: var(--background-modifier-hover);
+	background: var(--background-modifier-hover);
 }
 
 .cubicj-brewing-view .brew-flow-toggle.is-active {
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-  border-color: var(--interactive-accent);
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-color: var(--interactive-accent);
 }
 
 .cubicj-brewing-view .brew-flow-bean-item {
-  padding: 8px;
-  border-bottom: 1px solid var(--background-modifier-border);
-  cursor: pointer;
+	padding: 8px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	cursor: pointer;
 }
 
 .cubicj-brewing-view .brew-flow-bean-item:first-child {
-  border-top: 1px solid var(--background-modifier-border);
+	border-top: 1px solid var(--background-modifier-border);
 }
 
 .cubicj-brewing-view .brew-flow-bean-item:hover {
-  background: var(--background-modifier-hover);
+	background: var(--background-modifier-hover);
 }
 
 .cubicj-brewing-view .brew-flow-bean-item.is-selected {
-  background: var(--background-modifier-active-hover);
-  border-left: 3px solid var(--interactive-accent);
-  padding-left: 5px;
+	background: var(--background-modifier-active-hover);
+	border-left: 3px solid var(--interactive-accent);
+	padding-left: 5px;
 }
 
 .cubicj-brewing-view .brew-flow-bean-meta {
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
 }
 
 .cubicj-brewing-view .brew-flow-empty {
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  padding: 16px 0;
-  text-align: center;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	padding: 16px 0;
+	text-align: center;
 }
 
 /* Configure */
 
 .cubicj-brewing-view .brew-flow-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 8px 0;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin: 8px 0;
 }
 
 .cubicj-brewing-view .brew-flow-form label {
-  display: block;
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
-  margin-bottom: 2px;
+	display: block;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	margin-bottom: 2px;
 }
 
 .cubicj-brewing-view .brew-flow-field select,
 .cubicj-brewing-view .brew-flow-recipe-select select {
-  width: 100%;
+	width: 100%;
 }
 
 /* Stepper (shared: sidebar + modal) */
 .brew-flow-stepper-controls {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+	display: flex;
+	align-items: center;
+	gap: 4px;
 }
 .brew-flow-stepper-btn {
-  flex: 0 0 auto;
-  min-width: 36px;
-  padding: 4px 8px;
-  font-size: var(--font-ui-small);
-  cursor: pointer;
-  box-shadow: none;
-  border-radius: var(--radius-s);
+	flex: 0 0 auto;
+	min-width: 36px;
+	padding: 4px 8px;
+	font-size: var(--font-ui-small);
+	cursor: pointer;
+	box-shadow: none;
+	border-radius: var(--radius-s);
 }
 .brew-flow-stepper-scale-btn {
-  all: unset;
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 6px;
-  margin-left: 4px;
-  cursor: pointer;
-  border-radius: var(--radius-s);
-  color: var(--text-faint);
-  font-size: var(--font-ui-smaller);
-  line-height: 1;
+	all: unset;
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 6px;
+	margin-left: 4px;
+	cursor: pointer;
+	border-radius: var(--radius-s);
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	line-height: 1;
 }
 .brew-flow-stepper-scale-btn:hover {
-  color: var(--text-normal);
-  background: var(--background-modifier-hover);
+	color: var(--text-normal);
+	background: var(--background-modifier-hover);
 }
 .brew-flow-stepper-value {
-  flex: 1;
-  text-align: center;
-  font-weight: var(--font-semibold);
-  font-size: var(--font-ui-medium);
-  user-select: none;
+	flex: 1;
+	text-align: center;
+	font-weight: var(--font-semibold);
+	font-size: var(--font-ui-medium);
+	user-select: none;
 }
 .brew-flow-stepper-value.is-draggable {
-  cursor: ew-resize;
+	cursor: ew-resize;
 }
 .brew-flow-stepper-value.is-dragging {
-  color: var(--text-accent);
+	color: var(--text-accent);
 }
 .brew-flow-stepper-input {
-  width: 100%;
-  text-align: center;
-  font-weight: var(--font-semibold);
-  font-size: var(--font-ui-medium);
-  border: none;
-  outline: none;
-  background: var(--background-modifier-form-field);
-  border-radius: var(--radius-s);
-  padding: 2px;
+	width: 100%;
+	text-align: center;
+	font-weight: var(--font-semibold);
+	font-size: var(--font-ui-medium);
+	border: none;
+	outline: none;
+	background: var(--background-modifier-form-field);
+	border-radius: var(--radius-s);
+	padding: 2px;
 }
 .cubicj-brewing-view .brew-flow-start-btn {
-  width: 100%;
-  margin-top: 4px;
+	width: 100%;
+	margin-top: 4px;
 }
 
 .cubicj-brewing-view .brew-flow-recipe-select {
-  margin: 8px 0;
+	margin: 8px 0;
 }
 
 .cubicj-brewing-view .brew-flow-recipe-select label {
-  display: block;
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
-  margin-bottom: 2px;
+	display: block;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	margin-bottom: 2px;
 }
 
 .cubicj-brewing-view .brew-flow-recipe-select select {
-  width: 100%;
+	width: 100%;
 }
 
 .cubicj-brewing-view .brew-flow-espresso-msg {
-  color: var(--text-muted);
-  font-size: var(--font-ui-small);
-  text-align: center;
-  padding: 12px 0;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	text-align: center;
+	padding: 12px 0;
 }
 
 /* Brewing active */
 
 .cubicj-brewing-view .brew-flow-recipe-steps {
-  margin: 8px 0;
-  font-size: var(--font-ui-smaller);
+	margin: 8px 0;
+	font-size: var(--font-ui-smaller);
 }
 
 .cubicj-brewing-view .brew-flow-recipe-steps h4 {
-  margin: 4px 0;
-  font-size: var(--font-ui-small);
-  color: var(--text-muted);
+	margin: 4px 0;
+	font-size: var(--font-ui-small);
+	color: var(--text-muted);
 }
 
 .cubicj-brewing-view .brew-flow-recipe-step {
-  padding: 4px 8px;
-  border-left: 2px solid transparent;
+	padding: 4px 8px;
+	border-left: 2px solid transparent;
 }
 
-
 .cubicj-brewing-view .brew-flow-recipe-step.is-done {
-  color: var(--text-muted);
+	color: var(--text-muted);
 }
 
 .cubicj-brewing-view .brew-flow-stop-btn {
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
 }
 
 /* Brew profile chart */
 
 .cubicj-brewing-view .brew-profile-container {
-  margin: 8px 0;
-  border-radius: 8px;
-  overflow: hidden;
+	margin: 8px 0;
+	border-radius: 8px;
+	overflow: hidden;
 }
 
 .cubicj-brewing-view .brew-profile-canvas {
-  display: block;
-  border-radius: 8px;
+	display: block;
+	border-radius: 8px;
 }
 
 /* Saving */
 
 .cubicj-brewing-view .brew-flow-section-label {
-  margin: 8px 0 4px;
-  font-size: var(--font-ui-small);
-  color: var(--text-muted);
+	margin: 8px 0 4px;
+	font-size: var(--font-ui-small);
+	color: var(--text-muted);
 }
 
 .cubicj-brewing-view .brew-flow-note {
-  width: 100%;
-  min-height: 60px;
-  resize: vertical;
-  margin-bottom: 8px;
+	width: 100%;
+	min-height: 60px;
+	resize: vertical;
+	margin-bottom: 8px;
 }
 
 .cubicj-brewing-view .brew-flow-save-btn {
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
 }
 
 .cm-embed-block:has(.block-language-beans) {
-  --embed-block-shadow-hover: none;
+	--embed-block-shadow-hover: none;
 }
 
 .block-language-beans > button,
@@ -669,470 +677,470 @@
 .block-language-beans .code-block-flair,
 .cm-embed-block:has(.block-language-beans) > .edit-block-button,
 .cm-embed-block:has(.block-language-beans):hover > .edit-block-button {
-  display: none;
+	display: none;
 }
 
 .block-language-beans .bean-hub {
-  padding: 8px 0;
+	padding: 8px 0;
 }
 
 .block-language-beans .bean-hub-header {
-  display: flex;
-  justify-content: flex-end;
-  padding-bottom: 4px;
+	display: flex;
+	justify-content: flex-end;
+	padding-bottom: 4px;
 }
 
 .block-language-beans .bean-hub-section-title {
-  font-size: 0.85em;
-  font-weight: 600;
-  color: var(--text-muted);
-  padding: 4px 0;
-  margin-top: 4px;
+	font-size: 0.85em;
+	font-weight: 600;
+	color: var(--text-muted);
+	padding: 4px 0;
+	margin-top: 4px;
 }
 
 .block-language-beans .bean-hub-section-past {
-  margin-top: 12px;
-  border-top: 1px solid var(--background-modifier-border);
-  padding-top: 8px;
+	margin-top: 12px;
+	border-top: 1px solid var(--background-modifier-border);
+	padding-top: 8px;
 }
 
 .block-language-beans .bean-hub-row {
-  display: flex;
-  align-items: center;
-  padding: 6px 8px;
-  border-radius: 4px;
-  gap: 8px;
+	display: flex;
+	align-items: center;
+	padding: 6px 8px;
+	border-radius: 4px;
+	gap: 8px;
 }
 
 .block-language-beans .bean-hub-row:hover {
-  background: var(--background-modifier-hover);
+	background: var(--background-modifier-hover);
 }
 
 .block-language-beans .bean-hub-row.is-finished {
-  opacity: 0.6;
+	opacity: 0.6;
 }
 
 .block-language-beans .bean-hub-name {
-  flex: 1;
-  cursor: pointer;
-  color: var(--text-accent);
-  text-decoration: none;
+	flex: 1;
+	cursor: pointer;
+	color: var(--text-accent);
+	text-decoration: none;
 }
 
 .block-language-beans .bean-hub-name:hover {
-  text-decoration: underline;
+	text-decoration: underline;
 }
 
 .block-language-beans .bean-hub-days {
-  font-size: 0.85em;
-  color: var(--text-muted);
-  white-space: nowrap;
+	font-size: 0.85em;
+	color: var(--text-muted);
+	white-space: nowrap;
 }
 
 .block-language-beans .bean-hub-actions {
-  display: flex;
-  gap: 4px;
-  flex-shrink: 0;
-  margin-left: 8px;
+	display: flex;
+	gap: 4px;
+	flex-shrink: 0;
+	margin-left: 8px;
 }
 
 .block-language-beans .bean-hub-btn {
-  font-size: 0.8em;
-  padding: 2px 8px;
-  cursor: pointer;
-  background: var(--background-modifier-hover);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
-  color: var(--text-normal);
-  box-shadow: none;
+	font-size: 0.8em;
+	padding: 2px 8px;
+	cursor: pointer;
+	background: var(--background-modifier-hover);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	color: var(--text-normal);
+	box-shadow: none;
 }
 
 .block-language-beans .bean-hub-btn:hover {
-  background: var(--background-modifier-border);
+	background: var(--background-modifier-border);
 }
 
 .block-language-beans .bean-hub-status-btn {
-  font-size: 0.75em;
+	font-size: 0.75em;
 }
 
 .block-language-beans .bean-hub-date-row {
-  display: flex;
-  gap: 4px;
-  padding: 4px 0 0 0;
-  align-items: center;
+	display: flex;
+	gap: 4px;
+	padding: 4px 0 0 0;
+	align-items: center;
 }
 
-.block-language-beans .bean-hub-date-row input[type="date"] {
-  font-size: 0.85em;
-  padding: 2px 4px;
+.block-language-beans .bean-hub-date-row input[type='date'] {
+	font-size: 0.85em;
+	padding: 2px 4px;
 }
 
 .block-language-beans .bean-hub-date-btns {
-  display: flex;
-  gap: 4px;
-  margin-left: auto;
+	display: flex;
+	gap: 4px;
+	margin-left: auto;
 }
 
 .block-language-beans .bean-hub-add-btn {
-  font-size: 0.8em;
+	font-size: 0.8em;
 }
 
 .block-language-beans .bean-hub-empty {
-  color: var(--text-muted);
-  font-size: 0.85em;
-  padding: 8px;
+	color: var(--text-muted);
+	font-size: 0.85em;
+	padding: 8px;
 }
 
 .cubicj-data-manage-modal .dm-bean-header {
-  display: flex;
-  justify-content: flex-end;
-  padding-bottom: 8px;
+	display: flex;
+	justify-content: flex-end;
+	padding-bottom: 8px;
 }
 
 .cubicj-data-manage-modal .dm-new-bean-btn {
-  font-size: 0.85em;
+	font-size: 0.85em;
 }
 
 /* Brew Records Code Block */
 .cm-embed-block:has(.block-language-brews) {
-  --embed-block-shadow-hover: none;
+	--embed-block-shadow-hover: none;
 }
 .block-language-brews > button,
 .block-language-brews .copy-code-button,
 .block-language-brews .code-block-flair,
 .cm-embed-block:has(.block-language-brews) > .edit-block-button,
 .cm-embed-block:has(.block-language-brews):hover > .edit-block-button {
-  display: none !important;
+	display: none !important;
 }
 
 .block-language-brews .brew-records-empty {
-  color: var(--text-muted);
-  padding: 12px 0;
-  font-size: var(--font-ui-small);
+	color: var(--text-muted);
+	padding: 12px 0;
+	font-size: var(--font-ui-small);
 }
 
 .block-language-brews .brew-record-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--font-ui-small);
+	width: 100%;
+	border-collapse: collapse;
+	font-size: var(--font-ui-small);
 }
 .block-language-brews .brew-record-table th {
-  text-align: left;
-  color: var(--text-muted);
-  font-weight: 500;
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--background-modifier-border);
-  white-space: nowrap;
+	text-align: left;
+	color: var(--text-muted);
+	font-weight: 500;
+	padding: 4px 8px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	white-space: nowrap;
 }
 .block-language-brews .brew-record-table td {
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--background-modifier-border-hover);
-  white-space: nowrap;
-  vertical-align: middle;
+	padding: 4px 8px;
+	border-bottom: 1px solid var(--background-modifier-border-hover);
+	white-space: nowrap;
+	vertical-align: middle;
 }
 .block-language-brews .brew-record-date div:last-child {
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
 }
 .block-language-brews .brew-record-note {
-  max-width: 300px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+	max-width: 300px;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 .block-language-brews .brew-record-table td:last-child {
-  text-align: center;
+	text-align: center;
 }
 .block-language-brews .brew-record-chart-btn {
-  background: none;
-  border: 1px solid var(--background-modifier-border-hover);
-  border-radius: 4px;
-  cursor: pointer;
-  padding: 4px 6px;
-  opacity: 0.6;
-  box-shadow: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+	background: none;
+	border: 1px solid var(--background-modifier-border-hover);
+	border-radius: 4px;
+	cursor: pointer;
+	padding: 4px 6px;
+	opacity: 0.6;
+	box-shadow: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 }
 .block-language-brews .brew-record-chart-btn:hover {
-  opacity: 1;
-  background: var(--background-modifier-hover);
+	opacity: 1;
+	background: var(--background-modifier-hover);
 }
 .block-language-brews .brew-records-header {
-  margin: 0 0 8px;
-  font-size: var(--font-ui-medium);
+	margin: 0 0 8px;
+	font-size: var(--font-ui-medium);
 }
 
 /* Brew Profile Expand Button (sidebar) */
 .cubicj-brewing-view .brew-profile-wrapper {
-  position: relative;
+	position: relative;
 }
 .cubicj-brewing-view .brew-profile-expand-btn {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  z-index: 1;
-  background: rgba(10, 10, 10, 0.6);
-  border: none;
-  color: #999;
-  cursor: pointer;
-  padding: 2px 6px;
-  font-size: 14px;
-  line-height: 1;
-  border-radius: 3px;
-  box-shadow: none;
-  opacity: 0;
-  transition: opacity 0.15s;
+	position: absolute;
+	top: 4px;
+	right: 4px;
+	z-index: 1;
+	background: rgba(10, 10, 10, 0.6);
+	border: none;
+	color: #999;
+	cursor: pointer;
+	padding: 2px 6px;
+	font-size: 14px;
+	line-height: 1;
+	border-radius: 3px;
+	box-shadow: none;
+	opacity: 0;
+	transition: opacity 0.15s;
 }
 .cubicj-brewing-view .brew-profile-wrapper:hover .brew-profile-expand-btn {
-  opacity: 1;
+	opacity: 1;
 }
 .cubicj-brewing-view .brew-profile-expand-btn:hover {
-  color: #ddd;
-  background: rgba(10, 10, 10, 0.8);
+	color: #ddd;
+	background: rgba(10, 10, 10, 0.8);
 }
 
 /* Brew Profile Modal */
 .modal.brew-profile-modal {
-  width: 75vw;
-  max-width: 75vw;
+	width: 75vw;
+	max-width: 75vw;
 }
 .modal.brew-profile-modal.brew-profile-editing {
-  width: 400px;
-  max-width: 90vw;
+	width: 400px;
+	max-width: 90vw;
 }
 .brew-profile-modal .brew-profile-subtitle {
-  color: var(--text-muted);
-  font-size: var(--font-ui-small);
-  margin-bottom: 12px;
-  line-height: 1.6;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	margin-bottom: 12px;
+	line-height: 1.6;
 }
 .brew-profile-modal .brew-profile-subtitle-label {
-  color: var(--text-faint);
+	color: var(--text-faint);
 }
 .brew-profile-modal .brew-detail-layout {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 16px;
+	display: flex;
+	gap: 16px;
+	margin-bottom: 16px;
 }
 .brew-profile-modal .brew-detail-left {
-  flex: 3;
-  min-width: 0;
+	flex: 3;
+	min-width: 0;
 }
 .brew-profile-modal .brew-detail-right {
-  flex: 2;
-  padding: 12px;
-  background: var(--background-primary-alt);
-  border-radius: var(--radius-s);
+	flex: 2;
+	padding: 12px;
+	background: var(--background-primary-alt);
+	border-radius: var(--radius-s);
 }
 .brew-profile-modal .brew-detail-note {
-  margin-top: 4px;
-  white-space: pre-wrap;
-  line-height: 1.5;
+	margin-top: 4px;
+	white-space: pre-wrap;
+	line-height: 1.5;
 }
 .brew-profile-modal .brew-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(var(--cols, 3), auto);
-  gap: 12px 16px;
-  padding: 12px;
-  background: var(--background-primary-alt);
-  border-radius: var(--radius-s);
+	display: grid;
+	grid-template-columns: repeat(var(--cols, 3), auto);
+	gap: 12px 16px;
+	padding: 12px;
+	background: var(--background-primary-alt);
+	border-radius: var(--radius-s);
 }
 .brew-profile-modal .brew-detail-label {
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
-  margin-bottom: 2px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	margin-bottom: 2px;
 }
 .brew-profile-modal .brew-detail-value {
-  font-weight: var(--font-semibold);
-  white-space: nowrap;
+	font-weight: var(--font-semibold);
+	white-space: nowrap;
 }
 .brew-profile-modal .brew-profile-container {
-  height: auto;
-  overflow-x: auto;
+	height: auto;
+	overflow-x: auto;
 }
 .brew-profile-modal .brew-espresso-stats {
-  display: flex;
-  gap: 24px;
-  padding: 24px;
-  background: var(--background-primary-alt);
-  border-radius: var(--radius-s);
-  justify-content: center;
+	display: flex;
+	gap: 24px;
+	padding: 24px;
+	background: var(--background-primary-alt);
+	border-radius: var(--radius-s);
+	justify-content: center;
 }
 .brew-profile-modal .brew-espresso-stat {
-  text-align: center;
+	text-align: center;
 }
 .brew-profile-modal .brew-espresso-stat-label {
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
-  margin-bottom: 4px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	margin-bottom: 4px;
 }
 .brew-profile-modal .brew-espresso-stat-value {
-  font-size: var(--font-ui-large);
-  font-weight: var(--font-semibold);
+	font-size: var(--font-ui-large);
+	font-weight: var(--font-semibold);
 }
 .brew-profile-modal .brew-profile-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 16px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 16px;
 }
 .brew-profile-modal .brew-profile-footer-right {
-  display: flex;
-  gap: 8px;
-  margin-left: auto;
+	display: flex;
+	gap: 8px;
+	margin-left: auto;
 }
 
 /* Edit form — mirrors sidebar configure step layout */
 .brew-profile-modal .brew-edit-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 12px;
 }
 .brew-profile-modal .brew-edit-espresso-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
 }
 .brew-profile-modal .brew-edit-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
 }
 .brew-profile-modal .brew-edit-row label {
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
 }
 .brew-profile-modal .brew-edit-row select,
 .brew-profile-modal .brew-edit-row textarea {
-  width: 100%;
+	width: 100%;
 }
 .brew-profile-modal .brew-edit-note textarea {
-  min-height: 60px;
-  resize: vertical;
+	min-height: 60px;
+	resize: vertical;
 }
 /* Stepper in modal — clone sidebar stepper styles */
 .brew-profile-modal .brew-flow-stepper label {
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
 }
 
 /* Confirm modal */
 .brew-confirm-message {
-  margin-bottom: 16px;
+	margin-bottom: 16px;
 }
 .brew-confirm-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 20px;
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 20px;
 }
 
 /* Equipment tab */
 .dm-equip-section {
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-bottom: 12px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	padding: 10px 12px;
+	margin-bottom: 12px;
 }
 .dm-equip-category {
-  font-size: 0.75em;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  margin-bottom: 4px;
+	font-size: 0.75em;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--text-muted);
+	margin-bottom: 4px;
 }
 .dm-equip-list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 8px 0 4px;
-  font-weight: 500;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin: 8px 0 4px;
+	font-weight: 500;
 }
 .dm-equip-add-btn {
-  --icon-size: var(--icon-size-s);
-  padding: 4px;
+	--icon-size: var(--icon-size-s);
+	padding: 4px;
 }
 .dm-equip-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  border-radius: 4px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 8px;
+	border-radius: 4px;
 }
 .dm-equip-row:hover {
-  background: var(--background-modifier-hover);
+	background: var(--background-modifier-hover);
 }
 .dm-equip-row span:first-child {
-  flex: 1;
+	flex: 1;
 }
 .dm-equip-grinder-meta {
-  color: var(--text-muted);
-  font-size: 0.85em;
-  flex: none !important;
+	color: var(--text-muted);
+	font-size: 0.85em;
+	flex: none !important;
 }
 .dm-equip-del-btn {
-  opacity: 0;
-  font-size: 0.8em;
-  padding: 0 4px;
-  min-width: unset;
-  color: var(--text-muted);
+	opacity: 0;
+	font-size: 0.8em;
+	padding: 0 4px;
+	min-width: unset;
+	color: var(--text-muted);
 }
 .dm-equip-row:hover .dm-equip-del-btn {
-  opacity: 1;
+	opacity: 1;
 }
 .dm-equip-input {
-  width: 100%;
-  padding: 4px 8px;
-  margin: 4px 0;
+	width: 100%;
+	padding: 4px 8px;
+	margin: 4px 0;
 }
 .dm-equip-num {
-  width: 60px;
+	width: 60px;
 }
 .dm-equip-grinder-form {
-  padding: 8px;
-  margin: 4px 0;
-  background: var(--background-secondary);
-  border-radius: 6px;
+	padding: 8px;
+	margin: 4px 0;
+	background: var(--background-secondary);
+	border-radius: 6px;
 }
 .dm-equip-grinder-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 4px 0;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 4px 0;
 }
 .dm-equip-select {
-  padding: 4px 8px;
+	padding: 4px 8px;
 }
 .dm-equip-grinder-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-  justify-content: flex-end;
+	display: flex;
+	gap: 8px;
+	margin-top: 8px;
+	justify-content: flex-end;
 }
 
 /* Accessories checklist (shared: sidebar + modal) */
 .brew-flow-accessories {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
 }
 .brew-flow-accessories > label {
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
-  margin-bottom: 0;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	margin-bottom: 0;
 }
 .brew-flow-accessory-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  font-size: var(--font-ui-small);
-  color: var(--text-normal);
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	cursor: pointer;
+	font-size: var(--font-ui-small);
+	color: var(--text-normal);
 }
-.brew-flow-accessory-item input[type="checkbox"] {
-  margin: 0;
-  flex-shrink: 0;
+.brew-flow-accessory-item input[type='checkbox'] {
+	margin: 0;
+	flex-shrink: 0;
 }

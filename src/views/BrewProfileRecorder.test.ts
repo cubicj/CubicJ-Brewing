@@ -2,8 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { BrewProfileRecorder } from './BrewProfileRecorder';
 
 describe('BrewProfileRecorder', () => {
-	beforeEach(() => { vi.useFakeTimers(); });
-	afterEach(() => { vi.useRealTimers(); });
+	beforeEach(() => {
+		vi.useFakeTimers();
+	});
+	afterEach(() => {
+		vi.useRealTimers();
+	});
 
 	it('starts not recording', () => {
 		const rec = new BrewProfileRecorder();

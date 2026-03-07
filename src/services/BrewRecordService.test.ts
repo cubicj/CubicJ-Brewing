@@ -4,8 +4,12 @@ import type { FilterRecord } from '../brew/types';
 
 class InMemoryAdapter implements StorageAdapter {
 	data = '';
-	async read(): Promise<string | null> { return this.data || null; }
-	async write(content: string): Promise<void> { this.data = content; }
+	async read(): Promise<string | null> {
+		return this.data || null;
+	}
+	async write(content: string): Promise<void> {
+		this.data = content;
+	}
 }
 
 const makeFilter = (overrides: Partial<FilterRecord> = {}): FilterRecord => ({
@@ -100,7 +104,9 @@ describe('BrewRecordService', () => {
 
 	it('calls onChange after add', async () => {
 		let called = false;
-		service.onChange = () => { called = true; };
+		service.onChange = () => {
+			called = true;
+		};
 		await service.add(makeFilter());
 		expect(called).toBe(true);
 	});
@@ -118,7 +124,9 @@ describe('BrewRecordService', () => {
 		const record = makeFilter();
 		await service.add(record);
 		let called = false;
-		service.onChange = () => { called = true; };
+		service.onChange = () => {
+			called = true;
+		};
 		await service.update(record.id, { grindSize: 3.0 });
 		expect(called).toBe(true);
 	});
@@ -138,7 +146,9 @@ describe('BrewRecordService', () => {
 		const record = makeFilter();
 		await service.add(record);
 		let called = false;
-		service.onChange = () => { called = true; };
+		service.onChange = () => {
+			called = true;
+		};
 		await service.remove(record.id);
 		expect(called).toBe(true);
 	});

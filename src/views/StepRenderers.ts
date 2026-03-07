@@ -24,7 +24,7 @@ export const STEP_CONFIG: Array<{ step: FlowStep; label: string }> = [
 	{ step: 'saving', label: '메모' },
 ];
 
-export const STEP_ORDER: FlowStep[] = STEP_CONFIG.map(c => c.step);
+export const STEP_ORDER: FlowStep[] = STEP_CONFIG.map((c) => c.step);
 
 export interface StepRenderContext {
 	flowState: BrewFlowState;
@@ -51,11 +51,21 @@ export interface StepRenderContext {
 
 export function renderStep(step: FlowStep, container: HTMLElement, ctx: StepRenderContext): void {
 	switch (step) {
-		case 'method': renderMethod(container, ctx); break;
-		case 'bean': renderBean(container, ctx); break;
-		case 'configure': renderConfigure(container, ctx); break;
-		case 'brewing': renderBrewing(container, ctx); break;
-		case 'saving': renderSaving(container, ctx); break;
+		case 'method':
+			renderMethod(container, ctx);
+			break;
+		case 'bean':
+			renderBean(container, ctx);
+			break;
+		case 'configure':
+			renderConfigure(container, ctx);
+			break;
+		case 'brewing':
+			renderBrewing(container, ctx);
+			break;
+		case 'saving':
+			renderSaving(container, ctx);
+			break;
 	}
 }
 
@@ -94,8 +104,6 @@ export function getStepSummary(step: FlowStep, sel: BrewFlowSelection): string {
 	}
 }
 
-
-
 function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
 	container.addClass('brew-flow-method');
 
@@ -112,7 +120,10 @@ function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
 
 	createToggleGroup(
 		container,
-		[{ value: 'filter' as BrewMethod, label: METHOD_LABELS.filter }, { value: 'espresso' as BrewMethod, label: METHOD_LABELS.espresso }],
+		[
+			{ value: 'filter' as BrewMethod, label: METHOD_LABELS.filter },
+			{ value: 'espresso' as BrewMethod, label: METHOD_LABELS.espresso },
+		],
 		selectedMethod,
 		(val) => {
 			selectedMethod = val;
@@ -129,7 +140,10 @@ function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
 	container.createEl('h4', { text: '온도' });
 	createToggleGroup(
 		container,
-		[{ value: 'hot' as BrewTemp, label: TEMP_LABELS.hot }, { value: 'iced' as BrewTemp, label: TEMP_LABELS.iced }],
+		[
+			{ value: 'hot' as BrewTemp, label: TEMP_LABELS.hot },
+			{ value: 'iced' as BrewTemp, label: TEMP_LABELS.iced },
+		],
 		selectedTemp,
 		(val) => {
 			selectedTemp = val;
@@ -162,9 +176,7 @@ function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
 			ctx.flowState.selectMethod(selectedMethod!, selectedTemp!, selectedDrink ?? undefined);
 			const bean = ctx.flowState.selection.bean;
 			if (bean) {
-				const lastRecord = await ctx.plugin.recordService.getLastRecord(
-					bean.name, selectedMethod!, selectedTemp!,
-				);
+				const lastRecord = await ctx.plugin.recordService.getLastRecord(bean.name, selectedMethod!, selectedTemp!);
 				ctx.flowState.selectBean(bean, lastRecord);
 			}
 			ctx.renderContent();
@@ -262,23 +274,27 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 		if (sel.filter) equip.filter = sel.filter;
 		if (sel.grinder) equip.grinder = sel.grinder;
 		if (sel.dripper) equip.dripper = sel.dripper;
-		const record = await ctx.plugin.recordService.getLastRecord(
-			sel.bean!.name, sel.method!, sel.temp!, equip,
-		);
+		const record = await ctx.plugin.recordService.getLastRecord(sel.bean!.name, sel.method!, sel.temp!, equip);
 		sel.lastRecord = record;
 		updateCard(record);
 		if (record) applyDials(record);
 	};
 
 	if (isFilter) {
-		const initFilter = sel.filter ?? (last?.method === 'filter' && last.filter && ctx.filters.includes(last.filter) ? last.filter : ctx.filters[0]);
+		const initFilter =
+			sel.filter ??
+			(last?.method === 'filter' && last.filter && ctx.filters.includes(last.filter) ? last.filter : ctx.filters[0]);
 		sel.filter = initFilter;
 		filterSelect = createSelectField(form, '필터', ctx.filters, initFilter, (v) => {
 			sel.filter = v;
 			queryAndApplyDials();
 		});
 
-		const initDripper = sel.dripper ?? (last?.method === 'filter' && last.dripper && ctx.drippers.includes(last.dripper) ? last.dripper : ctx.drippers[0]);
+		const initDripper =
+			sel.dripper ??
+			(last?.method === 'filter' && last.dripper && ctx.drippers.includes(last.dripper)
+				? last.dripper
+				: ctx.drippers[0]);
 		sel.dripper = initDripper;
 		if (ctx.drippers.length > 0) {
 			dripperSelect = createSelectField(form, '드리퍼', ctx.drippers, initDripper, (v) => {
@@ -289,16 +305,20 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	}
 
 	if (isEspresso) {
-		basketSelect = createSelectField(form, '바스켓', ctx.baskets, sel.basket ?? ctx.baskets[0], (v) => { sel.basket = v; syncSummary(); });
+		basketSelect = createSelectField(form, '바스켓', ctx.baskets, sel.basket ?? ctx.baskets[0], (v) => {
+			sel.basket = v;
+			syncSummary();
+		});
 	}
 
 	let selectedGrinder: GrinderConfig | undefined;
 	let grindStepperConfig = { step: 0.1, min: 0, max: 50, format: (v: number) => v.toFixed(1) };
 
 	if (ctx.grinders.length > 0) {
-		const initGrinderName = sel.grinder ?? (last?.grinder && ctx.grinders.find(g => g.name === last.grinder) ? last.grinder : undefined);
+		const initGrinderName =
+			sel.grinder ?? (last?.grinder && ctx.grinders.find((g) => g.name === last.grinder) ? last.grinder : undefined);
 		if (initGrinderName) {
-			selectedGrinder = ctx.grinders.find(g => g.name === initGrinderName);
+			selectedGrinder = ctx.grinders.find((g) => g.name === initGrinderName);
 		}
 		if (!selectedGrinder) {
 			selectedGrinder = ctx.grinders[0];
@@ -307,15 +327,17 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 		grindStepperConfig = grinderToStepperConfig(selectedGrinder);
 
 		if (ctx.grinders.length > 1) {
-			const grinderNames = ctx.grinders.map(g => g.name);
+			const grinderNames = ctx.grinders.map((g) => g.name);
 			createSelectField(form, '그라인더', grinderNames, selectedGrinder.name, (v) => {
-				const g = ctx.grinders.find(gr => gr.name === v)!;
+				const g = ctx.grinders.find((gr) => gr.name === v)!;
 				sel.grinder = g.name;
 				grindStepperConfig = grinderToStepperConfig(g);
 				grindStepper.destroy();
 				grindStepper = createStepper(form, {
-					label: '분쇄도', initial: 0,
-					...grindStepperConfig, pxPerStep: 12,
+					label: '분쇄도',
+					initial: 0,
+					...grindStepperConfig,
+					pxPerStep: 12,
 					onChange: grindOnChange,
 				});
 				form.insertBefore(grindStepper.el, doseStepper.el);
@@ -324,17 +346,29 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 		}
 	}
 
-	const grindOnChange = (v: number) => { sel.grindSize = v; syncSummary(); };
+	const grindOnChange = (v: number) => {
+		sel.grindSize = v;
+		syncSummary();
+	};
 	let grindStepper = createStepper(form, {
-		label: '분쇄도', initial: sel.grindSize ?? 0,
-		...grindStepperConfig, pxPerStep: 12,
+		label: '분쇄도',
+		initial: sel.grindSize ?? 0,
+		...grindStepperConfig,
+		pxPerStep: 12,
 		onChange: grindOnChange,
 	});
 	const doseStepper = createStepper(form, {
-		label: '도징량', initial: sel.dose ?? 0,
-		min: 0, max: 100, step: 0.1,
-		format: v => `${v.toFixed(1)}g`, pxPerStep: 12,
-		onChange: v => { sel.dose = v; syncSummary(); },
+		label: '도징량',
+		initial: sel.dose ?? 0,
+		min: 0,
+		max: 100,
+		step: 0.1,
+		format: (v) => `${v.toFixed(1)}g`,
+		pxPerStep: 12,
+		onChange: (v) => {
+			sel.dose = v;
+			syncSummary();
+		},
 	});
 
 	attachScaleAutoBtn(doseStepper, ctx.getWeightText);
@@ -355,10 +389,17 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 
 	if (isFilter) {
 		waterTempStepper = createStepper(form, {
-			label: '물 온도', initial: sel.waterTemp ?? 93,
-			min: 0, max: 100, step: 1,
-			format: v => `${v}°C`, pxPerStep: 12,
-			onChange: v => { sel.waterTemp = v; syncSummary(); },
+			label: '물 온도',
+			initial: sel.waterTemp ?? 93,
+			min: 0,
+			max: 100,
+			step: 1,
+			format: (v) => `${v}°C`,
+			pxPerStep: 12,
+			onChange: (v) => {
+				sel.waterTemp = v;
+				syncSummary();
+			},
 		});
 	}
 
@@ -378,7 +419,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 			recipeSelect.createEl('option', { text: r.name, value: r.path });
 		}
 		recipeSelect.addEventListener('change', () => {
-			const recipe = recipes.find(r => r.path === recipeSelect.value);
+			const recipe = recipes.find((r) => r.path === recipeSelect.value);
 			if (recipe) ctx.flowState.selectRecipe(recipe);
 		});
 	}
@@ -496,16 +537,28 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 	if (!sel.time && sel.method === 'espresso') {
 		const manualForm = container.createDiv({ cls: 'brew-flow-form' });
 		createStepper(manualForm, {
-			label: '시간', initial: 0,
-			min: 0, max: 120, step: 1,
-			format: v => `${v}초`, pxPerStep: 6,
-			onChange: v => { ctx.flowState.updateVariables({ time: v || undefined }); },
+			label: '시간',
+			initial: 0,
+			min: 0,
+			max: 120,
+			step: 1,
+			format: (v) => `${v}초`,
+			pxPerStep: 6,
+			onChange: (v) => {
+				ctx.flowState.updateVariables({ time: v || undefined });
+			},
 		});
 		createStepper(manualForm, {
-			label: '추출량', initial: 0,
-			min: 0, max: 200, step: 0.1,
-			format: v => `${v.toFixed(1)}g`, pxPerStep: 12,
-			onChange: v => { ctx.flowState.updateVariables({ yield: v || undefined }); },
+			label: '추출량',
+			initial: 0,
+			min: 0,
+			max: 200,
+			step: 0.1,
+			format: (v) => `${v.toFixed(1)}g`,
+			pxPerStep: 12,
+			onChange: (v) => {
+				ctx.flowState.updateVariables({ yield: v || undefined });
+			},
 		});
 	}
 
@@ -515,10 +568,14 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 		const weightForm = container.createDiv({ cls: 'brew-flow-form' });
 		const label = needsMilk ? '우유' : '가수';
 		const weightStepper = createStepper(weightForm, {
-			label, initial: 0,
-			min: 0, max: 1000, step: 0.1,
-			format: v => `${v.toFixed(1)}g`, pxPerStep: 12,
-			onChange: v => {
+			label,
+			initial: 0,
+			min: 0,
+			max: 1000,
+			step: 0.1,
+			format: (v) => `${v.toFixed(1)}g`,
+			pxPerStep: 12,
+			onChange: (v) => {
 				if (needsMilk) sel.milkWeight = v;
 				else sel.waterWeight = v;
 			},
@@ -533,12 +590,15 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 	if (ctx.savingRo.current) ctx.savingRo.current.disconnect();
 	let roReady = false;
 	ctx.savingRo.current = new ResizeObserver(() => {
-		if (!roReady) { roReady = true; return; }
+		if (!roReady) {
+			roReady = true;
+			return;
+		}
 		const body = noteEl.closest('.brew-accordion-body') as HTMLElement | null;
 		if (body?.classList.contains('is-open') && body.style.maxHeight !== '0px') {
 			body.style.transition = 'none';
 			body.style.maxHeight = body.scrollHeight + 'px';
-			body.offsetHeight;
+			void body.offsetHeight;
 			body.style.transition = '';
 		}
 	});

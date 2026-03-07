@@ -17,11 +17,7 @@ export interface BrewRecordFormDeps {
 	onCancel: () => void;
 }
 
-export function renderEditForm(
-	container: HTMLElement,
-	record: BrewRecord,
-	deps: BrewRecordFormDeps,
-): void {
+export function renderEditForm(container: HTMLElement, record: BrewRecord, deps: BrewRecordFormDeps): void {
 	const form = container.createDiv({ cls: 'brew-edit-form' });
 
 	let currentMethod: BrewMethod = record.method;
@@ -29,7 +25,10 @@ export function renderEditForm(
 	const methodRow = form.createDiv({ cls: 'brew-edit-row' });
 	methodRow.createEl('label', { text: '방식' });
 	const methodSelect = methodRow.createEl('select');
-	for (const m of [{ v: 'filter' as const, l: METHOD_LABELS.filter }, { v: 'espresso' as const, l: METHOD_LABELS.espresso }]) {
+	for (const m of [
+		{ v: 'filter' as const, l: METHOD_LABELS.filter },
+		{ v: 'espresso' as const, l: METHOD_LABELS.espresso },
+	]) {
 		const opt = methodSelect.createEl('option', { text: m.l, value: m.v });
 		if (m.v === record.method) opt.selected = true;
 	}
@@ -37,7 +36,10 @@ export function renderEditForm(
 	const tempRow = form.createDiv({ cls: 'brew-edit-row' });
 	tempRow.createEl('label', { text: '온도' });
 	const tempSelect = tempRow.createEl('select');
-	for (const t of [{ v: 'hot' as const, l: 'Hot' }, { v: 'iced' as const, l: 'Ice' }]) {
+	for (const t of [
+		{ v: 'hot' as const, l: 'Hot' },
+		{ v: 'iced' as const, l: 'Ice' },
+	]) {
 		const opt = tempSelect.createEl('option', { text: t.l, value: t.v });
 		if (t.v === record.temp) opt.selected = true;
 	}
@@ -55,23 +57,35 @@ export function renderEditForm(
 	}
 
 	const grindStepper = createStepper(form, {
-		label: '분쇄도', initial: record.grindSize,
-		min: 0, max: 50, step: 0.1, pxPerStep: 10,
-		format: v => v.toFixed(1),
+		label: '분쇄도',
+		initial: record.grindSize,
+		min: 0,
+		max: 50,
+		step: 0.1,
+		pxPerStep: 10,
+		format: (v) => v.toFixed(1),
 	});
 
 	const doseStepper = createStepper(form, {
-		label: '도징량(g)', initial: record.dose,
-		min: 0, max: 100, step: 0.1, pxPerStep: 10,
-		format: v => `${v.toFixed(1)}g`,
+		label: '도징량(g)',
+		initial: record.dose,
+		min: 0,
+		max: 100,
+		step: 0.1,
+		pxPerStep: 10,
+		format: (v) => `${v.toFixed(1)}g`,
 	});
 
 	const filterGroup = form.createDiv({ cls: 'brew-edit-filter-fields' });
 
 	const waterTempStepper = createStepper(filterGroup, {
-		label: '물 온도(°C)', initial: record.method === 'filter' ? record.waterTemp : 93,
-		min: 0, max: 100, step: 1, pxPerStep: 5,
-		format: v => `${v}°C`,
+		label: '물 온도(°C)',
+		initial: record.method === 'filter' ? record.waterTemp : 93,
+		min: 0,
+		max: 100,
+		step: 1,
+		pxPerStep: 5,
+		format: (v) => `${v}°C`,
 	});
 
 	const filterRow = filterGroup.createDiv({ cls: 'brew-edit-row' });
@@ -117,19 +131,32 @@ export function renderEditForm(
 		if (record.method === 'espresso' && record.basket === b) opt.selected = true;
 	}
 
-	const accChecked = deps.equipment.accessories.length > 0
-		? createAccessoryChecklist(espressoGroup, deps.equipment.accessories, record.method === 'espresso' ? record.accessories ?? [] : [])
-		: new Set<string>();
+	const accChecked =
+		deps.equipment.accessories.length > 0
+			? createAccessoryChecklist(
+					espressoGroup,
+					deps.equipment.accessories,
+					record.method === 'espresso' ? (record.accessories ?? []) : [],
+				)
+			: new Set<string>();
 
 	const waterWeightStepper = createStepper(form, {
-		label: '가수', initial: record.waterWeight ?? 0,
-		min: 0, max: 1000, step: 0.1, pxPerStep: 10,
-		format: v => `${v.toFixed(1)}g`,
+		label: '가수',
+		initial: record.waterWeight ?? 0,
+		min: 0,
+		max: 1000,
+		step: 0.1,
+		pxPerStep: 10,
+		format: (v) => `${v.toFixed(1)}g`,
 	});
 	const milkWeightStepper = createStepper(form, {
-		label: '우유', initial: record.milkWeight ?? 0,
-		min: 0, max: 1000, step: 0.1, pxPerStep: 10,
-		format: v => `${v.toFixed(1)}g`,
+		label: '우유',
+		initial: record.milkWeight ?? 0,
+		min: 0,
+		max: 1000,
+		step: 0.1,
+		pxPerStep: 10,
+		format: (v) => `${v.toFixed(1)}g`,
 	});
 
 	const noteRow = form.createDiv({ cls: 'brew-edit-row brew-edit-note' });
@@ -162,10 +189,14 @@ export function renderEditForm(
 	const footer = container.createDiv({ cls: 'brew-profile-footer' });
 	const deleteBtn = footer.createEl('button', { text: '삭제', cls: 'mod-warning' });
 	deleteBtn.addEventListener('click', () => {
-		const modal = new ConfirmModal(deps.app, '선택한 브루잉 기록을 삭제합니다. 삭제된 기록은 복구할 수 없습니다.', async () => {
-			await deps.recordService.removeWithProfile(record.id, record.profilePath, deps.profileStorage);
-			deps.onDeleted();
-		});
+		const modal = new ConfirmModal(
+			deps.app,
+			'선택한 브루잉 기록을 삭제합니다. 삭제된 기록은 복구할 수 없습니다.',
+			async () => {
+				await deps.recordService.removeWithProfile(record.id, record.profilePath, deps.profileStorage);
+				deps.onDeleted();
+			},
+		);
 		modal.open();
 	});
 
@@ -188,10 +219,22 @@ export function renderEditForm(
 
 		let changes: Partial<BrewRecord>;
 		if (method === 'filter') {
-			changes = { ...base, method: 'filter' as const, waterTemp: waterTempStepper.getValue(), filter: filterSelect.value, dripper: dripperSelect?.value || undefined };
+			changes = {
+				...base,
+				method: 'filter' as const,
+				waterTemp: waterTempStepper.getValue(),
+				filter: filterSelect.value,
+				dripper: dripperSelect?.value || undefined,
+			};
 		} else {
 			const accList = [...accChecked];
-			changes = { ...base, method: 'espresso' as const, drink: drinkSelect.value as EspressoDrink, basket: basketSelect.value, accessories: accList.length > 0 ? accList : undefined };
+			changes = {
+				...base,
+				method: 'espresso' as const,
+				drink: drinkSelect.value as EspressoDrink,
+				basket: basketSelect.value,
+				accessories: accList.length > 0 ? accList : undefined,
+			};
 		}
 
 		if (method !== record.method) {
