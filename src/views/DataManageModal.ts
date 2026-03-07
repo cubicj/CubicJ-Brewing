@@ -95,6 +95,7 @@ export class DataManageModal extends Modal {
 		const finished = [...beans.filter((b) => b.status === 'finished')].sort((a, b) => a.name.localeCompare(b.name));
 
 		if (active.length > 0) {
+			listEl.createDiv({ cls: 'dm-divider', text: '현재 보유 원두' });
 			for (const bean of active) this.renderBeanRow(listEl, bean);
 		}
 
