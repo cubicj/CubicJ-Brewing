@@ -584,7 +584,7 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 	}
 
 	container.createEl('h4', { text: '메모', cls: 'brew-flow-section-label' });
-	const noteEl = container.createEl('textarea', { cls: 'brew-flow-note' });
+	const noteEl = container.createEl('textarea', { cls: 'brew-flow-note', attr: { spellcheck: 'false' } });
 	noteEl.placeholder = '';
 
 	if (ctx.savingRo.current) ctx.savingRo.current.disconnect();
