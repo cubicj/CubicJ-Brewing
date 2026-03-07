@@ -4,6 +4,8 @@ export interface LogConfig {
 	packetLog: boolean;
 }
 
+export type GlobalHotkeys = Record<string, string>;
+
 export type BrewMethod = 'filter' | 'espresso';
 export type BrewTemp = 'hot' | 'iced';
 export type EspressoDrink = 'shot' | 'americano' | 'latte';
