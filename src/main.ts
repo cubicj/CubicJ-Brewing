@@ -141,6 +141,12 @@ export default class CubicJBrewingPlugin extends Plugin {
 		};
 
 		this.addCommand({
+			id: 'open-view',
+			name: '브루잉 뷰 열기',
+			callback: () => this.activateView(),
+		});
+
+		this.addCommand({
 			id: 'tare',
 			name: '영점 맞추기',
 			checkCallback: (checking) => {
@@ -198,8 +204,6 @@ export default class CubicJBrewingPlugin extends Plugin {
 		this.addRibbonIcon('coffee', 'CubicJ Brewing', () => {
 			this.activateView();
 		});
-
-		this.app.workspace.onLayoutReady(() => this.activateView());
 
 		this.beforeUnloadHandler = () => {
 			this.acaiaService?.destroy();
