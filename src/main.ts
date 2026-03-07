@@ -34,6 +34,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 	private viewType: string | null = null;
 	private hotkeyManager: import('./utils/GlobalHotkeyManager').GlobalHotkeyManager | null = null;
 	private globalHotkeys: GlobalHotkeys = DEFAULT_HOTKEYS;
+	private firstInstall = false;
 
 	async onload() {
 		this.vaultData = new VaultDataService(this.app);
@@ -111,7 +112,10 @@ export default class CubicJBrewingPlugin extends Plugin {
 		brewBlock.register((lang, handler) => this.registerMarkdownCodeBlockProcessor(lang, handler));
 		this.recordService.onChange = () => brewBlock.refreshAll();
 
-		this.app.workspace.onLayoutReady(() => this.vaultData.refreshRoastDays());
+		this.app.workspace.onLayoutReady(() => {
+			this.vaultData.refreshRoastDays();
+			if (this.firstInstall) this.activateView();
+		});
 
 		if (Platform.isDesktop) {
 			await this.initDesktop();
@@ -255,7 +259,9 @@ export default class CubicJBrewingPlugin extends Plugin {
 	}
 
 	async loadPluginData(): Promise<void> {
-		const data = (await this.loadData()) ?? {};
+		const raw = await this.loadData();
+		this.firstInstall = raw === null || raw === undefined;
+		const data = raw ?? {};
 		const eq = data.equipment;
 		if (eq && typeof eq === 'object' && !Array.isArray(eq)) {
 			const keys: (keyof EquipmentSettings)[] = ['grinders', 'drippers', 'filters', 'baskets', 'accessories'];

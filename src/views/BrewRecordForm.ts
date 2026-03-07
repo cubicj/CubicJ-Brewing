@@ -161,7 +161,7 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 
 	const noteRow = form.createDiv({ cls: 'brew-edit-row brew-edit-note' });
 	noteRow.createEl('label', { text: '메모' });
-	const noteInput = noteRow.createEl('textarea');
+	const noteInput = noteRow.createEl('textarea', { attr: { spellcheck: 'false' } });
 	noteInput.value = record.note ?? '';
 
 	const syncWeightVisibility = () => {
