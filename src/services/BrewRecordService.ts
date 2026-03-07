@@ -14,10 +14,14 @@ export class BrewRecordService {
 	private async load(): Promise<BrewRecord[]> {
 		if (this.records) return this.records;
 		const raw = await this.adapter.read();
-		if (!raw) { this.records = []; return this.records; }
+		if (!raw) {
+			this.records = [];
+			return this.records;
+		}
 		let parsed: unknown;
-		try { parsed = JSON.parse(raw); }
-		catch {
+		try {
+			parsed = JSON.parse(raw);
+		} catch {
 			console.error('brew-records.json corrupt — backing up raw data');
 			await this.adapter.write(raw + '\n// BACKUP ' + new Date().toISOString());
 			this.records = [];
@@ -28,10 +32,14 @@ export class BrewRecordService {
 			this.records = [];
 			return this.records;
 		}
-		const valid = parsed.filter((r: any) =>
-			r && typeof r === 'object' && typeof r.id === 'string' &&
-			typeof r.timestamp === 'string' && typeof r.bean === 'string' &&
-			(r.method === 'filter' || r.method === 'espresso')
+		const valid = parsed.filter(
+			(r: any) =>
+				r &&
+				typeof r === 'object' &&
+				typeof r.id === 'string' &&
+				typeof r.timestamp === 'string' &&
+				typeof r.bean === 'string' &&
+				(r.method === 'filter' || r.method === 'espresso'),
 		);
 		if (valid.length < parsed.length) {
 			console.warn(`brew-records.json: ${parsed.length - valid.length} invalid records filtered out`);
@@ -50,9 +58,7 @@ export class BrewRecordService {
 
 	async getByBean(bean: string): Promise<BrewRecord[]> {
 		const records = await this.load();
-		return records
-			.filter(r => r.bean === bean)
-			.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+		return records.filter((r) => r.bean === bean).sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 	}
 
 	async add(record: BrewRecord): Promise<void> {
@@ -64,7 +70,7 @@ export class BrewRecordService {
 
 	async update(id: string, changes: Partial<BrewRecord>): Promise<void> {
 		const records = await this.load();
-		const idx = records.findIndex(r => r.id === id);
+		const idx = records.findIndex((r) => r.id === id);
 		if (idx === -1) return;
 		records[idx] = { ...records[idx], ...changes } as BrewRecord;
 		await this.save();
@@ -82,7 +88,7 @@ export class BrewRecordService {
 
 	async remove(id: string): Promise<void> {
 		const records = await this.load();
-		const idx = records.findIndex(r => r.id === id);
+		const idx = records.findIndex((r) => r.id === id);
 		if (idx === -1) return;
 		records.splice(idx, 1);
 		await this.save();
@@ -90,12 +96,14 @@ export class BrewRecordService {
 	}
 
 	async getLastRecord(
-		bean: string, method: BrewMethod, temp: BrewTemp,
+		bean: string,
+		method: BrewMethod,
+		temp: BrewTemp,
 		equip?: { filter?: string; grinder?: string; dripper?: string },
 	): Promise<BrewRecord | undefined> {
 		const records = await this.load();
 		return records
-			.filter(r => {
+			.filter((r) => {
 				if (r.bean !== bean || r.method !== method || r.temp !== temp) return false;
 				if (equip?.filter && !(r.method === 'filter' && r.filter === equip.filter)) return false;
 				if (equip?.grinder && r.grinder !== equip.grinder) return false;

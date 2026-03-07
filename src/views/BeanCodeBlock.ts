@@ -11,7 +11,12 @@ export class BeanCodeBlock {
 		private vaultData: VaultDataService,
 	) {}
 
-	register(registerFn: (lang: string, handler: (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void) => void): void {
+	register(
+		registerFn: (
+			lang: string,
+			handler: (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void,
+		) => void,
+	): void {
 		registerFn('beans', (_source, el, _ctx) => {
 			this.containers.push(new WeakRef(el));
 			this.render(el);
@@ -19,7 +24,7 @@ export class BeanCodeBlock {
 	}
 
 	refreshAll(): void {
-		this.containers = this.containers.filter(ref => {
+		this.containers = this.containers.filter((ref) => {
 			const el = ref.deref();
 			if (!el || !el.isConnected) return false;
 			this.render(el);
@@ -37,7 +42,7 @@ export class BeanCodeBlock {
 
 		const beans = this.vaultData.getAllBeans();
 		const active = [...this.vaultData.getActiveBeans()].sort((a, b) => a.name.localeCompare(b.name));
-		const finished = [...beans.filter(b => b.status === 'finished')].sort((a, b) => a.name.localeCompare(b.name));
+		const finished = [...beans.filter((b) => b.status === 'finished')].sort((a, b) => a.name.localeCompare(b.name));
 
 		if (active.length > 0) {
 			el.createDiv({ cls: 'bean-hub-section-title', text: '현재 보유 원두' });

@@ -8,7 +8,13 @@ import { renderEditForm } from './BrewRecordForm';
 import { formatBrewDate } from '../utils/format';
 
 export type ModalMode =
-	| { type: 'detail'; record: BrewRecord; recordService: BrewRecordService; profileStorage: BrewProfileStorage; equipment: EquipmentSettings }
+	| {
+			type: 'detail';
+			record: BrewRecord;
+			recordService: BrewRecordService;
+			profileStorage: BrewProfileStorage;
+			equipment: EquipmentSettings;
+	  }
 	| { type: 'expand'; points: BrewProfilePoint[] };
 
 export class BrewProfileModal extends Modal {
@@ -27,7 +33,10 @@ export class BrewProfileModal extends Modal {
 		} else {
 			this.record = mode.record;
 			this.resolvePoints = mode.record.profilePath
-				? () => (mode as { type: 'detail'; profileStorage: BrewProfileStorage; record: BrewRecord }).profileStorage.load(mode.record.profilePath!)
+				? () =>
+						(mode as { type: 'detail'; profileStorage: BrewProfileStorage; record: BrewRecord }).profileStorage.load(
+							mode.record.profilePath!,
+						)
 				: async () => [];
 		}
 	}
@@ -77,7 +86,10 @@ export class BrewProfileModal extends Modal {
 				e.stopPropagation();
 				chartContainer.scrollLeft += dx;
 			};
-			this.modalEl.addEventListener('wheel', this.wheelHandler, { capture: true, passive: false } as AddEventListenerOptions);
+			this.modalEl.addEventListener('wheel', this.wheelHandler, {
+				capture: true,
+				passive: false,
+			} as AddEventListenerOptions);
 		} else if (this.record) {
 			const espressoStats: string[] = [];
 			if (this.record.time) espressoStats.push(`${this.record.time}초`);
@@ -122,10 +134,14 @@ export class BrewProfileModal extends Modal {
 		if (!this.record || this.mode.type !== 'detail') return;
 		const record = this.record;
 		const { recordService, profileStorage } = this.mode;
-		const modal = new ConfirmModal(this.app, '선택한 브루잉 기록을 삭제합니다. 삭제된 기록은 복구할 수 없습니다.', async () => {
-			await recordService.removeWithProfile(record.id, record.profilePath, profileStorage);
-			this.close();
-		});
+		const modal = new ConfirmModal(
+			this.app,
+			'선택한 브루잉 기록을 삭제합니다. 삭제된 기록은 복구할 수 없습니다.',
+			async () => {
+				await recordService.removeWithProfile(record.id, record.profilePath, profileStorage);
+				this.close();
+			},
+		);
 		modal.open();
 	}
 
@@ -141,7 +157,10 @@ export class BrewProfileModal extends Modal {
 			equipment: this.mode.equipment,
 			recordService: this.mode.recordService,
 			profileStorage: this.mode.profileStorage,
-			onSaved: (updated) => { this.record = updated; this.renderReadMode(); },
+			onSaved: (updated) => {
+				this.record = updated;
+				this.renderReadMode();
+			},
 			onDeleted: () => this.close(),
 			onCancel: () => this.renderReadMode(),
 		});
@@ -156,7 +175,7 @@ export class BrewProfileModal extends Modal {
 
 	private renderDetails(record: BrewRecord): void {
 		const eq = this.mode.type === 'detail' ? this.mode.equipment : undefined;
-		const grinderConfig = eq?.grinders.find(g => g.name === record.grinder);
+		const grinderConfig = eq?.grinders.find((g) => g.name === record.grinder);
 
 		const fmtGrind = (v: number) => {
 			if (grinderConfig && grinderConfig.step < 0.1) return v.toFixed(2);

@@ -31,9 +31,15 @@ export class BrewingView extends ItemView {
 		this.plugin = plugin;
 	}
 
-	getViewType(): string { return VIEW_TYPE_BREWING; }
-	getDisplayText(): string { return 'Brewing'; }
-	getIcon(): string { return 'coffee'; }
+	getViewType(): string {
+		return VIEW_TYPE_BREWING;
+	}
+	getDisplayText(): string {
+		return 'Brewing';
+	}
+	getIcon(): string {
+		return 'coffee';
+	}
 
 	async onOpen(): Promise<void> {
 		this.log('onOpen');
@@ -106,7 +112,10 @@ export class BrewingView extends ItemView {
 	toggleBrewing(): void {
 		const container = this.containerEl.children[1] as HTMLElement;
 		const startBtn = container.querySelector('.brew-flow-start-btn') as HTMLButtonElement | null;
-		if (startBtn) { startBtn.click(); return; }
+		if (startBtn) {
+			startBtn.click();
+			return;
+		}
 		const stopBtn = container.querySelector('.brew-flow-stop-btn') as HTMLButtonElement | null;
 		if (stopBtn) stopBtn.click();
 	}
@@ -117,7 +126,10 @@ export class BrewingView extends ItemView {
 		this.scaleConnectBtn = toolbar.createEl('button', { text: '저울 연결', cls: 'brewing-toolbar-btn' });
 		this.scaleConnectBtn.addEventListener('click', () => this.handleConnectClick());
 
-		this.scalePowerOffBtn = toolbar.createEl('button', { text: '전원 끄기', cls: 'brewing-toolbar-btn brewing-power-off-btn' });
+		this.scalePowerOffBtn = toolbar.createEl('button', {
+			text: '전원 끄기',
+			cls: 'brewing-toolbar-btn brewing-power-off-btn',
+		});
 		this.scalePowerOffBtn.addEventListener('click', () => this.powerOff());
 		this.scalePowerOffBtn.style.display = 'none';
 
@@ -166,7 +178,9 @@ export class BrewingView extends ItemView {
 			timerController: this.timerController,
 			getWeightText: () => this.scaleDisplay.getWeightText(),
 			brewingStarted: this.brewingStarted,
-			setBrewingStarted: (v) => { this.brewingStarted = v; },
+			setBrewingStarted: (v) => {
+				this.brewingStarted = v;
+			},
 			resetFlow: () => this.resetFlow(),
 			recorder: this.recorder,
 			expandStep: (step) => this.accordion.expandStep(step),
@@ -217,7 +231,9 @@ export class BrewingView extends ItemView {
 		this.listeners.push({ event, fn });
 	}
 
-	async toggleConnect(): Promise<void> { return this.handleConnectClick(); }
+	async toggleConnect(): Promise<void> {
+		return this.handleConnectClick();
+	}
 
 	private async handleConnectClick(): Promise<void> {
 		const service = this.plugin.acaiaService!;
@@ -236,5 +252,4 @@ export class BrewingView extends ItemView {
 	private log(msg: string): void {
 		this.plugin.pluginLogger?.log('VIEW', msg);
 	}
-
 }

@@ -77,14 +77,22 @@ export class BrewProfileChart {
 			e.stopPropagation();
 			container.scrollLeft += dx;
 		};
-		container.addEventListener('wheel', this.scrollWheelHandler, { capture: true, passive: false } as AddEventListenerOptions);
+		container.addEventListener('wheel', this.scrollWheelHandler, {
+			capture: true,
+			passive: false,
+		} as AddEventListenerOptions);
 	}
 
 	private attachKeyboard(container: HTMLElement): void {
 		const STEP = 60;
 		this.scrollKeyHandler = (e: KeyboardEvent) => {
-			if (e.key === 'ArrowRight') { container.scrollLeft += STEP; e.preventDefault(); }
-			else if (e.key === 'ArrowLeft') { container.scrollLeft -= STEP; e.preventDefault(); }
+			if (e.key === 'ArrowRight') {
+				container.scrollLeft += STEP;
+				e.preventDefault();
+			} else if (e.key === 'ArrowLeft') {
+				container.scrollLeft -= STEP;
+				e.preventDefault();
+			}
 		};
 		container.addEventListener('keydown', this.scrollKeyHandler);
 	}
@@ -112,7 +120,7 @@ export class BrewProfileChart {
 		this.dragHandlers = { down, move, up };
 	}
 
-	private attachCrosshairEvents(container: HTMLElement): void {
+	private attachCrosshairEvents(_container: HTMLElement): void {
 		this.crosshairMoveHandler = (e: MouseEvent) => {
 			const rect = this.canvas.getBoundingClientRect();
 			const scaleX = this.canvas.width / rect.width;
@@ -306,7 +314,7 @@ export class BrewProfileChart {
 		}
 
 		const viewEnd = this.viewStart + dur;
-		const maxW = Math.max(...points.map(p => p.w), 10) * 1.1;
+		const maxW = Math.max(...points.map((p) => p.w), 10) * 1.1;
 
 		const toX = (t: number) => m.pl + ((t - this.viewStart) / dur) * m.plotW;
 		const toY = (w: number) => m.pt + m.plotH - (w / maxW) * m.plotH;
@@ -333,7 +341,19 @@ export class BrewProfileChart {
 		ctx.rect(m.pl, m.pt, m.plotW, m.plotH);
 		ctx.clip();
 
-		this.drawGrid(ctx, m.dpr, m.pl, m.pt, m.plotW, m.plotH, this.viewStart, scale.viewEnd, scale.maxW, scale.toX, scale.toY);
+		this.drawGrid(
+			ctx,
+			m.dpr,
+			m.pl,
+			m.pt,
+			m.plotW,
+			m.plotH,
+			this.viewStart,
+			scale.viewEnd,
+			scale.maxW,
+			scale.toX,
+			scale.toY,
+		);
 		this.drawLine(ctx, m.dpr, detail, scale.toX, scale.toY, 1, DETAIL_ALPHA);
 		this.drawTrend(ctx, m.dpr, trend, scale.toX, scale.toY);
 
@@ -370,10 +390,15 @@ export class BrewProfileChart {
 	}
 
 	private drawCrosshair(
-		ctx: CanvasRenderingContext2D, dpr: number,
-		pl: number, pt: number, plotW: number, plotH: number,
+		ctx: CanvasRenderingContext2D,
+		dpr: number,
+		pl: number,
+		pt: number,
+		plotW: number,
+		plotH: number,
 		trend: BrewProfilePoint[],
-		toX: (t: number) => number, toY: (w: number) => number,
+		toX: (t: number) => number,
+		toY: (w: number) => number,
 	): void {
 		if (trend.length < 2) return;
 		const t = Math.max(0, Math.min(this.crosshairT!, trend[trend.length - 1].t));
@@ -401,14 +426,18 @@ export class BrewProfileChart {
 	}
 
 	private renderCrosshairLabel(
-		ctx: CanvasRenderingContext2D, dpr: number,
-		x: number, dotY: number, w: number, t: number,
-		pl: number, plotW: number, pt: number,
+		ctx: CanvasRenderingContext2D,
+		dpr: number,
+		x: number,
+		dotY: number,
+		w: number,
+		t: number,
+		pl: number,
+		plotW: number,
+		pt: number,
 	): void {
 		const tSec = Math.round(t);
-		const tLabel = tSec >= 60
-			? `${Math.floor(tSec / 60)}분 ${tSec % 60}초`
-			: `${tSec}초`;
+		const tLabel = tSec >= 60 ? `${Math.floor(tSec / 60)}분 ${tSec % 60}초` : `${tSec}초`;
 		const line1 = `무게: ${w.toFixed(1)}g`;
 		const line2 = `시간: ${tLabel}`;
 		ctx.font = `${11 * dpr}px -apple-system, BlinkMacSystemFont, sans-serif`;
@@ -443,25 +472,36 @@ export class BrewProfileChart {
 		return trend[trend.length - 1].w;
 	}
 
-	private filterVisible(
-		points: BrewProfilePoint[], start: number, end: number,
-	): BrewProfilePoint[] {
+	private filterVisible(points: BrewProfilePoint[], start: number, end: number): BrewProfilePoint[] {
 		let lo = 0;
 		let hi = points.length;
 		for (let i = 0; i < points.length; i++) {
-			if (points[i].t >= start) { lo = Math.max(0, i - 1); break; }
+			if (points[i].t >= start) {
+				lo = Math.max(0, i - 1);
+				break;
+			}
 		}
 		for (let i = points.length - 1; i >= 0; i--) {
-			if (points[i].t <= end) { hi = Math.min(points.length, i + 2); break; }
+			if (points[i].t <= end) {
+				hi = Math.min(points.length, i + 2);
+				break;
+			}
 		}
 		return points.slice(lo, hi);
 	}
 
 	private drawGrid(
-		ctx: CanvasRenderingContext2D, dpr: number,
-		pl: number, pt: number, plotW: number, plotH: number,
-		viewStart: number, viewEnd: number, maxW: number,
-		toX: (t: number) => number, toY: (w: number) => number,
+		ctx: CanvasRenderingContext2D,
+		dpr: number,
+		pl: number,
+		pt: number,
+		plotW: number,
+		plotH: number,
+		viewStart: number,
+		viewEnd: number,
+		maxW: number,
+		toX: (t: number) => number,
+		toY: (w: number) => number,
 	): void {
 		ctx.strokeStyle = GRID_COLOR;
 		ctx.lineWidth = dpr;
@@ -486,9 +526,14 @@ export class BrewProfileChart {
 	}
 
 	private drawXAxis(
-		ctx: CanvasRenderingContext2D, dpr: number,
-		pl: number, pt: number, plotW: number, plotH: number,
-		viewStart: number, viewEnd: number,
+		ctx: CanvasRenderingContext2D,
+		dpr: number,
+		pl: number,
+		pt: number,
+		plotW: number,
+		plotH: number,
+		viewStart: number,
+		viewEnd: number,
 		toX: (t: number) => number,
 	): void {
 		ctx.fillStyle = LABEL_COLOR;
@@ -506,9 +551,13 @@ export class BrewProfileChart {
 	}
 
 	private drawYAxis(
-		ctx: CanvasRenderingContext2D, dpr: number,
-		pl: number, _pt: number, plotH: number,
-		maxW: number, toY: (w: number) => number,
+		ctx: CanvasRenderingContext2D,
+		dpr: number,
+		pl: number,
+		_pt: number,
+		plotH: number,
+		maxW: number,
+		toY: (w: number) => number,
 	): void {
 		ctx.fillStyle = LABEL_COLOR;
 		ctx.font = `${10 * dpr}px -apple-system, BlinkMacSystemFont, sans-serif`;
@@ -521,10 +570,13 @@ export class BrewProfileChart {
 	}
 
 	private drawLine(
-		ctx: CanvasRenderingContext2D, dpr: number,
+		ctx: CanvasRenderingContext2D,
+		dpr: number,
 		points: BrewProfilePoint[],
-		toX: (t: number) => number, toY: (w: number) => number,
-		width: number, alpha: number,
+		toX: (t: number) => number,
+		toY: (w: number) => number,
+		width: number,
+		alpha: number,
 	): void {
 		if (points.length < 2) return;
 		ctx.beginPath();
@@ -541,9 +593,11 @@ export class BrewProfileChart {
 	}
 
 	private drawTrend(
-		ctx: CanvasRenderingContext2D, dpr: number,
+		ctx: CanvasRenderingContext2D,
+		dpr: number,
 		points: BrewProfilePoint[],
-		toX: (t: number) => number, toY: (w: number) => number,
+		toX: (t: number) => number,
+		toY: (w: number) => number,
 	): void {
 		if (points.length < 2) return;
 

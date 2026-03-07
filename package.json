@@ -7,13 +7,37 @@
     "build": "vitest run && tsc --noEmit && node esbuild.config.mjs production",
     "check": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"*.mjs\" \"*.css\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"*.mjs\" \"*.css\"",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.css": [
+      "prettier --write"
+    ],
+    "*.mjs": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^20.0.0",
     "esbuild": "^0.25.0",
+    "eslint": "^10.0.3",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.3.2",
     "obsidian": "^1.12.3",
+    "prettier": "^3.8.1",
     "typescript": "^5.0.0",
+    "typescript-eslint": "^8.56.1",
     "vitest": "^4.0.18"
   },
   "dependencies": {

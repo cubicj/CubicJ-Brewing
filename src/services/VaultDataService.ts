@@ -3,15 +3,19 @@ import type { BeanInfo, RecipeInfo, RecipeStep } from '../brew/types';
 import { MS_PER_DAY } from '../brew/constants';
 
 export class VaultDataService {
-	constructor(private app: App, private beanFolder = '3. Resources') {}
+	constructor(
+		private app: App,
+		private beanFolder = '3. Resources',
+	) {}
 
 	getActiveBeans(): BeanInfo[] {
-		return this.getAllBeans().filter(b => b.status === 'active');
+		return this.getAllBeans().filter((b) => b.status === 'active');
 	}
 
 	getAllBeans(): BeanInfo[] {
-		return this.app.vault.getMarkdownFiles()
-			.map(file => this.parseBeanNote(file))
+		return this.app.vault
+			.getMarkdownFiles()
+			.map((file) => this.parseBeanNote(file))
 			.filter((b): b is BeanInfo => b !== null);
 	}
 
@@ -38,8 +42,9 @@ export class VaultDataService {
 	}
 
 	getAllRecipes(): RecipeInfo[] {
-		return this.app.vault.getMarkdownFiles()
-			.map(file => this.parseRecipeNote(file))
+		return this.app.vault
+			.getMarkdownFiles()
+			.map((file) => this.parseRecipeNote(file))
 			.filter((r): r is RecipeInfo => r !== null);
 	}
 
@@ -88,9 +93,7 @@ export class VaultDataService {
 			name = `새 원두 ${counter}`;
 			path = `${folder}/${name}.md`;
 		}
-		const parts = [
-			'---', 'type: bean', 'roaster:', 'status: active', 'roast_date:', 'roast_days:', '---', '',
-		];
+		const parts = ['---', 'type: bean', 'roaster:', 'status: active', 'roast_date:', 'roast_days:', '---', ''];
 		if (extraContent) parts.push(extraContent, '');
 		await this.app.vault.create(path, parts.join('\n'));
 		return path;
@@ -116,6 +119,6 @@ export class VaultDataService {
 
 	private getTFile(path: string): TFile | null {
 		const file = this.app.vault.getAbstractFileByPath(path);
-		return file && 'extension' in file ? file as TFile : null;
+		return file && 'extension' in file ? (file as TFile) : null;
 	}
 }

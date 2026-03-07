@@ -30,10 +30,7 @@ export function spikeFilter(
 	});
 }
 
-export function emaSmooth(
-	points: BrewProfilePoint[],
-	alpha = EMA_ALPHA,
-): BrewProfilePoint[] {
+export function emaSmooth(points: BrewProfilePoint[], alpha = EMA_ALPHA): BrewProfilePoint[] {
 	if (points.length === 0) return [];
 	const result: BrewProfilePoint[] = [points[0]];
 	for (let i = 1; i < points.length; i++) {
@@ -43,11 +40,7 @@ export function emaSmooth(
 	return result;
 }
 
-export function savitzkyGolay(
-	points: BrewProfilePoint[],
-	coeffs = SG11_COEFFS,
-	norm = SG11_NORM,
-): BrewProfilePoint[] {
+export function savitzkyGolay(points: BrewProfilePoint[], coeffs = SG11_COEFFS, norm = SG11_NORM): BrewProfilePoint[] {
 	if (points.length < coeffs.length) return points;
 	const half = Math.floor(coeffs.length / 2);
 	const result: BrewProfilePoint[] = [];

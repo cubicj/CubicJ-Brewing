@@ -1,4 +1,13 @@
-import type { BrewMethod, BrewTemp, EspressoDrink, BeanInfo, RecipeInfo, BrewRecord, BrewFlowStep, BrewFlowSelection } from './types';
+import type {
+	BrewMethod,
+	BrewTemp,
+	EspressoDrink,
+	BeanInfo,
+	RecipeInfo,
+	BrewRecord,
+	BrewFlowStep,
+	BrewFlowSelection,
+} from './types';
 import { MS_PER_DAY } from './constants';
 
 const FLOW_ORDER: BrewFlowStep[] = ['idle', 'method', 'bean', 'configure', 'brewing', 'saving'];

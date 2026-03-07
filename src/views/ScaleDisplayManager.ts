@@ -73,7 +73,8 @@ export class ScaleDisplayManager {
 		this.scaleDotEl.className = 'brewing-scale-dot';
 		if (state === 'connected') this.scaleDotEl.addClass('is-connected');
 		else if (state === 'disconnected') this.scaleDotEl.addClass('is-disconnected');
-		else if (state === 'scanning' || state === 'connecting' || state === 'reconnecting') this.scaleDotEl.addClass('is-busy');
+		else if (state === 'scanning' || state === 'connecting' || state === 'reconnecting')
+			this.scaleDotEl.addClass('is-busy');
 
 		this.scaleStatusEl.removeClass('brewing-error');
 
