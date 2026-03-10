@@ -257,6 +257,9 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 		if (record.method === 'filter') parts.push(`물온도 ${record.waterTemp}°C`);
 		if (record.method === 'espresso') parts.push(`바스켓 ${record.basket}`);
 		card.createDiv({ cls: 'brew-flow-last-record-meta', text: parts.join(' · ') });
+		if (record.note) {
+			card.createDiv({ cls: 'brew-flow-last-record-note', text: record.note });
+		}
 	};
 
 	updateCard(last);
