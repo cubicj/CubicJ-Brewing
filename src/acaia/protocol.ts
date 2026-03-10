@@ -1,7 +1,11 @@
+// Acaia Pearl S BLE protocol — see Docs/analysis/ble-protocol.md
+// Packet: [0xEF 0xDD] [msgType] [payload...] [ck1] [ck2]
+// Checksums: ck1 = sum(even-indexed payload bytes), ck2 = sum(odd-indexed)
+
 export function encode(msgType: number, payload: number[]): Buffer {
 	const buf = Buffer.alloc(5 + payload.length);
-	buf[0] = 0xef;
-	buf[1] = 0xdd;
+	buf[0] = 0xef; // header byte 1
+	buf[1] = 0xdd; // header byte 2
 	buf[2] = msgType;
 	let ck1 = 0,
 		ck2 = 0;
@@ -56,6 +60,8 @@ export interface WeightResult {
 	stable: boolean;
 }
 
+// Weight payload: [lo] [hi] [?] [?] [unit] [flags]
+// flags: bit0 = unstable (0=stable, 1=changing), bit1 = negative
 export function decodeWeight(data: Buffer, offset: number): WeightResult {
 	let value = ((data[offset + 1] & 0xff) << 8) | (data[offset] & 0xff);
 	const unit = data[offset + 4] & 0xff;
@@ -77,6 +83,8 @@ export interface ScaleSettings {
 	timerRunning: boolean;
 }
 
+// Pearl S settings payload byte map (model-specific — differs from Lunar):
+// [1]=battery, [2]=timerRunning, [3]=units(2=g,5=oz), [5]=autoOff(×5min), [9]=beep
 export function decodeSettings(data: Buffer, offset: number): ScaleSettings {
 	return {
 		battery: data[offset + 1] & 0x7f,
@@ -87,6 +95,7 @@ export function decodeSettings(data: Buffer, offset: number): ScaleSettings {
 	};
 }
 
+// Reassembles fragmented BLE packets. Total length = 5 + buf[3] (payload length byte).
 export class PacketBuffer {
 	onPacket: ((packet: Buffer) => void) | null = null;
 	private buf: number[] = [];

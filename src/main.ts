@@ -104,6 +104,11 @@ export default class CubicJBrewingPlugin extends Plugin {
 				await this.app.vault.adapter.mkdir(DATA_DIR);
 				await this.app.vault.adapter.write(recordsPath, content);
 			},
+			writeBackup: async (content) => {
+				await this.app.vault.adapter.mkdir(DATA_DIR);
+				const ts = new Date().toISOString().replace(/:/g, '-');
+				await this.app.vault.adapter.write(`${DATA_DIR}/brew-records.${ts}.bak`, content);
+			},
 		};
 		this.recordService = new BrewRecordService(adapter);
 

@@ -4,11 +4,15 @@ import type { FilterRecord } from '../brew/types';
 
 class InMemoryAdapter implements StorageAdapter {
 	data = '';
+	backup: string | null = null;
 	async read(): Promise<string | null> {
 		return this.data || null;
 	}
 	async write(content: string): Promise<void> {
 		this.data = content;
+	}
+	async writeBackup(content: string): Promise<void> {
+		this.backup = content;
 	}
 }
 
@@ -180,8 +184,7 @@ describe('BrewRecordService', () => {
 		const svc = new BrewRecordService(adapter);
 		const records = await svc.getAll();
 		expect(records).toEqual([]);
-		expect(adapter.data).toContain('BACKUP');
-		expect(adapter.data).toContain('{broken json');
+		expect(adapter.backup).toBe('{broken json');
 	});
 
 	it('handles non-array JSON', async () => {
