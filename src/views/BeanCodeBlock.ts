@@ -69,8 +69,11 @@ export class BeanCodeBlock {
 		});
 
 		const days = this.vaultData.getDaysSinceRoast(bean);
-		if (days !== null) {
-			row.createSpan({ cls: 'bean-hub-days', text: `로스팅 ${days}일차` });
+		if (days !== null || bean.weight != null) {
+			const parts: string[] = [];
+			if (days !== null) parts.push(`로스팅 ${days}일차`);
+			if (bean.weight != null) parts.push(`남은 원두 ${bean.weight}g`);
+			row.createSpan({ cls: 'bean-hub-days', text: parts.join(' · ') });
 		}
 
 		const actions = row.createDiv({ cls: 'bean-hub-actions' });

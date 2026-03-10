@@ -33,6 +33,14 @@ export class VaultDataService {
 		});
 	}
 
+	async setWeight(path: string, weight: number | null): Promise<void> {
+		const file = this.getTFile(path);
+		if (!file) return;
+		await this.app.fileManager.processFrontMatter(file, (fm) => {
+			fm.weight = weight;
+		});
+	}
+
 	async setBeanStatus(path: string, status: 'active' | 'finished'): Promise<void> {
 		const file = this.getTFile(path);
 		if (!file) return;
@@ -60,6 +68,7 @@ export class VaultDataService {
 			roaster: fm.roaster ?? '',
 			status: fm.status ?? 'active',
 			roastDate,
+			weight: typeof fm.weight === 'number' ? fm.weight : null,
 		};
 	}
 
@@ -93,7 +102,17 @@ export class VaultDataService {
 			name = `새 원두 ${counter}`;
 			path = `${folder}/${name}.md`;
 		}
-		const parts = ['---', 'type: bean', 'roaster:', 'status: active', 'roast_date:', 'roast_days:', '---', ''];
+		const parts = [
+			'---',
+			'type: bean',
+			'roaster:',
+			'status: active',
+			'roast_date:',
+			'roast_days:',
+			'weight:',
+			'---',
+			'',
+		];
 		if (extraContent) parts.push(extraContent, '');
 		await this.app.vault.create(path, parts.join('\n'));
 		return path;

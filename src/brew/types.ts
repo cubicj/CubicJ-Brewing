@@ -18,6 +18,7 @@ export interface BeanInfo {
 	roaster: string;
 	status: 'active' | 'finished';
 	roastDate: string | null;
+	weight: number | null;
 }
 
 export interface RecipeStep {

@@ -116,14 +116,24 @@ export class DataManageModal extends Modal {
 
 		if (bean.status === 'active') {
 			const days = this.plugin.vaultData.getDaysSinceRoast(bean);
-			if (days !== null) {
-				row.createSpan({ cls: 'dm-row-days', text: `로스팅 ${days}일차` });
+			const metaParts: string[] = [];
+			if (days !== null) metaParts.push(`로스팅 ${days}일차`);
+			if (bean.weight != null) metaParts.push(`남은 원두 ${bean.weight}g`);
+			if (metaParts.length > 0) {
+				row.createSpan({ cls: 'dm-row-days', text: metaParts.join(' · ') });
 			}
 		}
 
 		const actions = row.createDiv({ cls: 'dm-row-actions' });
 
 		if (bean.status === 'active') {
+			const weightBtn = actions.createEl('button', { cls: 'dm-btn dm-btn-muted' });
+			setIcon(weightBtn, 'scale');
+			weightBtn.addEventListener('click', (e) => {
+				e.stopPropagation();
+				this.showWeightForm(row, bean);
+			});
+
 			const exhaustBtn = actions.createEl('button', { text: '소진', cls: 'dm-btn dm-btn-muted' });
 			exhaustBtn.addEventListener('click', async (e) => {
 				e.stopPropagation();
@@ -159,6 +169,88 @@ export class DataManageModal extends Modal {
 			this.plugin.app.workspace.openLinkText(bean.path, '');
 		});
 		row.style.cursor = 'pointer';
+	}
+
+	private showWeightForm(row: HTMLElement, bean: BeanInfo): void {
+		const existing = row.querySelector('.dm-weight-form');
+		if (existing) {
+			existing.remove();
+			return;
+		}
+
+		const formEl = row.createDiv({ cls: 'dm-weight-form' });
+
+		type WeightMode = 'set' | 'add' | 'sub';
+		let mode: WeightMode = 'set';
+
+		const tabs = formEl.createDiv({ cls: 'dm-weight-tabs' });
+		const modes: { id: WeightMode; label: string }[] = [
+			{ id: 'set', label: '설정' },
+			{ id: 'add', label: '더하기' },
+			{ id: 'sub', label: '빼기' },
+		];
+		for (const m of modes) {
+			const btn = tabs.createEl('button', {
+				text: m.label,
+				cls: `dm-weight-tab${m.id === mode ? ' is-active' : ''}`,
+			});
+			btn.addEventListener('click', (e) => {
+				e.stopPropagation();
+				mode = m.id;
+				tabs
+					.querySelectorAll('.dm-weight-tab')
+					.forEach((el) => (el as HTMLElement).classList.toggle('is-active', el === btn));
+			});
+		}
+
+		const inputRow = formEl.createDiv({ cls: 'dm-weight-input-row' });
+		const input = inputRow.createEl('input', {
+			type: 'number',
+			cls: 'dm-weight-input',
+			attr: { placeholder: 'g', step: '0.1', min: '0' },
+		});
+		inputRow.createSpan({ text: 'g' });
+
+		const btnRow = formEl.createDiv({ cls: 'dm-weight-actions' });
+		const applyBtn = btnRow.createEl('button', { text: '적용', cls: 'dm-btn dm-btn-accent' });
+		const cancelBtn = btnRow.createEl('button', { text: '취소', cls: 'dm-btn dm-btn-muted' });
+
+		input.focus();
+
+		const apply = async () => {
+			const val = parseFloat(input.value);
+			if (isNaN(val) || val < 0) return;
+			const current = bean.weight ?? 0;
+			let newWeight: number;
+			switch (mode) {
+				case 'set':
+					newWeight = val;
+					break;
+				case 'add':
+					newWeight = Math.round((current + val) * 10) / 10;
+					break;
+				case 'sub':
+					newWeight = Math.max(0, Math.round((current - val) * 10) / 10);
+					break;
+			}
+			await this.plugin.vaultData.setWeight(bean.path, newWeight);
+			bean.weight = newWeight;
+			this.renderActiveTab();
+		};
+
+		applyBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			apply();
+		});
+		cancelBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			formEl.remove();
+		});
+		input.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') apply();
+			if (e.key === 'Escape') formEl.remove();
+		});
+		formEl.addEventListener('click', (e) => e.stopPropagation());
 	}
 
 	private async createNewBean(): Promise<void> {

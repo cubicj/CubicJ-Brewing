@@ -205,7 +205,12 @@ async function renderBean(container: HTMLElement, ctx: StepRenderContext): Promi
 		item.createDiv({ text: bean.name });
 
 		const days = ctx.plugin.vaultData.getDaysSinceRoast(bean);
-		if (days !== null) item.createDiv({ cls: 'brew-flow-bean-meta', text: `로스팅 ${days}일차` });
+		if (days !== null || bean.weight != null) {
+			const parts: string[] = [];
+			if (days !== null) parts.push(`로스팅 ${days}일차`);
+			if (bean.weight != null) parts.push(`남은 원두 ${bean.weight}g`);
+			item.createDiv({ cls: 'brew-flow-bean-meta', text: parts.join(' · ') });
+		}
 
 		item.addEventListener('click', async () => {
 			if (isSelected) {
@@ -624,6 +629,12 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 			const record = ctx.flowState.buildRecord(note, profilePath);
 			await ctx.plugin.recordService.add(record);
 			ctx.plugin.pluginLogger?.log('FLOW', `record saved — ${record.method} ${record.bean}`);
+			const bean = ctx.flowState.selection.bean;
+			if (bean?.weight != null) {
+				const newWeight = Math.max(0, Math.round((bean.weight - record.dose) * 10) / 10);
+				await ctx.plugin.vaultData.setWeight(bean.path, newWeight);
+				bean.weight = newWeight;
+			}
 			new Notice('저장 완료');
 			ctx.resetFlow();
 		} catch (err) {
