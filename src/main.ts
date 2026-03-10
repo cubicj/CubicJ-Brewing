@@ -35,6 +35,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 	private hotkeyManager: import('./utils/GlobalHotkeyManager').GlobalHotkeyManager | null = null;
 	private globalHotkeys: GlobalHotkeys = DEFAULT_HOTKEYS;
 	private firstInstall = false;
+	private beanBlock!: BeanCodeBlock;
 
 	async onload() {
 		this.vaultData = new VaultDataService(this.app);
@@ -49,13 +50,13 @@ export default class CubicJBrewingPlugin extends Plugin {
 		}
 		this.pluginLogger?.log('PLUGIN', 'onload');
 
-		const beanBlock = new BeanCodeBlock(this.app, this.vaultData);
-		beanBlock.register((lang, handler) => this.registerMarkdownCodeBlockProcessor(lang, handler));
+		this.beanBlock = new BeanCodeBlock(this.app, this.vaultData);
+		this.beanBlock.register((lang, handler) => this.registerMarkdownCodeBlockProcessor(lang, handler));
 		this.registerEvent(
 			this.app.metadataCache.on('changed', (file) => {
 				const cache = this.app.metadataCache.getFileCache(file);
 				if (cache?.frontmatter?.type === 'bean') {
-					beanBlock.refreshAll();
+					this.beanBlock.refreshAll();
 				}
 			}),
 		);
@@ -147,6 +148,11 @@ export default class CubicJBrewingPlugin extends Plugin {
 
 		this.acaiaService = new AcaiaService({ logger });
 
+		this.beanBlock.setScaleWeightGetter(() => {
+			if (this.acaiaService?.state !== 'connected') return null;
+			return this.acaiaService.lastWeight;
+		});
+
 		this.registerView(VIEW_TYPE_BREWING, (leaf) => new BrewingView(leaf, this));
 
 		const getView = (): InstanceType<typeof BrewingView> | null => {
@@ -171,13 +177,23 @@ export default class CubicJBrewingPlugin extends Plugin {
 			},
 		});
 
+		const doAutoFill = () => {
+			const popoverBtn = document.querySelector('.bwp-auto') as HTMLButtonElement | null;
+			if (popoverBtn) {
+				popoverBtn.click();
+				return;
+			}
+			getView()?.autoFill();
+		};
+
 		this.addCommand({
 			id: 'auto-fill',
 			name: '무게 자동 입력',
 			checkCallback: (checking) => {
 				const view = getView();
-				if (!view) return false;
-				if (!checking) view.autoFill();
+				const hasPopover = !!document.querySelector('.bean-weight-popover');
+				if (!view && !hasPopover) return false;
+				if (!checking) doAutoFill();
 				return true;
 			},
 		});
@@ -223,7 +239,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 
 		const commandActions: Record<string, () => void> = {
 			tare: withFocus(() => getView()?.tare()),
-			'auto-fill': withFocus(() => getView()?.autoFill()),
+			'auto-fill': withFocus(() => doAutoFill()),
 			'toggle-brewing': withFocus(() => getView()?.toggleBrewing()),
 			'toggle-connect': withFocus(() => getView()?.toggleConnect()),
 			'power-off-scale': withFocus(() => getView()?.powerOff()),

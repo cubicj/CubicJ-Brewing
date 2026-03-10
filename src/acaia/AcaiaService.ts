@@ -109,6 +109,10 @@ export class AcaiaService extends EventEmitter {
 		return this._scaleName;
 	}
 
+	get lastWeight(): number {
+		return this._lastWeight;
+	}
+
 	get currentReconnectAttempt(): number {
 		return this.reconnectAttempt;
 	}

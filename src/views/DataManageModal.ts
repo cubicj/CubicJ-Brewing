@@ -95,13 +95,13 @@ export class DataManageModal extends Modal {
 		const finished = [...beans.filter((b) => b.status === 'finished')].sort((a, b) => a.name.localeCompare(b.name));
 
 		if (active.length > 0) {
-			listEl.createDiv({ cls: 'dm-divider', text: '현재 보유 원두' });
-			for (const bean of active) this.renderBeanRow(listEl, bean);
+			listEl.createDiv({ cls: 'dm-bean-section-title', text: '현재 보유 원두' });
+			for (const bean of active) this.renderActiveBeanRow(listEl, bean);
 		}
 
 		if (finished.length > 0) {
-			listEl.createDiv({ cls: 'dm-divider', text: '과거 원두' });
-			for (const bean of finished) this.renderBeanRow(listEl, bean);
+			listEl.createDiv({ cls: 'dm-bean-section-title dm-bean-section-past', text: '과거 원두' });
+			for (const bean of finished) this.renderFinishedBeanRow(listEl, bean);
 		}
 
 		if (beans.length === 0) {
@@ -109,148 +109,63 @@ export class DataManageModal extends Modal {
 		}
 	}
 
-	private renderBeanRow(listEl: HTMLElement, bean: BeanInfo): void {
-		const row = listEl.createDiv({ cls: `dm-row${bean.status === 'finished' ? ' is-finished' : ''}` });
+	private renderActiveBeanRow(listEl: HTMLElement, bean: BeanInfo): void {
+		const row = listEl.createDiv({ cls: 'dm-bean-row' });
 
-		row.createDiv({ cls: 'dm-row-name', text: bean.name });
-
-		if (bean.status === 'active') {
-			const days = this.plugin.vaultData.getDaysSinceRoast(bean);
-			const metaParts: string[] = [];
-			if (days !== null) metaParts.push(`로스팅 ${days}일차`);
-			if (bean.weight != null) metaParts.push(`남은 원두 ${bean.weight}g`);
-			if (metaParts.length > 0) {
-				row.createSpan({ cls: 'dm-row-days', text: metaParts.join(' · ') });
-			}
-		}
-
-		const actions = row.createDiv({ cls: 'dm-row-actions' });
-
-		if (bean.status === 'active') {
-			const weightBtn = actions.createEl('button', { cls: 'dm-btn dm-btn-muted' });
-			setIcon(weightBtn, 'scale');
-			weightBtn.addEventListener('click', (e) => {
-				e.stopPropagation();
-				this.showWeightForm(row, bean);
-			});
-
-			const exhaustBtn = actions.createEl('button', { text: '소진', cls: 'dm-btn dm-btn-muted' });
-			exhaustBtn.addEventListener('click', async (e) => {
-				e.stopPropagation();
-				await this.plugin.vaultData.setBeanStatus(bean.path, 'finished');
-				this.renderActiveTab();
-			});
-		} else {
-			const repurchaseBtn = actions.createEl('button', { text: '재구매', cls: 'dm-btn dm-btn-accent' });
-			repurchaseBtn.addEventListener('click', (e) => {
-				e.stopPropagation();
-				const dateInput = row.createEl('input', { type: 'date', cls: 'dm-date-input' });
-				dateInput.valueAsDate = new Date();
-				dateInput.focus();
-				repurchaseBtn.style.display = 'none';
-
-				dateInput.addEventListener('change', async () => {
-					if (!dateInput.value) return;
-					await this.plugin.vaultData.setRoastDate(bean.path, dateInput.value);
-					await this.plugin.vaultData.setBeanStatus(bean.path, 'active');
-					this.renderActiveTab();
-				});
-				dateInput.addEventListener('blur', () => {
-					if (!dateInput.value) {
-						dateInput.remove();
-						repurchaseBtn.style.display = '';
-					}
-				});
-			});
-		}
-
-		row.addEventListener('click', () => {
+		const nameEl = row.createEl('a', { cls: 'dm-bean-name', text: bean.name });
+		nameEl.addEventListener('click', (e) => {
+			e.preventDefault();
 			this.close();
 			this.plugin.app.workspace.openLinkText(bean.path, '');
 		});
-		row.style.cursor = 'pointer';
+
+		const days = this.plugin.vaultData.getDaysSinceRoast(bean);
+		row.createSpan({ cls: 'dm-bean-days', text: days !== null ? `로스팅 ${days}일차` : '' });
+
+		const weightText = bean.weight != null ? `남은 원두 ${bean.weight}g` : '남은 원두 N/A';
+		row.createSpan({ cls: 'dm-bean-weight', text: weightText });
+
+		const statusBtn = row.createEl('button', { text: '소진', cls: 'dm-btn dm-btn-muted' });
+		statusBtn.addEventListener('click', async (e) => {
+			e.stopPropagation();
+			await this.plugin.vaultData.setBeanStatus(bean.path, 'finished');
+			this.renderActiveTab();
+		});
 	}
 
-	private showWeightForm(row: HTMLElement, bean: BeanInfo): void {
-		const existing = row.querySelector('.dm-weight-form');
-		if (existing) {
-			existing.remove();
-			return;
-		}
+	private renderFinishedBeanRow(listEl: HTMLElement, bean: BeanInfo): void {
+		const row = listEl.createDiv({ cls: 'dm-bean-row is-finished' });
 
-		const formEl = row.createDiv({ cls: 'dm-weight-form' });
-
-		type WeightMode = 'set' | 'add' | 'sub';
-		let mode: WeightMode = 'set';
-
-		const tabs = formEl.createDiv({ cls: 'dm-weight-tabs' });
-		const modes: { id: WeightMode; label: string }[] = [
-			{ id: 'set', label: '설정' },
-			{ id: 'add', label: '더하기' },
-			{ id: 'sub', label: '빼기' },
-		];
-		for (const m of modes) {
-			const btn = tabs.createEl('button', {
-				text: m.label,
-				cls: `dm-weight-tab${m.id === mode ? ' is-active' : ''}`,
-			});
-			btn.addEventListener('click', (e) => {
-				e.stopPropagation();
-				mode = m.id;
-				tabs
-					.querySelectorAll('.dm-weight-tab')
-					.forEach((el) => (el as HTMLElement).classList.toggle('is-active', el === btn));
-			});
-		}
-
-		const inputRow = formEl.createDiv({ cls: 'dm-weight-input-row' });
-		const input = inputRow.createEl('input', {
-			type: 'number',
-			cls: 'dm-weight-input',
-			attr: { placeholder: 'g', step: '0.1', min: '0' },
+		const nameEl = row.createEl('a', { cls: 'dm-bean-name', text: bean.name });
+		nameEl.addEventListener('click', (e) => {
+			e.preventDefault();
+			this.close();
+			this.plugin.app.workspace.openLinkText(bean.path, '');
 		});
-		inputRow.createSpan({ text: 'g' });
 
-		const btnRow = formEl.createDiv({ cls: 'dm-weight-actions' });
-		const applyBtn = btnRow.createEl('button', { text: '적용', cls: 'dm-btn dm-btn-accent' });
-		const cancelBtn = btnRow.createEl('button', { text: '취소', cls: 'dm-btn dm-btn-muted' });
-
-		input.focus();
-
-		const apply = async () => {
-			const val = parseFloat(input.value);
-			if (isNaN(val) || val < 0) return;
-			const current = bean.weight ?? 0;
-			let newWeight: number;
-			switch (mode) {
-				case 'set':
-					newWeight = val;
-					break;
-				case 'add':
-					newWeight = Math.round((current + val) * 10) / 10;
-					break;
-				case 'sub':
-					newWeight = Math.max(0, Math.round((current - val) * 10) / 10);
-					break;
-			}
-			await this.plugin.vaultData.setWeight(bean.path, newWeight);
-			bean.weight = newWeight;
-			this.renderActiveTab();
-		};
-
-		applyBtn.addEventListener('click', (e) => {
+		const statusBtn = row.createEl('button', { text: '재구매', cls: 'dm-btn dm-btn-accent' });
+		statusBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
-			apply();
+			statusBtn.style.display = 'none';
+
+			const dateRow = row.createDiv({ cls: 'dm-bean-date-row' });
+			const input = dateRow.createEl('input', { type: 'date' });
+			input.valueAsDate = new Date();
+
+			const btns = dateRow.createDiv({ cls: 'dm-bean-date-btns' });
+			const confirmBtn = btns.createEl('button', { text: '확인', cls: 'dm-btn dm-btn-accent' });
+			confirmBtn.addEventListener('click', async () => {
+				if (!input.value) return;
+				await this.plugin.vaultData.setRoastDate(bean.path, input.value);
+				await this.plugin.vaultData.setBeanStatus(bean.path, 'active');
+				this.renderActiveTab();
+			});
+			const cancelBtn = btns.createEl('button', { text: '취소', cls: 'dm-btn dm-btn-muted' });
+			cancelBtn.addEventListener('click', () => {
+				dateRow.remove();
+				statusBtn.style.display = '';
+			});
 		});
-		cancelBtn.addEventListener('click', (e) => {
-			e.stopPropagation();
-			formEl.remove();
-		});
-		input.addEventListener('keydown', (e) => {
-			if (e.key === 'Enter') apply();
-			if (e.key === 'Escape') formEl.remove();
-		});
-		formEl.addEventListener('click', (e) => e.stopPropagation());
 	}
 
 	private async createNewBean(): Promise<void> {
