@@ -440,6 +440,16 @@
 	color: var(--text-muted);
 }
 
+.cubicj-brewing-view .brew-flow-last-record-note {
+	margin-top: 6px;
+	padding-top: 6px;
+	border-top: 1px solid var(--background-modifier-border);
+	color: var(--text-muted);
+	font-size: var(--font-smallest);
+	line-height: 1.5;
+	white-space: pre-wrap;
+}
+
 .cubicj-brewing-view .brew-flow-method h4,
 .cubicj-brewing-view .brew-flow-bean h4 {
 	margin: 8px 0 4px;
