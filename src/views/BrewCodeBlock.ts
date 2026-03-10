@@ -65,6 +65,7 @@ export class BrewCodeBlock {
 	private render(el: HTMLElement, records: BrewRecord[], beanName: string): void {
 		el.empty();
 		el.addClass('brew-records');
+
 		el.createEl('h3', { text: '브루잉 기록', cls: 'brew-records-header' });
 
 		if (records.length === 0) {
