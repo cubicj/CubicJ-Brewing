@@ -3,6 +3,7 @@ import type { BrewRecord, BrewMethod, BrewTemp } from '../brew/types';
 export interface StorageAdapter {
 	read(): Promise<string | null>;
 	write(content: string): Promise<void>;
+	writeBackup?(content: string): Promise<void>;
 }
 
 export class BrewRecordService {
@@ -23,7 +24,9 @@ export class BrewRecordService {
 			parsed = JSON.parse(raw);
 		} catch {
 			console.error('brew-records.json corrupt — backing up raw data');
-			await this.adapter.write(raw + '\n// BACKUP ' + new Date().toISOString());
+			if (this.adapter.writeBackup) {
+				await this.adapter.writeBackup(raw);
+			}
 			this.records = [];
 			return this.records;
 		}
