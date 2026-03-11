@@ -1,5 +1,12 @@
 import type { BrewRecord, BrewMethod, BrewTemp } from '../brew/types';
 
+export const BREW_RECORDS_VERSION = 1;
+
+export interface BrewRecordsEnvelope {
+	version: number;
+	records: BrewRecord[];
+}
+
 export interface StorageAdapter {
 	read(): Promise<string | null>;
 	write(content: string): Promise<void>;
@@ -11,6 +18,22 @@ export class BrewRecordService {
 	onChange: (() => void) | null = null;
 
 	constructor(private adapter: StorageAdapter) {}
+
+	private validateRecords(arr: unknown[]): BrewRecord[] {
+		const valid = arr.filter(
+			(r: any) =>
+				r &&
+				typeof r === 'object' &&
+				typeof r.id === 'string' &&
+				typeof r.timestamp === 'string' &&
+				typeof r.bean === 'string' &&
+				(r.method === 'filter' || r.method === 'espresso'),
+		);
+		if (valid.length < arr.length) {
+			console.warn(`brew-records.json: ${arr.length - valid.length} invalid records filtered out`);
+		}
+		return valid as BrewRecord[];
+	}
 
 	private async load(): Promise<BrewRecord[]> {
 		if (this.records) return this.records;
@@ -30,29 +53,31 @@ export class BrewRecordService {
 			this.records = [];
 			return this.records;
 		}
-		if (!Array.isArray(parsed)) {
-			console.error('brew-records.json is not an array — resetting');
-			this.records = [];
+		if (Array.isArray(parsed)) {
+			this.records = this.validateRecords(parsed);
 			return this.records;
 		}
-		const valid = parsed.filter(
-			(r: any) =>
-				r &&
-				typeof r === 'object' &&
-				typeof r.id === 'string' &&
-				typeof r.timestamp === 'string' &&
-				typeof r.bean === 'string' &&
-				(r.method === 'filter' || r.method === 'espresso'),
-		);
-		if (valid.length < parsed.length) {
-			console.warn(`brew-records.json: ${parsed.length - valid.length} invalid records filtered out`);
+		if (parsed && typeof parsed === 'object' && 'version' in parsed && 'records' in parsed) {
+			const envelope = parsed as { version: number; records: unknown };
+			if (envelope.version > BREW_RECORDS_VERSION) {
+				console.warn(`brew-records.json version ${envelope.version} > ${BREW_RECORDS_VERSION} — loading anyway`);
+			}
+			if (Array.isArray(envelope.records)) {
+				this.records = this.validateRecords(envelope.records);
+				return this.records;
+			}
 		}
-		this.records = valid as BrewRecord[];
+		console.error('brew-records.json unrecognized format — resetting');
+		this.records = [];
 		return this.records;
 	}
 
 	private async save(): Promise<void> {
-		await this.adapter.write(JSON.stringify(this.records, null, 2));
+		const envelope: BrewRecordsEnvelope = {
+			version: BREW_RECORDS_VERSION,
+			records: this.records ?? [],
+		};
+		await this.adapter.write(JSON.stringify(envelope, null, 2));
 	}
 
 	async getAll(): Promise<BrewRecord[]> {

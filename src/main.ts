@@ -12,6 +12,7 @@ import type { EquipmentSettings, GlobalHotkeys, LogConfig } from './brew/types';
 import { BrewingSettingTab } from './views/SettingTab';
 
 const DATA_DIR = 'cubicj-brewing';
+const DATA_VERSION = 1;
 
 const DEFAULT_HOTKEYS: GlobalHotkeys = {};
 
@@ -283,6 +284,11 @@ export default class CubicJBrewingPlugin extends Plugin {
 		const raw = await this.loadData();
 		this.firstInstall = raw === null || raw === undefined;
 		const data = raw ?? {};
+		const savedVersion = typeof data.dataVersion === 'number' ? data.dataVersion : 0;
+		if (savedVersion < DATA_VERSION) {
+			data.dataVersion = DATA_VERSION;
+			await this.saveData(data);
+		}
 		const eq = data.equipment;
 		if (eq && typeof eq === 'object' && !Array.isArray(eq)) {
 			const keys: (keyof EquipmentSettings)[] = ['grinders', 'drippers', 'filters', 'baskets', 'accessories'];
