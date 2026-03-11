@@ -1,11 +1,13 @@
 interface GlobalShortcutAPI {
 	register(accelerator: string, callback: () => void): boolean;
+	unregister(accelerator: string): void;
 	unregisterAll(): void;
 	isRegistered(accelerator: string): boolean;
 }
 
 export class GlobalHotkeyManager {
 	private api: GlobalShortcutAPI;
+	private registered = new Set<string>();
 
 	constructor(api: GlobalShortcutAPI) {
 		this.api = api;
@@ -17,13 +19,18 @@ export class GlobalHotkeyManager {
 			if (!action) continue;
 
 			const ok = this.api.register(accelerator, action);
-			if (!ok && warn) {
+			if (ok) {
+				this.registered.add(accelerator);
+			} else if (warn) {
 				warn(`Global hotkey failed to register: ${accelerator} for ${commandId}`);
 			}
 		}
 	}
 
 	unregisterAll(): void {
-		this.api.unregisterAll();
+		for (const accelerator of this.registered) {
+			this.api.unregister(accelerator);
+		}
+		this.registered.clear();
 	}
 }

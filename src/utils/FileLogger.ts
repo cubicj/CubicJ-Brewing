@@ -1,6 +1,7 @@
 export class FileLogger {
 	private buffer: string[] = [];
 	private flushTimer: ReturnType<typeof setInterval> | null = null;
+	private flushing = false;
 
 	constructor(
 		private adapter: {
@@ -27,7 +28,8 @@ export class FileLogger {
 	}
 
 	async flush(): Promise<void> {
-		if (this.buffer.length === 0) return;
+		if (this.buffer.length === 0 || this.flushing) return;
+		this.flushing = true;
 		const chunk = this.buffer.splice(0);
 		try {
 			let existing = '';
@@ -42,6 +44,8 @@ export class FileLogger {
 			await this.adapter.write(this.filePath, trimmed);
 		} catch (e) {
 			console.error('[FileLogger] flush failed:', e);
+		} finally {
+			this.flushing = false;
 		}
 	}
 

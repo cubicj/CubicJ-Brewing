@@ -301,8 +301,14 @@ export default class CubicJBrewingPlugin extends Plugin {
 				packetLog: typeof lc.packetLog === 'boolean' ? lc.packetLog : false,
 			};
 		}
-		if (data.globalHotkeys !== undefined) {
-			this.globalHotkeys = data.globalHotkeys;
+		if (data.globalHotkeys && typeof data.globalHotkeys === 'object' && !Array.isArray(data.globalHotkeys)) {
+			const hk = data.globalHotkeys as Record<string, unknown>;
+			const valid = Object.values(hk).every((v) => typeof v === 'string');
+			if (valid) {
+				this.globalHotkeys = hk as GlobalHotkeys;
+			} else {
+				this.pluginLogger?.log('PLUGIN', 'data.json globalHotkeys schema mismatch, using defaults');
+			}
 		} else {
 			this.globalHotkeys = DEFAULT_HOTKEYS;
 		}

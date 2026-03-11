@@ -243,6 +243,33 @@ describe('BrewFlowState', () => {
 		expect(state.selection.dripper).toBeUndefined();
 	});
 
+	it('selectMethod is no-op when not in method step', () => {
+		const state = new BrewFlowState();
+		state.selectMethod('filter', 'hot');
+		expect(state.step).toBe('idle');
+	});
+
+	it('startBrewing is no-op when not in configure step', () => {
+		const state = new BrewFlowState();
+		state.startBrew();
+		state.startBrewing();
+		expect(state.step).toBe('method');
+	});
+
+	it('finishBrewing is no-op when not in brewing step', () => {
+		const state = new BrewFlowState();
+		state.finishBrewing(120);
+		expect(state.step).toBe('idle');
+	});
+
+	it('goToStep only allows backward navigation', () => {
+		const state = new BrewFlowState();
+		state.startBrew();
+		state.selectMethod('filter', 'hot');
+		state.goToStep('brewing');
+		expect(state.step).toBe('bean');
+	});
+
 	it('buildRecord creates FilterRecord', () => {
 		const state = new BrewFlowState();
 		state.startBrew();

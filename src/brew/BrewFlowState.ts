@@ -22,6 +22,7 @@ export class BrewFlowState {
 	}
 
 	selectMethod(method: BrewMethod, temp: BrewTemp, drink?: EspressoDrink): void {
+		if (this.step !== 'method') return;
 		this.selection.method = method;
 		this.selection.temp = temp;
 		if (method === 'espresso') this.selection.drink = drink;
@@ -41,6 +42,7 @@ export class BrewFlowState {
 	}
 
 	selectBean(bean: BeanInfo, lastRecord?: BrewRecord): void {
+		if (this.step !== 'bean' && this.step !== 'configure') return;
 		this.selection.bean = bean;
 		this.clearEquipment();
 		this.selection.lastRecord = lastRecord;
@@ -64,6 +66,7 @@ export class BrewFlowState {
 	}
 
 	deselectBean(): void {
+		if (this.step !== 'configure') return;
 		this.selection.bean = undefined;
 		this.clearEquipment();
 		this.step = 'bean';
@@ -78,10 +81,12 @@ export class BrewFlowState {
 	}
 
 	startBrewing(): void {
+		if (this.step !== 'configure') return;
 		this.step = 'brewing';
 	}
 
 	finishBrewing(time?: number, yieldGrams?: number): void {
+		if (this.step !== 'brewing') return;
 		this.selection.time = time;
 		this.selection.yield = yieldGrams;
 		this.step = 'saving';
