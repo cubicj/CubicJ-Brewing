@@ -83,9 +83,11 @@ export const MSG_TYPE = {
 	HEARTBEAT: 0,
 	TARE: 4,
 	GET_SETTINGS: 6,
+	SETTINGS_RESP: 8,
 	IDENTIFY: 11,
 	NOTIFICATION_REQ: 12,
 	TIMER_CONTROL: 13,
+	POWER_OFF: 24,
 } as const;
 
 export const EVENT_TYPE = {

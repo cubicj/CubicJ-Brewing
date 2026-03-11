@@ -1,3 +1,5 @@
+import { MSG_TYPE } from './types';
+
 // Acaia Pearl S BLE protocol — see Docs/analysis/ble-protocol.md
 // Packet: [0xEF 0xDD] [msgType] [payload...] [ck1] [ck2]
 // Checksums: ck1 = sum(even-indexed payload bytes), ck2 = sum(odd-indexed)
@@ -25,34 +27,34 @@ const DEFAULT_WEIGHT_ARG = 1;
 const NOTIF_BASE = [9, 0, /* weightArg */ 1, 1, 2, 2, 5, 3, 4];
 
 export function encodeIdentify(): Buffer {
-	return encode(11, IDENTIFY_PAYLOAD);
+	return encode(MSG_TYPE.IDENTIFY, IDENTIFY_PAYLOAD);
 }
 
 export function encodeHeartbeat(): Buffer {
-	return encode(0, [2, 0]);
+	return encode(MSG_TYPE.HEARTBEAT, [2, 0]);
 }
 
 export function encodeNotificationRequest(weightArg: number = DEFAULT_WEIGHT_ARG): Buffer {
 	const payload = [...NOTIF_BASE];
 	payload[2] = weightArg;
-	return encode(12, payload);
+	return encode(MSG_TYPE.NOTIFICATION_REQ, payload);
 }
 
 export function encodeTare(): Buffer {
-	return encode(4, [0]);
+	return encode(MSG_TYPE.TARE, [0]);
 }
 
 export function encodeTimerControl(action: 'start' | 'stop' | 'reset'): Buffer {
 	const map = { start: 0, reset: 1, stop: 2 };
-	return encode(13, [0, map[action]]);
+	return encode(MSG_TYPE.TIMER_CONTROL, [0, map[action]]);
 }
 
 export function encodeGetSettings(): Buffer {
-	return encode(6, Array(16).fill(0));
+	return encode(MSG_TYPE.GET_SETTINGS, Array(16).fill(0));
 }
 
 export function encodePowerOff(): Buffer {
-	return encode(24, [0]);
+	return encode(MSG_TYPE.POWER_OFF, [0]);
 }
 
 export interface WeightResult {

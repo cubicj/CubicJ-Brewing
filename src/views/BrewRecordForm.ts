@@ -237,16 +237,47 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 			};
 		}
 
-		if (method !== record.method) {
-			if (method === 'filter') {
-				changes = { ...changes, drink: undefined, basket: undefined, accessories: undefined } as Partial<BrewRecord>;
-			} else {
-				changes = { ...changes, waterTemp: undefined, filter: undefined, dripper: undefined } as Partial<BrewRecord>;
-			}
-		}
-
 		await deps.recordService.update(record.id, changes);
-		const updated = { ...record, ...changes } as BrewRecord;
+		let updated: BrewRecord;
+		if (method !== record.method) {
+			const shared = {
+				id: record.id,
+				timestamp: record.timestamp,
+				bean: record.bean,
+				roastDate: record.roastDate,
+				roastDays: record.roastDays,
+				temp,
+				grindSize: grindStepper.getValue(),
+				grinder: grinderSelect?.value || undefined,
+				dose: doseStepper.getValue(),
+				time: record.time,
+				yield: record.yield,
+				recipe: record.recipe,
+				note: noteInput.value.trim() || undefined,
+				profilePath: record.profilePath,
+				waterWeight: ww > 0 ? ww : undefined,
+				milkWeight: mw > 0 ? mw : undefined,
+			};
+			if (method === 'espresso') {
+				updated = {
+					...shared,
+					method: 'espresso',
+					drink: drinkSelect.value as EspressoDrink,
+					basket: basketSelect.value,
+					accessories: [...accChecked].length > 0 ? [...accChecked] : undefined,
+				};
+			} else {
+				updated = {
+					...shared,
+					method: 'filter',
+					waterTemp: waterTempStepper.getValue(),
+					filter: filterSelect.value,
+					dripper: dripperSelect?.value || undefined,
+				};
+			}
+		} else {
+			updated = { ...record, ...changes } as BrewRecord;
+		}
 		deps.onSaved(updated);
 	});
 	const cancelBtn = rightGroup.createEl('button', { text: '취소' });
