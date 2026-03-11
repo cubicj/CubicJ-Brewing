@@ -37,7 +37,7 @@ export class AccordionManager {
 			indicator.createSpan({ text: String(i + 1) });
 
 			const titleArea = header.createDiv({ cls: 'brew-accordion-title-area' });
-			titleArea.createSpan({ cls: 'brew-accordion-title', text: STEP_CONFIG[i].label });
+			titleArea.createSpan({ cls: 'brew-accordion-title', text: STEP_CONFIG[i].label() });
 
 			const body = panel.createDiv({ cls: 'brew-accordion-body' });
 

@@ -1,5 +1,6 @@
-import { AbstractInputSuggest, App, PluginSettingTab, Setting, type TFolder } from 'obsidian';
+import { AbstractInputSuggest, App, Notice, PluginSettingTab, Setting, type TFolder } from 'obsidian';
 import type CubicJBrewingPlugin from '../main';
+import { t, getAvailableLocales } from '../i18n/index';
 
 class FolderSuggest extends AbstractInputSuggest<TFolder> {
 	private onPick: (folder: TFolder) => void;
@@ -49,21 +50,35 @@ export class BrewingSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('브루잉 뷰 열기')
-			.setDesc('사이드바에 브루잉 패널을 표시합니다.')
+			.setName(t('settings.openView'))
+			.setDesc(t('settings.openViewDesc'))
 			.addButton((btn) =>
-				btn.setButtonText('열기').onClick(() => {
+				btn.setButtonText(t('settings.open')).onClick(() => {
 					(this.app as any).commands.executeCommandById('cubicj-brewing:open-view');
 				}),
 			);
 
-		containerEl.createEl('h2', { text: '원두 노트' });
+		new Setting(containerEl)
+			.setName(t('settings.language'))
+			.setDesc(t('settings.languageDesc'))
+			.addDropdown((dd) => {
+				for (const loc of getAvailableLocales()) {
+					dd.addOption(loc.code, loc.name);
+				}
+				dd.setValue(this.plugin.getLocale());
+				dd.onChange(async (value) => {
+					await this.plugin.saveLocale(value);
+					new Notice(t('settings.restartRequired'));
+				});
+			});
+
+		containerEl.createEl('h2', { text: t('settings.beanFolder') });
 
 		new Setting(containerEl)
-			.setName('원두 폴더')
-			.setDesc('새 원두 노트가 생성될 폴더 경로. 비워두면 볼트 루트에 생성.')
+			.setName(t('settings.beanFolder'))
+			.setDesc(t('settings.beanFolderDesc'))
 			.addText((text) => {
-				text.setPlaceholder('예: Beans').setValue(this.plugin.getBeanFolder());
+				text.setPlaceholder('Beans').setValue(this.plugin.getBeanFolder());
 				new FolderSuggest(this.app, text.inputEl, async (folder) => {
 					await this.plugin.saveBeanFolder(folder.path);
 				});
@@ -72,13 +87,13 @@ export class BrewingSettingTab extends PluginSettingTab {
 				});
 			});
 
-		containerEl.createEl('h2', { text: '디버그' });
+		containerEl.createEl('h2', { text: t('settings.debugLog') });
 
 		const logConfig = this.plugin.getLogConfig();
 
 		new Setting(containerEl)
-			.setName('디버그 로그')
-			.setDesc('plugin-debug.log 파일 기록. 변경 후 플러그인 리로드 필요.')
+			.setName(t('settings.debugLog'))
+			.setDesc(t('settings.debugLogDesc'))
 			.addToggle((toggle) =>
 				toggle.setValue(logConfig.enabled).onChange(async (value) => {
 					logConfig.enabled = value;
@@ -87,11 +102,11 @@ export class BrewingSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName('로그 카테고리 필터')
-			.setDesc('비워두면 전체 기록. 쉼표 구분 (예: BLE,VIEW).')
+			.setName(t('settings.logCategories'))
+			.setDesc(t('settings.logCategoriesDesc'))
 			.addText((text) =>
 				text
-					.setPlaceholder('예: BLE,VIEW')
+					.setPlaceholder('BLE,VIEW')
 					.setValue(logConfig.categories.join(','))
 					.onChange(async (value) => {
 						logConfig.categories = value
@@ -103,8 +118,8 @@ export class BrewingSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName('BLE 패킷 로그')
-			.setDesc('ble-debug.log에 원시 패킷 기록 (고용량). 변경 후 플러그인 리로드 필요.')
+			.setName(t('settings.packetLog'))
+			.setDesc(t('settings.packetLogDesc'))
 			.addToggle((toggle) =>
 				toggle.setValue(logConfig.packetLog).onChange(async (value) => {
 					logConfig.packetLog = value;

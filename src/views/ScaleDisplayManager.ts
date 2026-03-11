@@ -1,4 +1,5 @@
 import type { AcaiaState } from '../acaia/types';
+import { t } from '../i18n/index';
 
 export interface ScaleDataElements {
 	timerEl: HTMLElement;
@@ -84,34 +85,34 @@ export class ScaleDisplayManager {
 		switch (state) {
 			case 'idle':
 				this.scaleStatusEl.textContent = '';
-				this.connectBtn.textContent = '저울 연결';
+				this.connectBtn.textContent = t('scale.connect');
 				this.scaleBatteryEl.textContent = '';
 				break;
 			case 'scanning':
-				this.scaleStatusEl.textContent = '스캔 중';
-				this.connectBtn.textContent = '취소';
+				this.scaleStatusEl.textContent = t('scale.scanning');
+				this.connectBtn.textContent = t('scale.scanCancel');
 				this.scaleBatteryEl.textContent = '';
 				break;
 			case 'connecting':
-				this.scaleStatusEl.textContent = '연결 중';
-				this.connectBtn.textContent = '취소';
+				this.scaleStatusEl.textContent = t('scale.connecting');
+				this.connectBtn.textContent = t('scale.scanCancel');
 				this.scaleBatteryEl.textContent = '';
 				break;
 			case 'connected':
-				this.scaleStatusEl.textContent = '연결됨';
+				this.scaleStatusEl.textContent = t('scale.connected');
 				if (scaleName) this.scaleNameEl.textContent = `· ${scaleName}`;
-				this.connectBtn.textContent = '해제';
+				this.connectBtn.textContent = t('scale.disconnect');
 				this.powerOffBtn.style.display = '';
 				break;
 			case 'disconnected':
-				this.scaleStatusEl.textContent = '연결 끊김';
-				this.connectBtn.textContent = '재연결';
+				this.scaleStatusEl.textContent = t('scale.disconnected');
+				this.connectBtn.textContent = t('scale.reconnect');
 				this.scaleBatteryEl.textContent = '';
 				break;
 			case 'reconnecting': {
 				const attempt = this.callbacks.getReconnectAttempt();
-				this.scaleStatusEl.textContent = `재연결 중 (${attempt}/3)`;
-				this.connectBtn.textContent = '취소';
+				this.scaleStatusEl.textContent = t('scale.reconnecting', { attempt });
+				this.connectBtn.textContent = t('scale.scanCancel');
 				this.scaleBatteryEl.textContent = '';
 				break;
 			}

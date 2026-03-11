@@ -1,5 +1,6 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import type CubicJBrewingPlugin from '../main';
+import { t } from '../i18n/index';
 import type { AcaiaState, ButtonEvent } from '../acaia/types';
 import { BrewFlowState } from '../brew/BrewFlowState';
 import { DataManageModal } from './DataManageModal';
@@ -118,11 +119,11 @@ export class BrewingView extends ItemView {
 	private buildToolbar(container: HTMLElement): void {
 		const toolbar = container.createDiv({ cls: 'brewing-toolbar' });
 
-		this.scaleConnectBtn = toolbar.createEl('button', { text: '저울 연결', cls: 'brewing-toolbar-btn' });
+		this.scaleConnectBtn = toolbar.createEl('button', { text: t('scale.connect'), cls: 'brewing-toolbar-btn' });
 		this.scaleConnectBtn.addEventListener('click', () => this.handleConnectClick());
 
 		this.scalePowerOffBtn = toolbar.createEl('button', {
-			text: '전원 끄기',
+			text: t('toolbar.powerOff'),
 			cls: 'brewing-toolbar-btn brewing-power-off-btn',
 		});
 		this.scalePowerOffBtn.addEventListener('click', () => this.powerOff());
@@ -130,10 +131,10 @@ export class BrewingView extends ItemView {
 
 		const rightGroup = toolbar.createDiv({ cls: 'brewing-toolbar-right' });
 
-		const resetBtn = rightGroup.createEl('button', { text: '세팅 리셋', cls: 'brewing-toolbar-btn' });
+		const resetBtn = rightGroup.createEl('button', { text: t('toolbar.resetSettings'), cls: 'brewing-toolbar-btn' });
 		resetBtn.addEventListener('click', () => this.resetFlow());
 
-		const manageBtn = rightGroup.createEl('button', { text: 'DB 관리', cls: 'brewing-toolbar-btn' });
+		const manageBtn = rightGroup.createEl('button', { text: t('toolbar.dataManage'), cls: 'brewing-toolbar-btn' });
 		manageBtn.addEventListener('click', () => {
 			new DataManageModal(this.plugin).open();
 		});
