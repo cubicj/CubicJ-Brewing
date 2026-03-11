@@ -115,6 +115,12 @@ export default class CubicJBrewingPlugin extends Plugin {
 		brewBlock.register((lang, handler) => this.registerMarkdownCodeBlockProcessor(lang, handler));
 		this.recordService.onChange = () => brewBlock.refreshAll();
 
+		this.registerEvent(
+			this.app.metadataCache.on('changed', (file, data, cache) => {
+				this.vaultData.onMetadataChanged(file, data, cache);
+			}),
+		);
+
 		this.app.workspace.onLayoutReady(() => {
 			this.vaultData.refreshRoastDays();
 			if (this.firstInstall) this.activateView();
