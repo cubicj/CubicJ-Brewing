@@ -13,6 +13,10 @@ export class BeanCodeBlock {
 		private vaultData: VaultDataService,
 	) {}
 
+	updateVaultData(vaultData: VaultDataService): void {
+		this.vaultData = vaultData;
+	}
+
 	setScaleWeightGetter(fn: () => number | null): void {
 		this.getScaleWeight = fn;
 	}

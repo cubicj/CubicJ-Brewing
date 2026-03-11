@@ -5,7 +5,7 @@ import { MS_PER_DAY } from '../brew/constants';
 export class VaultDataService {
 	constructor(
 		private app: App,
-		private beanFolder = '3. Resources',
+		private beanFolder = '',
 	) {}
 
 	getActiveBeans(): BeanInfo[] {
@@ -94,13 +94,18 @@ export class VaultDataService {
 
 	async createBeanNote(extraContent?: string): Promise<string> {
 		const folder = this.beanFolder;
+		const toPath = (n: string) => (folder ? `${folder}/${n}.md` : `${n}.md`);
 		let name = '새 원두';
-		let path = `${folder}/${name}.md`;
+		let path = toPath(name);
 		let counter = 1;
 		while (this.app.vault.getAbstractFileByPath(path)) {
 			counter++;
 			name = `새 원두 ${counter}`;
-			path = `${folder}/${name}.md`;
+			path = toPath(name);
+		}
+		if (folder) {
+			const folderExists = this.app.vault.getAbstractFileByPath(folder);
+			if (!folderExists) await this.app.vault.createFolder(folder);
 		}
 		const parts = [
 			'---',

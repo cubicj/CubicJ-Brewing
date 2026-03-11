@@ -17,10 +17,19 @@ const NOBLE_PKG = resolve('node_modules/@stoprocent/noble');
 
 function copyNobleToDir(targetDir) {
 	const nobleOut = join(targetDir, 'noble');
-	cpSync(NOBLE_PKG, nobleOut, {
-		recursive: true,
-		filter: (src) => !src.includes('test') && !src.includes('examples') && !src.includes('assets'),
-	});
+	try {
+		cpSync(NOBLE_PKG, nobleOut, {
+			recursive: true,
+			force: true,
+			filter: (src) => !src.includes('test') && !src.includes('examples') && !src.includes('assets'),
+		});
+	} catch (e) {
+		if (e.code === 'EIO' || e.code === 'EBUSY') {
+			console.log('  noble .node file locked (Obsidian running) — skipping copy');
+			return;
+		}
+		throw e;
+	}
 
 	const deps = ['node-gyp-build', 'debug', 'ms', 'node-addon-api'];
 	for (const dep of deps) {

@@ -76,14 +76,66 @@ An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE s
 
 > macOS/Linux support depends on [@stoprocent/noble](https://github.com/nicedoc/noble) platform compatibility. Not tested yet.
 
+## Usage
+
+### Bean Notes
+
+Create a note with `type: bean` frontmatter to register a bean:
+
+```yaml
+---
+type: bean
+origin: Ethiopia Yirgacheffe
+roaster: My Roaster
+roast_date: 2026-03-01
+weight: 200
+status: active
+---
+```
+
+Add a `beans` code block anywhere in your vault to display the bean inventory:
+
+````markdown
+```beans
+```
+````
+
+### Brew Records
+
+Each bean note can include a `brews` code block to show its brew history:
+
+````markdown
+```brews
+```
+````
+
+The plugin links brew records to beans automatically — brew history appears per-bean with profile charts, extraction parameters, and equipment used.
+
+### Recipes
+
+Create a note with `type: recipe` frontmatter for brew recipes:
+
+```yaml
+---
+type: recipe
+method: filter
+bean_amount: 15
+water_amount: 250
+---
+```
+
+Recipes appear as selectable references during the brew flow.
+
 ## Installation
 
-### Manual Install (GitHub Release)
+### Download (GitHub Release)
 
-1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/cubicj/CubicJ-Brewing/releases/latest)
-2. Create folder: `<your-vault>/.obsidian/plugins/cubicj-brewing/`
-3. Copy the three files into the folder
+1. Download `cubicj-brewing.zip` from the [latest release](https://github.com/cubicj/CubicJ-Brewing/releases/latest)
+2. Extract the zip — you should see `main.js`, `manifest.json`, `styles.css`, and a `noble/` folder
+3. Copy all contents into `<your-vault>/.obsidian/plugins/cubicj-brewing/`
 4. Restart Obsidian → Settings → Community plugins → Enable "CubicJ Brewing"
+
+> The `noble/` folder contains the native BLE addon — do not omit it.
 
 ### Build from Source
 
@@ -94,7 +146,13 @@ npm install
 npm run build
 ```
 
-Copy `main.js`, `manifest.json`, and `styles.css` to your vault's plugin directory.
+After building, run the release script to generate the zip:
+
+```bash
+npm run release
+```
+
+Or manually copy `main.js`, `manifest.json`, `styles.css`, and the `noble/` folder (from `node_modules/@stoprocent/noble` with deps) to your vault's plugin directory.
 
 ## Development
 
