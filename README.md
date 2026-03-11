@@ -28,10 +28,7 @@ An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE s
 - Real-time brew profile chart (Canvas 2D, dual-curve: raw + smoothed)
 - Signal processing pipeline: spike filter → Savitzky-Golay / EMA smoothing
 
-<details>
-<summary><strong>Brew profile detail</strong></summary>
 <img src="assets/brews-data.png" alt="Brew record detail with profile chart" width="720">
-</details>
 
 ### Bean & Record Management
 - Bean notes with frontmatter metadata (origin, roaster, roast date, weight tracking)
@@ -40,10 +37,7 @@ An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE s
 - Equipment registry (grinders, drippers, filters, baskets, accessories)
 - Brew profiles stored as JSON — weight-over-time curves for every brew
 
-<details>
-<summary><strong>Bean inventory</strong></summary>
 <img src="assets/beans-data.png" alt="Bean inventory with roast days and remaining weight" width="720">
-</details>
 
 ### Vault-Native Storage
 - All data lives in your vault as plain files — Obsidian Sync compatible
