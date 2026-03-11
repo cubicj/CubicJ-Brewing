@@ -187,6 +187,42 @@ describe('BrewRecordService', () => {
 		expect(adapter.backup).toBe('{broken json');
 	});
 
+	it('removeWithProfile deletes associated profile file', async () => {
+		const record = makeFilter({ profilePath: 'brew-profiles/2026-03-01T10-00-00.json' });
+		await service.add(record);
+
+		const deletedPaths: string[] = [];
+		const mockProfileStorage = {
+			delete: async (path: string) => {
+				deletedPaths.push(path);
+			},
+		};
+
+		await service.removeWithProfile(record.id, record.profilePath, mockProfileStorage);
+
+		const all = await service.getAll();
+		expect(all).toHaveLength(0);
+		expect(deletedPaths).toEqual(['brew-profiles/2026-03-01T10-00-00.json']);
+	});
+
+	it('removeWithProfile skips profile deletion when no profilePath', async () => {
+		const record = makeFilter();
+		await service.add(record);
+
+		const deletedPaths: string[] = [];
+		const mockProfileStorage = {
+			delete: async (path: string) => {
+				deletedPaths.push(path);
+			},
+		};
+
+		await service.removeWithProfile(record.id, undefined, mockProfileStorage);
+
+		const all = await service.getAll();
+		expect(all).toHaveLength(0);
+		expect(deletedPaths).toEqual([]);
+	});
+
 	it('handles non-array JSON', async () => {
 		adapter.data = '{"not": "array"}';
 		const svc = new BrewRecordService(adapter);

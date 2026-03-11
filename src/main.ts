@@ -289,8 +289,6 @@ export default class CubicJBrewingPlugin extends Plugin {
 			const valid = keys.every((k) => Array.isArray(eq[k]));
 			if (valid) {
 				this.equipment = eq as EquipmentSettings;
-			} else {
-				this.pluginLogger?.log('PLUGIN', 'data.json equipment schema mismatch, using defaults');
 			}
 		}
 		const lc = data.logConfig;
@@ -306,8 +304,6 @@ export default class CubicJBrewingPlugin extends Plugin {
 			const valid = Object.values(hk).every((v) => typeof v === 'string');
 			if (valid) {
 				this.globalHotkeys = hk as GlobalHotkeys;
-			} else {
-				this.pluginLogger?.log('PLUGIN', 'data.json globalHotkeys schema mismatch, using defaults');
 			}
 		} else {
 			this.globalHotkeys = DEFAULT_HOTKEYS;

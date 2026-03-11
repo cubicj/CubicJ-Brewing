@@ -156,6 +156,151 @@ describe('AcaiaService reconnect', () => {
 	});
 });
 
+describe('AcaiaService handlePacket routing', () => {
+	function buildCompoundPacket(innerPayload: number[]): Buffer {
+		const payloadLen = innerPayload.length;
+		const buf = Buffer.alloc(5 + payloadLen);
+		buf[0] = 0xef;
+		buf[1] = 0xdd;
+		buf[2] = 12;
+		buf[3] = payloadLen;
+		for (let i = 0; i < payloadLen; i++) buf[4 + i] = innerPayload[i];
+		return buf;
+	}
+
+	function buildSettingsPacket(
+		battery: number,
+		timerRunning: number,
+		units: number,
+		autoOff: number,
+		beep: number,
+	): Buffer {
+		const payload = [battery, timerRunning, units, 0, autoOff, 0, 0, 0, beep];
+		const buf = Buffer.alloc(5 + payload.length);
+		buf[0] = 0xef;
+		buf[1] = 0xdd;
+		buf[2] = 8;
+		buf[3] = payload.length;
+		for (let i = 0; i < payload.length; i++) buf[4 + i] = payload[i];
+		return buf;
+	}
+
+	function createConnectedService(): AcaiaService {
+		const peripheral = createMockPeripheral();
+		const noble = createMockNoble(peripheral);
+		const service = new AcaiaService({ nobleFactory: () => noble });
+		(service as any)._state = 'connected';
+		return service;
+	}
+
+	it('emits weight from compound packet', () => {
+		const service = createConnectedService();
+		const weights: { grams: number; stable: boolean }[] = [];
+		service.on('weight', (grams: number, stable: boolean) => weights.push({ grams, stable }));
+
+		const innerPayload = [5, 0xe8, 0x03, 0, 0, 1, 0x00];
+		const packet = buildCompoundPacket(innerPayload);
+		(service as any).handlePacket(packet);
+
+		expect(weights).toHaveLength(1);
+		expect(weights[0].grams).toBeCloseTo(100.0);
+		expect(weights[0].stable).toBe(true);
+
+		service.destroy();
+	});
+
+	it('emits weight with negative and unstable flags', () => {
+		const service = createConnectedService();
+		const weights: { grams: number; stable: boolean }[] = [];
+		service.on('weight', (grams: number, stable: boolean) => weights.push({ grams, stable }));
+
+		const innerPayload = [5, 0xe8, 0x03, 0, 0, 1, 0x03];
+		const packet = buildCompoundPacket(innerPayload);
+		(service as any).handlePacket(packet);
+
+		expect(weights[0].grams).toBeCloseTo(-100.0);
+		expect(weights[0].stable).toBe(false);
+
+		service.destroy();
+	});
+
+	it('emits timer from compound packet', () => {
+		const service = createConnectedService();
+		const timers: number[] = [];
+		service.on('timer', (seconds: number) => timers.push(seconds));
+
+		const innerPayload = [7, 2, 30, 5];
+		const packet = buildCompoundPacket(innerPayload);
+		(service as any).handlePacket(packet);
+
+		expect(timers).toHaveLength(1);
+		expect(timers[0]).toBeCloseTo(2 * 60 + 30 + 0.5);
+
+		service.destroy();
+	});
+
+	it('emits battery and timer_start on settings state change', () => {
+		const service = createConnectedService();
+		(service as any).scaleTimerRunning = false;
+
+		const batteries: number[] = [];
+		const buttons: { type: string }[] = [];
+		service.on('battery', (pct: number) => batteries.push(pct));
+		service.on('button', (evt: { type: string }) => buttons.push(evt));
+
+		const packet = buildSettingsPacket(85, 1, 2, 1, 0);
+		(service as any).handlePacket(packet);
+
+		expect(batteries).toEqual([85]);
+		expect(buttons).toEqual([{ type: 'timer_start' }]);
+
+		service.destroy();
+	});
+
+	it('emits timer_stop on settings timer state change', () => {
+		const service = createConnectedService();
+		(service as any).scaleTimerRunning = true;
+
+		const buttons: { type: string }[] = [];
+		service.on('button', (evt: { type: string }) => buttons.push(evt));
+
+		const packet = buildSettingsPacket(90, 0, 2, 1, 0);
+		(service as any).handlePacket(packet);
+
+		expect(buttons).toEqual([{ type: 'timer_stop' }]);
+
+		service.destroy();
+	});
+
+	it('does not emit button when timer state unchanged', () => {
+		const service = createConnectedService();
+		(service as any).scaleTimerRunning = false;
+
+		const buttons: { type: string }[] = [];
+		service.on('button', (evt: { type: string }) => buttons.push(evt));
+
+		const packet = buildSettingsPacket(90, 0, 2, 1, 0);
+		(service as any).handlePacket(packet);
+
+		expect(buttons).toEqual([]);
+
+		service.destroy();
+	});
+
+	it('ignores packets with invalid header', () => {
+		const service = createConnectedService();
+		const weights: number[] = [];
+		service.on('weight', (g: number) => weights.push(g));
+
+		const packet = Buffer.from([0xaa, 0xbb, 12, 7, 5, 0xe8, 0x03, 0, 0, 2, 0x00, 0, 0]);
+		(service as any).handlePacket(packet);
+
+		expect(weights).toEqual([]);
+
+		service.destroy();
+	});
+});
+
 describe('AcaiaService write health', () => {
 	it('triggers disconnect after 6 consecutive write failures', async () => {
 		const writeChar = createMockWriteChar();
