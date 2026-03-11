@@ -23,6 +23,11 @@ export class BrewProfileStorage {
 			parsed = JSON.parse(raw);
 		} catch {
 			console.error(`Profile ${profilePath} corrupt`);
+			try {
+				await this.adapter.write(`${this.baseDir}/${profilePath}.bak`, raw);
+			} catch {
+				/* best effort */
+			}
 			return [];
 		}
 		if (!Array.isArray(parsed)) return [];

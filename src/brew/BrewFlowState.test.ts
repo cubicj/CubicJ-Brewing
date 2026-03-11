@@ -270,6 +270,58 @@ describe('BrewFlowState', () => {
 		expect(state.step).toBe('bean');
 	});
 
+	it('goToStep navigates backward', () => {
+		const state = new BrewFlowState();
+		state.startBrew();
+		state.selectMethod('filter', 'hot');
+		state.selectBean({
+			path: 'a.md',
+			name: 'A',
+			roaster: '',
+			status: 'active',
+			roastDate: null,
+			weight: null,
+		});
+		state.goToStep('method');
+		expect(state.step).toBe('method');
+	});
+
+	it('roastDays returns days since roast', () => {
+		const state = new BrewFlowState();
+		const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0];
+		state.startBrew();
+		state.selectMethod('filter', 'hot');
+		state.selectBean({
+			path: 'a.md',
+			name: 'A',
+			roaster: '',
+			status: 'active',
+			roastDate: twoDaysAgo,
+			weight: null,
+		});
+		expect(state.roastDays).toBe(2);
+	});
+
+	it('roastDays returns null when no roast date', () => {
+		const state = new BrewFlowState();
+		state.startBrew();
+		state.selectMethod('filter', 'hot');
+		state.selectBean({
+			path: 'a.md',
+			name: 'A',
+			roaster: '',
+			status: 'active',
+			roastDate: null,
+			weight: null,
+		});
+		expect(state.roastDays).toBeNull();
+	});
+
+	it('buildRecord throws when called without required selection fields', () => {
+		const state = new BrewFlowState();
+		expect(() => state.buildRecord()).toThrow();
+	});
+
 	it('buildRecord creates FilterRecord', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
