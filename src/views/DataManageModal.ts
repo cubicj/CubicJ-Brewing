@@ -120,9 +120,13 @@ export class DataManageModal extends Modal {
 	}
 
 	private async createNewBean(): Promise<void> {
-		const path = await this.plugin.vaultData.createBeanNote(BEAN_NOTE_EXTRA);
-		this.close();
-		await this.app.workspace.openLinkText(path, '');
+		try {
+			const path = await this.plugin.vaultData.createBeanNote(BEAN_NOTE_EXTRA);
+			this.close();
+			await this.app.workspace.openLinkText(path, '');
+		} catch (err) {
+			console.error('[DataManageModal] createNewBean failed:', err);
+		}
 	}
 
 	private renderRecipeTab(container: HTMLElement): void {
@@ -184,9 +188,13 @@ export class DataManageModal extends Modal {
 				row.createSpan({ text: items[i] });
 				const delBtn = row.createEl('button', { text: '\u2715', cls: 'dm-btn dm-equip-del-btn' });
 				delBtn.addEventListener('click', async () => {
-					items.splice(i, 1);
-					await this.plugin.saveEquipment();
-					renderItems();
+					try {
+						items.splice(i, 1);
+						await this.plugin.saveEquipment();
+						renderItems();
+					} catch (err) {
+						console.error('[DataManageModal] equipment delete failed:', err);
+					}
 				});
 			}
 		};
@@ -210,10 +218,14 @@ export class DataManageModal extends Modal {
 			saveBtn.addEventListener('click', async () => {
 				const val = input.value.trim();
 				if (!val || items.includes(val)) return;
-				items.push(val);
-				await this.plugin.saveEquipment();
-				formEl.remove();
-				renderItems();
+				try {
+					items.push(val);
+					await this.plugin.saveEquipment();
+					formEl.remove();
+					renderItems();
+				} catch (err) {
+					console.error('[DataManageModal] equipment add failed:', err);
+				}
 			});
 			cancelBtn.addEventListener('click', () => formEl.remove());
 			input.addEventListener('keydown', (e) => {
@@ -246,9 +258,13 @@ export class DataManageModal extends Modal {
 				row.createSpan({ cls: 'dm-equip-grinder-meta', text: `분쇄도 범위: ${g.min}~${g.max}, 최소 단위: ${g.step}` });
 				const delBtn = row.createEl('button', { text: '\u2715', cls: 'dm-btn dm-equip-del-btn' });
 				delBtn.addEventListener('click', async () => {
-					grinders.splice(i, 1);
-					await this.plugin.saveEquipment();
-					renderItems();
+					try {
+						grinders.splice(i, 1);
+						await this.plugin.saveEquipment();
+						renderItems();
+					} catch (err) {
+						console.error('[DataManageModal] grinder delete failed:', err);
+					}
 				});
 			}
 		};
@@ -296,15 +312,19 @@ export class DataManageModal extends Modal {
 			saveBtn.addEventListener('click', async () => {
 				const name = nameInput.value.trim();
 				if (!name) return;
-				grinders.push({
-					name,
-					step: parseFloat(stepSelect.value),
-					min: parseFloat(minInput.value) || 0,
-					max: parseFloat(maxInput.value) || 50,
-				});
-				await this.plugin.saveEquipment();
-				formEl.remove();
-				renderItems();
+				try {
+					grinders.push({
+						name,
+						step: parseFloat(stepSelect.value),
+						min: parseFloat(minInput.value) || 0,
+						max: parseFloat(maxInput.value) || 50,
+					});
+					await this.plugin.saveEquipment();
+					formEl.remove();
+					renderItems();
+				} catch (err) {
+					console.error('[DataManageModal] grinder add failed:', err);
+				}
 			});
 			cancelBtn.addEventListener('click', () => formEl.remove());
 			nameInput.addEventListener('keydown', (e) => {

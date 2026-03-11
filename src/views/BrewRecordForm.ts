@@ -193,8 +193,12 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 			deps.app,
 			'선택한 브루잉 기록을 삭제합니다. 삭제된 기록은 복구할 수 없습니다.',
 			async () => {
-				await deps.recordService.removeWithProfile(record.id, record.profilePath, deps.profileStorage);
-				deps.onDeleted();
+				try {
+					await deps.recordService.removeWithProfile(record.id, record.profilePath, deps.profileStorage);
+					deps.onDeleted();
+				} catch (err) {
+					console.error('[BrewRecordForm] delete failed:', err);
+				}
 			},
 		);
 		modal.open();
@@ -203,82 +207,86 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 	const rightGroup = footer.createDiv({ cls: 'brew-profile-footer-right' });
 	const saveBtn = rightGroup.createEl('button', { text: '저장', cls: 'mod-cta' });
 	saveBtn.addEventListener('click', async () => {
-		const method = currentMethod;
-		const temp = tempSelect.value as BrewTemp;
-		const ww = waterWeightStepper.getValue();
-		const mw = milkWeightStepper.getValue();
-		const base = {
-			temp,
-			grindSize: grindStepper.getValue(),
-			dose: doseStepper.getValue(),
-			grinder: grinderSelect?.value || undefined,
-			note: noteInput.value.trim() || undefined,
-			waterWeight: ww > 0 ? ww : undefined,
-			milkWeight: mw > 0 ? mw : undefined,
-		};
-
-		let changes: Partial<BrewRecord>;
-		if (method === 'filter') {
-			changes = {
-				...base,
-				method: 'filter' as const,
-				waterTemp: waterTempStepper.getValue(),
-				filter: filterSelect.value,
-				dripper: dripperSelect?.value || undefined,
-			};
-		} else {
-			const accList = [...accChecked];
-			changes = {
-				...base,
-				method: 'espresso' as const,
-				drink: drinkSelect.value as EspressoDrink,
-				basket: basketSelect.value,
-				accessories: accList.length > 0 ? accList : undefined,
-			};
-		}
-
-		await deps.recordService.update(record.id, changes);
-		let updated: BrewRecord;
-		if (method !== record.method) {
-			const shared = {
-				id: record.id,
-				timestamp: record.timestamp,
-				bean: record.bean,
-				roastDate: record.roastDate,
-				roastDays: record.roastDays,
+		try {
+			const method = currentMethod;
+			const temp = tempSelect.value as BrewTemp;
+			const ww = waterWeightStepper.getValue();
+			const mw = milkWeightStepper.getValue();
+			const base = {
 				temp,
 				grindSize: grindStepper.getValue(),
-				grinder: grinderSelect?.value || undefined,
 				dose: doseStepper.getValue(),
-				time: record.time,
-				yield: record.yield,
-				recipe: record.recipe,
+				grinder: grinderSelect?.value || undefined,
 				note: noteInput.value.trim() || undefined,
-				profilePath: record.profilePath,
 				waterWeight: ww > 0 ? ww : undefined,
 				milkWeight: mw > 0 ? mw : undefined,
 			};
-			if (method === 'espresso') {
-				updated = {
-					...shared,
-					method: 'espresso',
-					drink: drinkSelect.value as EspressoDrink,
-					basket: basketSelect.value,
-					accessories: [...accChecked].length > 0 ? [...accChecked] : undefined,
-				};
-			} else {
-				updated = {
-					...shared,
-					method: 'filter',
+
+			let changes: Partial<BrewRecord>;
+			if (method === 'filter') {
+				changes = {
+					...base,
+					method: 'filter' as const,
 					waterTemp: waterTempStepper.getValue(),
 					filter: filterSelect.value,
 					dripper: dripperSelect?.value || undefined,
 				};
+			} else {
+				const accList = [...accChecked];
+				changes = {
+					...base,
+					method: 'espresso' as const,
+					drink: drinkSelect.value as EspressoDrink,
+					basket: basketSelect.value,
+					accessories: accList.length > 0 ? accList : undefined,
+				};
 			}
-		} else {
-			updated = { ...record, ...changes } as BrewRecord;
+
+			await deps.recordService.update(record.id, changes);
+			let updated: BrewRecord;
+			if (method !== record.method) {
+				const shared = {
+					id: record.id,
+					timestamp: record.timestamp,
+					bean: record.bean,
+					roastDate: record.roastDate,
+					roastDays: record.roastDays,
+					temp,
+					grindSize: grindStepper.getValue(),
+					grinder: grinderSelect?.value || undefined,
+					dose: doseStepper.getValue(),
+					time: record.time,
+					yield: record.yield,
+					recipe: record.recipe,
+					note: noteInput.value.trim() || undefined,
+					profilePath: record.profilePath,
+					waterWeight: ww > 0 ? ww : undefined,
+					milkWeight: mw > 0 ? mw : undefined,
+				};
+				if (method === 'espresso') {
+					updated = {
+						...shared,
+						method: 'espresso',
+						drink: drinkSelect.value as EspressoDrink,
+						basket: basketSelect.value,
+						accessories: [...accChecked].length > 0 ? [...accChecked] : undefined,
+					};
+				} else {
+					updated = {
+						...shared,
+						method: 'filter',
+						waterTemp: waterTempStepper.getValue(),
+						filter: filterSelect.value,
+						dripper: dripperSelect?.value || undefined,
+					};
+				}
+			} else {
+				updated = { ...record, ...changes } as BrewRecord;
+			}
+			deps.onSaved(updated);
+		} catch (err) {
+			console.error('[BrewRecordForm] save failed:', err);
 		}
-		deps.onSaved(updated);
 	});
 	const cancelBtn = rightGroup.createEl('button', { text: '취소' });
 	cancelBtn.addEventListener('click', () => deps.onCancel());

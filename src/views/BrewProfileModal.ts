@@ -138,8 +138,12 @@ export class BrewProfileModal extends Modal {
 			this.app,
 			'선택한 브루잉 기록을 삭제합니다. 삭제된 기록은 복구할 수 없습니다.',
 			async () => {
-				await recordService.removeWithProfile(record.id, record.profilePath, profileStorage);
-				this.close();
+				try {
+					await recordService.removeWithProfile(record.id, record.profilePath, profileStorage);
+					this.close();
+				} catch (err) {
+					console.error('[BrewProfileModal] delete failed:', err);
+				}
 			},
 		);
 		modal.open();

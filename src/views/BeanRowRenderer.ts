@@ -36,8 +36,12 @@ export function renderActiveBeanRow(container: HTMLElement, bean: BeanInfo, deps
 	const statusBtn = row.createEl('button', { text: '소진', cls: 'cb-bean-btn cb-bean-status-btn' });
 	statusBtn.addEventListener('click', async (e) => {
 		e.stopPropagation();
-		await deps.vaultData.setBeanStatus(bean.path, 'finished');
-		deps.onStatusChange();
+		try {
+			await deps.vaultData.setBeanStatus(bean.path, 'finished');
+			deps.onStatusChange();
+		} catch (err) {
+			console.error('[BeanRow] status change failed:', err);
+		}
 	});
 
 	return row;
@@ -66,9 +70,13 @@ export function renderFinishedBeanRow(container: HTMLElement, bean: BeanInfo, de
 		const confirmBtn = btns.createEl('button', { text: '확인', cls: 'cb-bean-btn cb-bean-confirm-btn' });
 		confirmBtn.addEventListener('click', async () => {
 			if (!input.value) return;
-			await deps.vaultData.setRoastDate(bean.path, input.value);
-			await deps.vaultData.setBeanStatus(bean.path, 'active');
-			deps.onStatusChange();
+			try {
+				await deps.vaultData.setRoastDate(bean.path, input.value);
+				await deps.vaultData.setBeanStatus(bean.path, 'active');
+				deps.onStatusChange();
+			} catch (err) {
+				console.error('[BeanRow] repurchase failed:', err);
+			}
 		});
 
 		const cancelBtn = btns.createEl('button', { text: '취소', cls: 'cb-bean-btn' });

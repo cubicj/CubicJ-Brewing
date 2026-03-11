@@ -36,13 +36,14 @@ export class FileLogger {
 			try {
 				existing = await this.adapter.read(this.filePath);
 			} catch {
-				/* new file */
+				/* new file or transient read failure — proceed with empty */
 			}
 			const combined = existing + chunk.join('\n') + '\n';
 			const lines = combined.split('\n');
 			const trimmed = lines.length > this.maxLines ? lines.slice(-this.maxLines).join('\n') : combined;
 			await this.adapter.write(this.filePath, trimmed);
 		} catch (e) {
+			this.buffer.unshift(...chunk);
 			console.error('[FileLogger] flush failed:', e);
 		} finally {
 			this.flushing = false;

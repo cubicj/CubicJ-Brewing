@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "node esbuild.config.mjs",
-    "build": "vitest run --config vitest.config.ts && tsc --noEmit && node esbuild.config.mjs production",
+    "build": "vitest run --config vitest.config.ts --pool forks && tsc --noEmit && node esbuild.config.mjs production",
     "check": "tsc --noEmit",
-    "test": "vitest run --config vitest.config.ts",
-    "test:watch": "vitest --config vitest.config.ts",
+    "test": "vitest run --config vitest.config.ts --pool forks",
+    "test:watch": "vitest --config vitest.config.ts --pool forks",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "format": "prettier --write \"src/**/*.ts\" \"*.mjs\" \"*.css\"",
