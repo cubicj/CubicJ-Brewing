@@ -8,7 +8,9 @@ An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE s
 
 > Currently supports **Acaia Pearl S** on **Windows**. Other Acaia models and platforms are planned.
 
-<!-- TODO: screenshot / GIF -->
+<p align="center">
+  <img src="assets/sidebar.png" alt="Brewing sidebar with real-time scale display" width="360">
+</p>
 
 ## Features
 
@@ -26,12 +28,22 @@ An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE s
 - Real-time brew profile chart (Canvas 2D, dual-curve: raw + smoothed)
 - Signal processing pipeline: spike filter → Savitzky-Golay / EMA smoothing
 
+<details>
+<summary><strong>Brew profile detail</strong></summary>
+<img src="assets/brews-data.png" alt="Brew record detail with profile chart" width="720">
+</details>
+
 ### Bean & Record Management
 - Bean notes with frontmatter metadata (origin, roaster, roast date, weight tracking)
 - Automatic roast-days calculation and refresh
 - Per-bean brew history via `brews` code blocks
 - Equipment registry (grinders, drippers, filters, baskets, accessories)
 - Brew profiles stored as JSON — weight-over-time curves for every brew
+
+<details>
+<summary><strong>Bean inventory</strong></summary>
+<img src="assets/beans-data.png" alt="Bean inventory with roast days and remaining weight" width="720">
+</details>
 
 ### Vault-Native Storage
 - All data lives in your vault as plain files — Obsidian Sync compatible
