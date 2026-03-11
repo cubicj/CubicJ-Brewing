@@ -398,7 +398,6 @@ export class AcaiaService extends EventEmitter {
 
 	private waitForPoweredOn(timeoutMs = 10000): Promise<boolean> {
 		return new Promise((resolve) => {
-			const timer = setTimeout(() => resolve(false), timeoutMs);
 			const onState = (state: string) => {
 				if (state === 'poweredOn') {
 					clearTimeout(timer);
@@ -406,6 +405,10 @@ export class AcaiaService extends EventEmitter {
 					resolve(true);
 				}
 			};
+			const timer = setTimeout(() => {
+				this.noble!.removeListener('stateChange', onState);
+				resolve(false);
+			}, timeoutMs);
 			this.noble!.on('stateChange', onState);
 		});
 	}
@@ -447,6 +450,7 @@ export class AcaiaService extends EventEmitter {
 				const msg = scanErr instanceof Error ? scanErr.message : String(scanErr);
 				this.log(`startScanning error: ${msg}`);
 				clearTimeout(timer);
+				cleanup();
 				resolve(null);
 			}
 		});

@@ -114,6 +114,9 @@ export function createStepper(
 			if (silent) display.textContent = config.format(value);
 			else update();
 		},
-		destroy: () => group.remove(),
+		destroy: () => {
+			onUp();
+			group.remove();
+		},
 	};
 }

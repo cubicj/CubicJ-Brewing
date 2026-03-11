@@ -3,6 +3,7 @@ import { GlobalHotkeyManager } from './GlobalHotkeyManager';
 
 describe('GlobalHotkeyManager', () => {
 	const mockRegister = vi.fn().mockReturnValue(true);
+	const mockUnregister = vi.fn();
 	const mockUnregisterAll = vi.fn();
 	const mockIsRegistered = vi.fn().mockReturnValue(false);
 
@@ -13,6 +14,7 @@ describe('GlobalHotkeyManager', () => {
 	function create() {
 		return new GlobalHotkeyManager({
 			register: mockRegister,
+			unregister: mockUnregister,
 			unregisterAll: mockUnregisterAll,
 			isRegistered: mockIsRegistered,
 		});
@@ -42,12 +44,32 @@ describe('GlobalHotkeyManager', () => {
 		expect(logFn).toHaveBeenCalledWith(expect.stringContaining('Ctrl+Alt+Shift+F11'));
 	});
 
-	it('unregisters all on destroy', () => {
+	it('unregisterAll calls individual unregister for each registered accelerator', () => {
+		const mgr = create();
+		mgr.register({ tare: 'Ctrl+Alt+Shift+F11', connect: 'Ctrl+Alt+Shift+F7' }, { tare: vi.fn(), connect: vi.fn() });
+		mgr.unregisterAll();
+
+		expect(mockUnregister).toHaveBeenCalledTimes(2);
+		expect(mockUnregister).toHaveBeenCalledWith('Ctrl+Alt+Shift+F11');
+		expect(mockUnregister).toHaveBeenCalledWith('Ctrl+Alt+Shift+F7');
+	});
+
+	it('unregisterAll does not call api.unregisterAll', () => {
 		const mgr = create();
 		mgr.register({ tare: 'Ctrl+Alt+Shift+F11' }, { tare: vi.fn() });
 		mgr.unregisterAll();
 
-		expect(mockUnregisterAll).toHaveBeenCalled();
+		expect(mockUnregisterAll).not.toHaveBeenCalled();
+	});
+
+	it('unregisterAll skips accelerators that failed to register', () => {
+		mockRegister.mockReturnValueOnce(true).mockReturnValueOnce(false);
+		const mgr = create();
+		mgr.register({ tare: 'Ctrl+Alt+Shift+F11', connect: 'Ctrl+Alt+Shift+F7' }, { tare: vi.fn(), connect: vi.fn() });
+		mgr.unregisterAll();
+
+		expect(mockUnregister).toHaveBeenCalledTimes(1);
+		expect(mockUnregister).toHaveBeenCalledWith('Ctrl+Alt+Shift+F11');
 	});
 
 	it('invokes action callback when hotkey fires', () => {
