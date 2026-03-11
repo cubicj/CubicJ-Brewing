@@ -74,8 +74,12 @@ export class BeanCodeBlock {
 	}
 
 	private async createNewBean(): Promise<void> {
-		const path = await this.vaultData.createBeanNote(BEAN_NOTE_EXTRA);
-		await this.app.workspace.openLinkText(path, '');
+		try {
+			const path = await this.vaultData.createBeanNote(BEAN_NOTE_EXTRA);
+			await this.app.workspace.openLinkText(path, '');
+		} catch (err) {
+			console.error('[BeanCodeBlock] createNewBean failed:', err);
+		}
 	}
 }
 
@@ -137,11 +141,15 @@ function openWeightPopover(
 	const applyAction = async (calc: (val: number, cur: number) => number) => {
 		const val = parseFloat(input.value);
 		if (isNaN(val) || val < 0) return;
-		const newWeight = calc(val, bean.weight ?? 0);
-		await vaultData.setWeight(bean.path, newWeight);
-		bean.weight = newWeight;
-		onSave();
-		close();
+		try {
+			const newWeight = calc(val, bean.weight ?? 0);
+			await vaultData.setWeight(bean.path, newWeight);
+			bean.weight = newWeight;
+			onSave();
+			close();
+		} catch (err) {
+			console.error('[BeanCodeBlock] weight update failed:', err);
+		}
 	};
 
 	input.addEventListener('keydown', (e) => {

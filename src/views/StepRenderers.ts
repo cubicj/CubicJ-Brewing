@@ -227,17 +227,21 @@ async function renderBean(container: HTMLElement, ctx: StepRenderContext): Promi
 		}
 
 		item.addEventListener('click', async () => {
-			if (isSelected) {
-				ctx.flowState.deselectBean();
-				ctx.accordion.update();
-			} else {
-				const lastRecord = await ctx.plugin.recordService.getLastRecord(
-					bean.name,
-					ctx.flowState.selection.method!,
-					ctx.flowState.selection.temp!,
-				);
-				ctx.flowState.selectBean(bean, lastRecord);
-				ctx.renderContent();
+			try {
+				if (isSelected) {
+					ctx.flowState.deselectBean();
+					ctx.accordion.update();
+				} else {
+					const lastRecord = await ctx.plugin.recordService.getLastRecord(
+						bean.name,
+						ctx.flowState.selection.method!,
+						ctx.flowState.selection.temp!,
+					);
+					ctx.flowState.selectBean(bean, lastRecord);
+					ctx.renderContent();
+				}
+			} catch (err) {
+				console.error('[StepRenderers] bean select failed:', err);
 			}
 		});
 	}
@@ -533,30 +537,38 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 		const controls = container.createDiv({ cls: 'brewing-controls' });
 		const stopBtn = controls.createEl('button', { text: '완료', cls: 'brewing-ctrl-btn brew-flow-stop-btn' });
 		stopBtn.addEventListener('click', async () => {
-			if (chart) chart.stopLive();
-			if (scaleConnected) {
-				ctx.recorder.stop();
-				await ctx.timerController.freeze();
-				const totalSeconds = ctx.timerController.getElapsedSeconds();
-				const yieldGrams = parseFloat(ctx.getWeightText()) || undefined;
-				ctx.flowState.finishBrewing(totalSeconds || undefined, yieldGrams);
-			} else {
-				ctx.flowState.finishBrewing(undefined, undefined);
+			try {
+				if (chart) chart.stopLive();
+				if (scaleConnected) {
+					ctx.recorder.stop();
+					await ctx.timerController.freeze();
+					const totalSeconds = ctx.timerController.getElapsedSeconds();
+					const yieldGrams = parseFloat(ctx.getWeightText()) || undefined;
+					ctx.flowState.finishBrewing(totalSeconds || undefined, yieldGrams);
+				} else {
+					ctx.flowState.finishBrewing(undefined, undefined);
+				}
+				ctx.flowState.brewingStarted = false;
+				ctx.accordion.expand('saving');
+				ctx.accordion.update();
+			} catch (err) {
+				console.error('[StepRenderers] brew stop failed:', err);
 			}
-			ctx.flowState.brewingStarted = false;
-			ctx.accordion.expand('saving');
-			ctx.accordion.update();
 		});
 	} else if (!hasProfile) {
 		const controls = container.createDiv({ cls: 'brewing-controls' });
 		const startBtn = controls.createEl('button', { text: '브루잉 시작', cls: 'brewing-ctrl-btn brew-flow-start-btn' });
 		startBtn.addEventListener('click', async () => {
-			ctx.flowState.brewingStarted = true;
-			if (scaleConnected) {
-				ctx.recorder.start();
-				await ctx.timerController.handleTimerClick();
+			try {
+				ctx.flowState.brewingStarted = true;
+				if (scaleConnected) {
+					ctx.recorder.start();
+					await ctx.timerController.handleTimerClick();
+				}
+				ctx.accordion.update();
+			} catch (err) {
+				console.error('[StepRenderers] brew start failed:', err);
 			}
-			ctx.accordion.update();
 		});
 	}
 }
