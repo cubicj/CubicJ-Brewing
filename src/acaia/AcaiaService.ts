@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import type { AcaiaEvents } from './types';
 import {
 	AcaiaState,
 	ButtonEvent,
@@ -6,6 +7,8 @@ import {
 	SCALE_PREFIXES,
 	WRITE_UUID,
 	NOTIFY_UUID,
+	MSG_TYPE,
+	EVENT_TYPE,
 	Noble,
 	NoblePeripheral,
 	NobleCharacteristic,
@@ -41,6 +44,22 @@ class StaleConnectionError extends Error {
 }
 
 export class AcaiaService extends EventEmitter {
+	on<K extends keyof AcaiaEvents>(event: K, listener: AcaiaEvents[K]): this;
+	on(event: string, listener: (...args: any[]) => void): this;
+	on(event: string, listener: (...args: any[]) => void): this {
+		return super.on(event, listener);
+	}
+
+	emit<K extends keyof AcaiaEvents>(event: K, ...args: Parameters<AcaiaEvents[K]>): boolean;
+	emit(event: string, ...args: any[]): boolean;
+	emit(event: string, ...args: any[]): boolean {
+		return super.emit(event, ...args);
+	}
+
+	removeAllListeners(event?: string): this {
+		return super.removeAllListeners(event);
+	}
+
 	private _state: AcaiaState = 'idle';
 	private nobleFactory: () => Noble | null;
 	private noble: Noble | null = null;
@@ -69,9 +88,6 @@ export class AcaiaService extends EventEmitter {
 	private _scaleName: string | null = null;
 	private logger?: BleLogger;
 	private _lastWeight = 0;
-	private _lastStable = false;
-	private _lastBattery = 0;
-	private _lastSettingsRaw: string | null = null;
 
 	constructor(options?: AcaiaServiceOptions) {
 		super();
@@ -336,6 +352,7 @@ export class AcaiaService extends EventEmitter {
 	}
 
 	async sendNotificationRequest(): Promise<void> {
+		if (this._state !== 'connected') return;
 		await this.enqueueWrite(encodeNotificationRequest());
 	}
 
@@ -462,7 +479,7 @@ export class AcaiaService extends EventEmitter {
 
 		const cmd = packet[2];
 
-		if ((cmd === 12 || cmd === 11) && packet.length > 4) {
+		if ((cmd === MSG_TYPE.NOTIFICATION_REQ || cmd === MSG_TYPE.IDENTIFY) && packet.length > 4) {
 			const totalPayloadLen = packet[3];
 			const payloadEnd = 3 + totalPayloadLen;
 			let offset = 4;
@@ -470,26 +487,23 @@ export class AcaiaService extends EventEmitter {
 			while (offset < payloadEnd) {
 				const innerType = packet[offset];
 
-				if (innerType === 5 && offset + 7 <= packet.length) {
+				if (innerType === EVENT_TYPE.WEIGHT && offset + 7 <= packet.length) {
 					const w = decodeWeight(packet, offset + 1);
 					this.emit('weight', w.weight, w.stable);
 					this._lastWeight = w.weight;
-					this._lastStable = w.stable;
 					offset += 7;
-				} else if (innerType === 7 && offset + 4 <= packet.length) {
+				} else if (innerType === EVENT_TYPE.TIMER && offset + 4 <= packet.length) {
 					this.emit('timer', decodeTimer(packet, offset + 1));
 					offset += 4;
-				} else if (innerType === 8 && offset + 3 <= packet.length) {
+				} else if (innerType === EVENT_TYPE.BUTTON && offset + 3 <= packet.length) {
 					this.handleButtonEvent(packet, offset);
 					break;
 				} else {
 					break;
 				}
 			}
-		} else if (cmd === 8 && packet.length >= 10) {
+		} else if (cmd === MSG_TYPE.SETTINGS_RESP && packet.length >= 10) {
 			const settings = decodeSettings(packet, 3);
-			this._lastSettingsRaw = packet.subarray(3).toString('hex');
-			this._lastBattery = settings.battery;
 			this.emit('battery', settings.battery);
 			if (settings.timerRunning !== this.scaleTimerRunning) {
 				this.scaleTimerRunning = settings.timerRunning;
