@@ -9,16 +9,11 @@ import { VaultDataService } from './services/VaultDataService';
 import { BeanCodeBlock } from './views/BeanCodeBlock';
 import { BrewCodeBlock } from './views/BrewCodeBlock';
 import type { EquipmentSettings, GlobalHotkeys, LogConfig } from './brew/types';
+import { BrewingSettingTab } from './views/SettingTab';
 
 const DATA_DIR = 'cubicj-brewing';
 
-const DEFAULT_HOTKEYS: GlobalHotkeys = {
-	'toggle-connect': 'Ctrl+Alt+Shift+F7',
-	'power-off-scale': 'Ctrl+Alt+Shift+F8',
-	'toggle-brewing': 'Ctrl+Alt+Shift+F9',
-	'auto-fill': 'Ctrl+Alt+Shift+F10',
-	tare: 'Ctrl+Alt+Shift+F11',
-};
+const DEFAULT_HOTKEYS: GlobalHotkeys = {};
 
 export default class CubicJBrewingPlugin extends Plugin {
 	acaiaService: AcaiaService | null = null;
@@ -27,7 +22,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 	vaultData!: VaultDataService;
 	equipment: EquipmentSettings = { grinders: [], drippers: [], filters: [], baskets: [], accessories: [] };
 	pluginLogger: PluginLogger | null = null;
-	private logConfig: LogConfig = { enabled: true, categories: [], packetLog: false };
+	private logConfig: LogConfig = { enabled: false, categories: [], packetLog: false };
 	private beforeUnloadHandler: (() => void) | null = null;
 	private blePacketLogger: FileLogger | null = null;
 	private fileAdapter!: FileAdapter;
@@ -35,11 +30,12 @@ export default class CubicJBrewingPlugin extends Plugin {
 	private hotkeyManager: import('./utils/GlobalHotkeyManager').GlobalHotkeyManager | null = null;
 	private globalHotkeys: GlobalHotkeys = DEFAULT_HOTKEYS;
 	private firstInstall = false;
+	private beanFolder = '';
 	private beanBlock!: BeanCodeBlock;
 
 	async onload() {
-		this.vaultData = new VaultDataService(this.app);
 		await this.loadPluginData();
+		this.vaultData = new VaultDataService(this.app, this.beanFolder);
 		if (this.logConfig.enabled) {
 			const vaultIO = {
 				read: async (p: string) => this.app.vault.adapter.read(p),
@@ -122,6 +118,8 @@ export default class CubicJBrewingPlugin extends Plugin {
 			this.vaultData.refreshRoastDays();
 			if (this.firstInstall) this.activateView();
 		});
+
+		this.addSettingTab(new BrewingSettingTab(this.app, this));
 
 		if (Platform.isDesktop) {
 			await this.initDesktop();
@@ -296,7 +294,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 		const lc = data.logConfig;
 		if (lc && typeof lc === 'object' && !Array.isArray(lc)) {
 			this.logConfig = {
-				enabled: typeof lc.enabled === 'boolean' ? lc.enabled : true,
+				enabled: typeof lc.enabled === 'boolean' ? lc.enabled : false,
 				categories: Array.isArray(lc.categories) ? lc.categories : [],
 				packetLog: typeof lc.packetLog === 'boolean' ? lc.packetLog : false,
 			};
@@ -310,11 +308,38 @@ export default class CubicJBrewingPlugin extends Plugin {
 		} else {
 			this.globalHotkeys = DEFAULT_HOTKEYS;
 		}
+		if (typeof data.beanFolder === 'string') {
+			this.beanFolder = data.beanFolder;
+		}
 	}
 
 	async saveEquipment(): Promise<void> {
 		const data = (await this.loadData()) ?? {};
 		data.equipment = this.equipment;
+		await this.saveData(data);
+	}
+
+	getBeanFolder(): string {
+		return this.beanFolder;
+	}
+
+	async saveBeanFolder(folder: string): Promise<void> {
+		this.beanFolder = folder;
+		this.vaultData = new VaultDataService(this.app, folder);
+		this.beanBlock.updateVaultData(this.vaultData);
+		const data = (await this.loadData()) ?? {};
+		data.beanFolder = folder;
+		await this.saveData(data);
+	}
+
+	getLogConfig(): LogConfig {
+		return { ...this.logConfig };
+	}
+
+	async saveLogConfig(config: LogConfig): Promise<void> {
+		this.logConfig = config;
+		const data = (await this.loadData()) ?? {};
+		data.logConfig = config;
 		await this.saveData(data);
 	}
 
