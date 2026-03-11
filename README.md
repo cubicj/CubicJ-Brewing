@@ -16,51 +16,15 @@ An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE s
 
 ## Features
 
-### BLE Scale Integration
-- Direct Bluetooth LE connection to Acaia Pearl S via [@stoprocent/noble](https://github.com/nicedoc/noble) — no companion app required
-- Real-time weight display with stability indicator (10Hz)
-- Timer sync from scale, tare, and power off commands
-- Auto-reconnect with tiered silence detection and write health monitoring
-- Global hotkeys for hands-free operation (connect, tare, start/stop brew)
-
-### Guided Brew Flow
-- 6-step accordion UI: method → bean → parameters → brew → profile → save
-- Filter and espresso modes with method-specific parameter sets
-- Recipe reference during brewing (vault-based YAML recipes)
-- Real-time brew profile chart (Canvas 2D, dual-curve: raw + smoothed)
-- Signal processing pipeline: spike filter → Savitzky-Golay / EMA smoothing
-
-<p>
-  <img src="assets/brews-data.png" alt="Brew record detail with profile chart" width="720">
-  <br>
-  <em>Brew record with weight-over-time profile chart and extraction parameters</em>
-</p>
-
-### Bean & Record Management
-- Bean notes with frontmatter metadata (origin, roaster, roast date, weight tracking)
-- Automatic roast-days calculation and refresh
-- Per-bean brew history via `brews` code blocks
-- Equipment registry (grinders, drippers, filters, baskets, accessories)
-- Brew profiles stored as JSON — weight-over-time curves for every brew
-
-### Vault-Native Storage
-- All data lives in your vault as plain files — Obsidian Sync compatible
-- Bean/recipe discovery via Obsidian's metadata cache
-- No external database, no cloud dependency
-
-## Architecture
-
-```
-8,200+ lines TypeScript · 119 tests (vitest) · esbuild CommonJS bundle
-```
-
-| Layer | Key Components |
-|-------|----------------|
-| **BLE** | Binary protocol codec, packet buffer (fragmentation handling), typed EventEmitter service |
-| **Brew State** | 6-step finite state machine with step guards and discriminated union records |
-| **Signal** | Median spike filter, Savitzky-Golay smoothing (order 2), EMA trend line |
-| **Storage** | File-adapter abstraction, JSON CRUD with schema validation, corrupt-file backup |
-| **Views** | Accordion manager, stepper component, Canvas 2D chart, code block processors |
+- **Real-time scale connection** — Acaia Pearl S via Bluetooth, no companion app required
+- **Guided brew flow** — 6-step accordion UI (method → bean → parameters → brew → profile → save)
+- **Filter & espresso modes** with method-specific parameter sets
+- **Live brew profile chart** — weight-over-time curve recorded during brewing
+- **Bean inventory** — roast days, remaining weight, status tracking
+- **Brew history** — per-bean records with profile charts and equipment used
+- **Equipment registry** — grinders, drippers, filters, baskets, accessories
+- **Vault-native storage** — all data as plain files, Obsidian Sync compatible
+- **Global hotkeys** — hands-free connect, tare, start/stop brew
 
 ## Requirements
 
@@ -69,6 +33,15 @@ An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE s
 - **Acaia Pearl S** scale
 
 > macOS/Linux support depends on [@stoprocent/noble](https://github.com/nicedoc/noble) platform compatibility. Not tested yet.
+
+## Installation
+
+1. Download `cubicj-brewing.zip` from the [latest release](https://github.com/cubicj/CubicJ-Brewing/releases/latest)
+2. Extract the zip — you should see `main.js`, `manifest.json`, `styles.css`, and a `noble/` folder
+3. Copy all contents into `<your-vault>/.obsidian/plugins/cubicj-brewing/`
+4. Restart Obsidian → Settings → Community plugins → Enable "CubicJ Brewing"
+
+> The `noble/` folder contains the native BLE addon — do not omit it.
 
 ## Usage
 
@@ -87,12 +60,10 @@ Place a `beans` code block in any note to create a bean inventory hub:
   <em>Bean inventory — roast days, remaining weight, and status tracking per bean</em>
 </p>
 
-This block renders a live dashboard of all beans in your vault:
-
-- **Active / Finished** sections — beans are grouped by status
-- **Roast days** — automatically calculated from `roast_date` and refreshed daily
+- **Active / Finished** sections — beans grouped by status
+- **Roast days** — automatically calculated from roast date, refreshed daily
 - **Remaining weight** — click to set, add, or subtract (with optional scale auto-read)
-- **Status toggle** — mark as finished ("소진") or repurchase ("재구매") with new roast date
+- **Status toggle** — mark as finished or repurchase with new roast date
 - **New bean button** — creates a bean note with frontmatter template and a `brews` block
 
 > The `beans` block is **not created automatically** — add it manually to a note of your choice (e.g., a "Coffee Dashboard" note). One block per vault is enough.
@@ -104,11 +75,10 @@ Each bean is a regular note with `type: bean` frontmatter:
 ```yaml
 ---
 type: bean
-origin: Ethiopia Yirgacheffe
-roaster: My Roaster
-roast_date: 2026-03-01
-weight: 200
-status: active
+로스터: My Roaster
+상태: active
+로스팅 날짜: 2026-03-01
+무게: 200
 ---
 ```
 
@@ -123,50 +93,27 @@ Each bean note includes a `brews` code block (auto-inserted on creation) that sh
 ```
 ````
 
-The plugin links brew records to beans automatically — brew history appears per-bean with profile charts, extraction parameters, and equipment used.
+<p>
+  <img src="assets/brews-data.png" alt="Brew record detail with profile chart" width="720">
+  <br>
+  <em>Brew record with weight-over-time profile chart and extraction parameters</em>
+</p>
 
-### Recipes
-
-Create a note with `type: recipe` frontmatter for brew recipes:
-
-```yaml
 ---
-type: recipe
-method: filter
-bean_amount: 15
-water_amount: 250
----
+
+## Architecture
+
+```
+8,200+ lines TypeScript · 119 tests (vitest) · esbuild CommonJS bundle
 ```
 
-Recipes appear as selectable references during the brew flow.
-
-## Installation
-
-### Download (GitHub Release)
-
-1. Download `cubicj-brewing.zip` from the [latest release](https://github.com/cubicj/CubicJ-Brewing/releases/latest)
-2. Extract the zip — you should see `main.js`, `manifest.json`, `styles.css`, and a `noble/` folder
-3. Copy all contents into `<your-vault>/.obsidian/plugins/cubicj-brewing/`
-4. Restart Obsidian → Settings → Community plugins → Enable "CubicJ Brewing"
-
-> The `noble/` folder contains the native BLE addon — do not omit it.
-
-### Build from Source
-
-```bash
-git clone https://github.com/cubicj/CubicJ-Brewing.git
-cd CubicJ-Brewing
-npm install
-npm run build
-```
-
-After building, run the release script to generate the zip:
-
-```bash
-npm run release
-```
-
-Or manually copy `main.js`, `manifest.json`, `styles.css`, and the `noble/` folder (from `node_modules/@stoprocent/noble` with deps) to your vault's plugin directory.
+| Layer | Key Components |
+|-------|----------------|
+| **BLE** | Binary protocol codec, packet buffer (fragmentation handling), typed EventEmitter service |
+| **Brew State** | 6-step finite state machine with step guards and discriminated union records |
+| **Signal** | Median spike filter, Savitzky-Golay smoothing (order 2), EMA trend line |
+| **Storage** | File-adapter abstraction, JSON CRUD with schema validation, corrupt-file backup |
+| **Views** | Accordion manager, stepper component, Canvas 2D chart, code block processors |
 
 ## Development
 
@@ -177,6 +124,16 @@ npm run test         # vitest (single run)
 npm run test:watch   # vitest (watch mode)
 npm run check        # typecheck only
 npm run lint         # eslint
+```
+
+### Build from Source
+
+```bash
+git clone https://github.com/cubicj/CubicJ-Brewing.git
+cd CubicJ-Brewing
+npm install
+npm run build
+npm run release      # generate release zip
 ```
 
 ## Acknowledgments
