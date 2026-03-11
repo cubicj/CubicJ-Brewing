@@ -2,7 +2,8 @@ import type { App } from 'obsidian';
 import type { BrewRecord, BrewMethod, BrewTemp, EspressoDrink, EquipmentSettings } from '../brew/types';
 import type { BrewRecordService } from '../services/BrewRecordService';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
-import { DRINK_LABELS, METHOD_LABELS } from '../brew/constants';
+import { getDrinkLabel, getMethodLabel } from '../brew/constants';
+import { t } from '../i18n/index';
 import { createStepper } from './Stepper';
 import { createAccessoryChecklist } from './FormHelpers';
 import { ConfirmModal } from './BrewProfileModal';
@@ -23,18 +24,18 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 	let currentMethod: BrewMethod = record.method;
 
 	const methodRow = form.createDiv({ cls: 'brew-edit-row' });
-	methodRow.createEl('label', { text: '방식' });
+	methodRow.createEl('label', { text: t('form.method') });
 	const methodSelect = methodRow.createEl('select');
 	for (const m of [
-		{ v: 'filter' as const, l: METHOD_LABELS.filter },
-		{ v: 'espresso' as const, l: METHOD_LABELS.espresso },
+		{ v: 'filter' as const, l: getMethodLabel('filter') },
+		{ v: 'espresso' as const, l: getMethodLabel('espresso') },
 	]) {
 		const opt = methodSelect.createEl('option', { text: m.l, value: m.v });
 		if (m.v === record.method) opt.selected = true;
 	}
 
 	const tempRow = form.createDiv({ cls: 'brew-edit-row' });
-	tempRow.createEl('label', { text: '온도' });
+	tempRow.createEl('label', { text: t('form.temperature') });
 	const tempSelect = tempRow.createEl('select');
 	for (const t of [
 		{ v: 'hot' as const, l: 'Hot' },
@@ -47,9 +48,9 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 	let grinderSelect: HTMLSelectElement | null = null;
 	if (deps.equipment.grinders.length > 0) {
 		const grinderRow = form.createDiv({ cls: 'brew-edit-row' });
-		grinderRow.createEl('label', { text: '그라인더' });
+		grinderRow.createEl('label', { text: t('form.grinder') });
 		grinderSelect = grinderRow.createEl('select');
-		grinderSelect.createEl('option', { text: '없음', value: '' });
+		grinderSelect.createEl('option', { text: '-', value: '' });
 		for (const g of deps.equipment.grinders) {
 			const opt = grinderSelect.createEl('option', { text: g.name, value: g.name });
 			if (record.grinder === g.name) opt.selected = true;
@@ -57,7 +58,7 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 	}
 
 	const grindStepper = createStepper(form, {
-		label: '분쇄도',
+		label: t('form.grindSize'),
 		initial: record.grindSize,
 		min: 0,
 		max: 50,
@@ -67,7 +68,7 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 	});
 
 	const doseStepper = createStepper(form, {
-		label: '도징량(g)',
+		label: t('form.dose'),
 		initial: record.dose,
 		min: 0,
 		max: 100,
@@ -79,7 +80,7 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 	const filterGroup = form.createDiv({ cls: 'brew-edit-filter-fields' });
 
 	const waterTempStepper = createStepper(filterGroup, {
-		label: '물 온도(°C)',
+		label: t('form.waterTemp'),
 		initial: record.method === 'filter' ? record.waterTemp : 93,
 		min: 0,
 		max: 100,
@@ -89,7 +90,7 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 	});
 
 	const filterRow = filterGroup.createDiv({ cls: 'brew-edit-row' });
-	filterRow.createEl('label', { text: '필터' });
+	filterRow.createEl('label', { text: t('form.filter') });
 	const filterSelect = filterRow.createEl('select');
 	for (const f of deps.equipment.filters) {
 		const opt = filterSelect.createEl('option', { text: f, value: f });
@@ -99,9 +100,9 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 	let dripperSelect: HTMLSelectElement | null = null;
 	if (deps.equipment.drippers.length > 0) {
 		const dripperRow = filterGroup.createDiv({ cls: 'brew-edit-row' });
-		dripperRow.createEl('label', { text: '드리퍼' });
+		dripperRow.createEl('label', { text: t('form.dripper') });
 		dripperSelect = dripperRow.createEl('select');
-		dripperSelect.createEl('option', { text: '없음', value: '' });
+		dripperSelect.createEl('option', { text: '-', value: '' });
 		for (const d of deps.equipment.drippers) {
 			const opt = dripperSelect.createEl('option', { text: d, value: d });
 			if (record.method === 'filter' && record.dripper === d) opt.selected = true;
@@ -111,12 +112,12 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 	const espressoGroup = form.createDiv({ cls: 'brew-edit-espresso-fields' });
 
 	const drinkRow = espressoGroup.createDiv({ cls: 'brew-edit-row' });
-	drinkRow.createEl('label', { text: '음료' });
+	drinkRow.createEl('label', { text: t('form.drink') });
 	const drinkSelect = drinkRow.createEl('select');
 	const drinks: { value: EspressoDrink; label: string }[] = [
-		{ value: 'shot', label: DRINK_LABELS.shot },
-		{ value: 'americano', label: DRINK_LABELS.americano },
-		{ value: 'latte', label: DRINK_LABELS.latte },
+		{ value: 'shot', label: getDrinkLabel('shot') },
+		{ value: 'americano', label: getDrinkLabel('americano') },
+		{ value: 'latte', label: getDrinkLabel('latte') },
 	];
 	for (const d of drinks) {
 		const opt = drinkSelect.createEl('option', { text: d.label, value: d.value });
@@ -124,7 +125,7 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 	}
 
 	const basketRow = espressoGroup.createDiv({ cls: 'brew-edit-row' });
-	basketRow.createEl('label', { text: '바스켓' });
+	basketRow.createEl('label', { text: t('form.basket') });
 	const basketSelect = basketRow.createEl('select');
 	for (const b of deps.equipment.baskets) {
 		const opt = basketSelect.createEl('option', { text: b, value: b });
@@ -141,7 +142,7 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 			: new Set<string>();
 
 	const waterWeightStepper = createStepper(form, {
-		label: '가수',
+		label: t('form.addition'),
 		initial: record.waterWeight ?? 0,
 		min: 0,
 		max: 1000,
@@ -150,7 +151,7 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 		format: (v) => `${v.toFixed(1)}g`,
 	});
 	const milkWeightStepper = createStepper(form, {
-		label: '우유',
+		label: t('form.milk'),
 		initial: record.milkWeight ?? 0,
 		min: 0,
 		max: 1000,
@@ -160,7 +161,7 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 	});
 
 	const noteRow = form.createDiv({ cls: 'brew-edit-row brew-edit-note' });
-	noteRow.createEl('label', { text: '메모' });
+	noteRow.createEl('label', { text: t('form.memo') });
 	const noteInput = noteRow.createEl('textarea', { attr: { spellcheck: 'false' } });
 	noteInput.value = record.note ?? '';
 
@@ -187,25 +188,21 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 	syncMethodVisibility();
 
 	const footer = container.createDiv({ cls: 'brew-profile-footer' });
-	const deleteBtn = footer.createEl('button', { text: '삭제', cls: 'mod-warning' });
+	const deleteBtn = footer.createEl('button', { text: t('form.delete'), cls: 'mod-warning' });
 	deleteBtn.addEventListener('click', () => {
-		const modal = new ConfirmModal(
-			deps.app,
-			'선택한 브루잉 기록을 삭제합니다. 삭제된 기록은 복구할 수 없습니다.',
-			async () => {
-				try {
-					await deps.recordService.removeWithProfile(record.id, record.profilePath, deps.profileStorage);
-					deps.onDeleted();
-				} catch (err) {
-					console.error('[BrewRecordForm] delete failed:', err);
-				}
-			},
-		);
+		const modal = new ConfirmModal(deps.app, t('form.deleteConfirm'), async () => {
+			try {
+				await deps.recordService.removeWithProfile(record.id, record.profilePath, deps.profileStorage);
+				deps.onDeleted();
+			} catch (err) {
+				console.error('[BrewRecordForm] delete failed:', err);
+			}
+		});
 		modal.open();
 	});
 
 	const rightGroup = footer.createDiv({ cls: 'brew-profile-footer-right' });
-	const saveBtn = rightGroup.createEl('button', { text: '저장', cls: 'mod-cta' });
+	const saveBtn = rightGroup.createEl('button', { text: t('form.save'), cls: 'mod-cta' });
 	saveBtn.addEventListener('click', async () => {
 		try {
 			const method = currentMethod;
@@ -288,6 +285,6 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 			console.error('[BrewRecordForm] save failed:', err);
 		}
 	});
-	const cancelBtn = rightGroup.createEl('button', { text: '취소' });
+	const cancelBtn = rightGroup.createEl('button', { text: t('form.cancel') });
 	cancelBtn.addEventListener('click', () => deps.onCancel());
 }

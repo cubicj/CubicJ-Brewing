@@ -1,5 +1,6 @@
 import type { BeanInfo } from '../brew/types';
 import type { VaultDataService } from '../services/VaultDataService';
+import { t } from '../i18n/index';
 
 interface BeanRowDeps {
 	vaultData: VaultDataService;
@@ -21,9 +22,9 @@ export function renderActiveBeanRow(container: HTMLElement, bean: BeanInfo, deps
 	});
 
 	const days = deps.vaultData.getDaysSinceRoast(bean);
-	row.createSpan({ cls: 'cb-bean-days', text: days !== null ? `로스팅 ${days}일차` : '' });
+	row.createSpan({ cls: 'cb-bean-days', text: days !== null ? t('bean.roastDays', { n: days }) : '' });
 
-	const weightText = bean.weight != null ? `남은 원두 ${bean.weight}g` : '';
+	const weightText = bean.weight != null ? t('bean.remaining', { weight: bean.weight }) : '';
 	const weightEl = row.createSpan({ cls: 'cb-bean-weight', text: weightText });
 	if (deps.onWeightClick) {
 		const handler = deps.onWeightClick;
@@ -33,7 +34,7 @@ export function renderActiveBeanRow(container: HTMLElement, bean: BeanInfo, deps
 		});
 	}
 
-	const statusBtn = row.createEl('button', { text: '소진', cls: 'cb-bean-btn cb-bean-status-btn' });
+	const statusBtn = row.createEl('button', { text: t('bean.depleted'), cls: 'cb-bean-btn cb-bean-status-btn' });
 	statusBtn.addEventListener('click', async (e) => {
 		e.stopPropagation();
 		try {
@@ -56,7 +57,7 @@ export function renderFinishedBeanRow(container: HTMLElement, bean: BeanInfo, de
 		deps.onNameClick(bean);
 	});
 
-	const statusBtn = row.createEl('button', { text: '재구매', cls: 'cb-bean-btn cb-bean-repurchase-btn' });
+	const statusBtn = row.createEl('button', { text: t('bean.repurchase'), cls: 'cb-bean-btn cb-bean-repurchase-btn' });
 	statusBtn.addEventListener('click', (e) => {
 		e.stopPropagation();
 		statusBtn.style.display = 'none';
@@ -67,7 +68,7 @@ export function renderFinishedBeanRow(container: HTMLElement, bean: BeanInfo, de
 
 		const btns = dateRow.createDiv({ cls: 'cb-bean-date-btns' });
 
-		const confirmBtn = btns.createEl('button', { text: '확인', cls: 'cb-bean-btn cb-bean-confirm-btn' });
+		const confirmBtn = btns.createEl('button', { text: t('common.confirm'), cls: 'cb-bean-btn cb-bean-confirm-btn' });
 		confirmBtn.addEventListener('click', async () => {
 			if (!input.value) return;
 			try {
@@ -79,7 +80,7 @@ export function renderFinishedBeanRow(container: HTMLElement, bean: BeanInfo, de
 			}
 		});
 
-		const cancelBtn = btns.createEl('button', { text: '취소', cls: 'cb-bean-btn' });
+		const cancelBtn = btns.createEl('button', { text: t('common.cancel'), cls: 'cb-bean-btn' });
 		cancelBtn.addEventListener('click', () => {
 			dateRow.remove();
 			statusBtn.style.display = '';

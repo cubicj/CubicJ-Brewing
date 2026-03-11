@@ -17,19 +17,20 @@ import { BrewProfileChart } from './BrewProfileChart';
 import { BrewProfileModal } from './BrewProfileModal';
 import { createStepper } from './Stepper';
 import { Notice } from 'obsidian';
-import { DRINK_LABELS, METHOD_LABELS, MS_PER_DAY } from '../brew/constants';
+import { getDrinkLabel, getMethodLabel, MS_PER_DAY } from '../brew/constants';
+import { t } from '../i18n/index';
 import { createToggleGroup, createSelectField, attachScaleAutoBtn, createAccessoryChecklist } from './FormHelpers';
 
 export type FlowStep = 'method' | 'bean' | 'configure' | 'brewing' | 'saving';
 
 const TEMP_LABELS: Record<BrewTemp, string> = { hot: 'Hot', iced: 'Ice' };
 
-export const STEP_CONFIG: Array<{ step: FlowStep; label: string }> = [
-	{ step: 'method', label: '추출 방식' },
-	{ step: 'bean', label: '원두 선택' },
-	{ step: 'configure', label: '추출 변수 설정' },
-	{ step: 'brewing', label: '브루잉' },
-	{ step: 'saving', label: '메모' },
+export const STEP_CONFIG: Array<{ step: FlowStep; label: () => string }> = [
+	{ step: 'method', label: () => t('brew.step.method') },
+	{ step: 'bean', label: () => t('brew.step.bean') },
+	{ step: 'configure', label: () => t('brew.step.variables') },
+	{ step: 'brewing', label: () => t('brew.step.brewing') },
+	{ step: 'saving', label: () => t('brew.step.memo') },
 ];
 
 export const STEP_ORDER: FlowStep[] = STEP_CONFIG.map((c) => c.step);
@@ -87,8 +88,8 @@ export function getStepSummary(step: FlowStep, sel: BrewFlowSelection): string {
 	switch (step) {
 		case 'method': {
 			if (!sel.method) return '';
-			const parts = [METHOD_LABELS[sel.method], TEMP_LABELS[sel.temp!]];
-			if (sel.drink) parts.push(DRINK_LABELS[sel.drink]);
+			const parts = [getMethodLabel(sel.method), TEMP_LABELS[sel.temp!]];
+			if (sel.drink) parts.push(getDrinkLabel(sel.drink));
 			return parts.join(' · ');
 		}
 		case 'bean': {
@@ -96,14 +97,17 @@ export function getStepSummary(step: FlowStep, sel: BrewFlowSelection): string {
 			const parts = [sel.bean.name];
 			if (sel.bean.roastDate) {
 				const days = Math.floor((Date.now() - new Date(sel.bean.roastDate).getTime()) / MS_PER_DAY);
-				if (days >= 0) parts.push(`${days}일차`);
+				if (days >= 0) parts.push(t('bean.roastDays', { n: days }));
 			}
 			return parts.join(' · ');
 		}
 		case 'configure': {
 			if (sel.grindSize == null) return '';
 			const fmt = (v: number) => parseFloat(v.toFixed(2));
-			const parts: string[] = [`분쇄도 ${fmt(sel.grindSize!)}`, `도징량 ${fmt(sel.dose!)}g`];
+			const parts: string[] = [
+				`${t('summary.grindSize')} ${fmt(sel.grindSize!)}`,
+				`${t('summary.dose')} ${fmt(sel.dose!)}g`,
+			];
 			if (sel.method === 'filter' && sel.waterTemp) parts.push(`${sel.waterTemp}°C`);
 			return parts.join(' · ');
 		}
@@ -135,8 +139,8 @@ function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
 	createToggleGroup(
 		container,
 		[
-			{ value: 'filter' as BrewMethod, label: METHOD_LABELS.filter },
-			{ value: 'espresso' as BrewMethod, label: METHOD_LABELS.espresso },
+			{ value: 'filter' as BrewMethod, label: getMethodLabel('filter') },
+			{ value: 'espresso' as BrewMethod, label: getMethodLabel('espresso') },
 		],
 		selectedMethod,
 		(val) => {
@@ -151,7 +155,7 @@ function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
 		},
 	);
 
-	container.createEl('h4', { text: '온도' });
+	container.createEl('h4', { text: t('form.temperature') });
 	createToggleGroup(
 		container,
 		[
@@ -168,13 +172,13 @@ function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
 
 	const drinkRow = container.createDiv({ cls: 'brew-flow-drink-row' });
 	drinkRow.style.display = selectedMethod === 'espresso' ? '' : 'none';
-	drinkRow.createEl('h4', { text: '음료' });
+	drinkRow.createEl('h4', { text: t('form.drink') });
 	createToggleGroup(
 		drinkRow,
 		[
-			{ value: 'shot' as EspressoDrink, label: DRINK_LABELS.shot },
-			{ value: 'americano' as EspressoDrink, label: DRINK_LABELS.americano },
-			{ value: 'latte' as EspressoDrink, label: DRINK_LABELS.latte },
+			{ value: 'shot' as EspressoDrink, label: getDrinkLabel('shot') },
+			{ value: 'americano' as EspressoDrink, label: getDrinkLabel('americano') },
+			{ value: 'latte' as EspressoDrink, label: getDrinkLabel('latte') },
 		],
 		selectedDrink,
 		(val) => {
@@ -207,7 +211,7 @@ async function renderBean(container: HTMLElement, ctx: StepRenderContext): Promi
 	const beans = [...ctx.plugin.vaultData.getActiveBeans()].sort((a, b) => a.name.localeCompare(b.name));
 
 	if (beans.length === 0) {
-		container.createDiv({ cls: 'brew-flow-empty', text: 'type: bean frontmatter가 있는 노트가 없어요' });
+		container.createDiv({ cls: 'brew-flow-empty', text: t('bean.emptyState') });
 		return;
 	}
 
@@ -221,8 +225,8 @@ async function renderBean(container: HTMLElement, ctx: StepRenderContext): Promi
 		const days = ctx.plugin.vaultData.getDaysSinceRoast(bean);
 		if (days !== null || bean.weight != null) {
 			const parts: string[] = [];
-			if (days !== null) parts.push(`로스팅 ${days}일차`);
-			if (bean.weight != null) parts.push(`남은 원두 ${bean.weight}g`);
+			if (days !== null) parts.push(`${t('modal.roasting')} ${t('bean.roastDays', { n: days })}`);
+			if (bean.weight != null) parts.push(t('bean.remaining', { weight: bean.weight }));
 			item.createDiv({ cls: 'brew-flow-bean-meta', text: parts.join(' · ') });
 		}
 
@@ -269,16 +273,16 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	const updateCard = (record: BrewRecord | undefined) => {
 		cardWrapper.empty();
 		const card = cardWrapper.createDiv({ cls: 'brew-flow-last-record' });
-		card.createDiv({ cls: 'brew-flow-last-record-title', text: '이전 기록' });
+		card.createDiv({ cls: 'brew-flow-last-record-title', text: t('brew.lastRecord') });
 		if (!record) {
 			card.createDiv({ cls: 'brew-flow-last-record-meta', text: '-' });
 			return;
 		}
 		const parts: string[] = [];
-		if (record.roastDays != null) parts.push(`로스팅 ${record.roastDays}일차`);
-		parts.push(`분쇄도 ${record.grindSize}`, `도징량 ${record.dose}g`);
-		if (record.method === 'filter') parts.push(`물온도 ${record.waterTemp}°C`);
-		if (record.method === 'espresso') parts.push(`바스켓 ${record.basket}`);
+		if (record.roastDays != null) parts.push(`${t('modal.roasting')} ${t('bean.roastDays', { n: record.roastDays })}`);
+		parts.push(`${t('summary.grindSize')} ${record.grindSize}`, `${t('summary.dose')} ${record.dose}g`);
+		if (record.method === 'filter') parts.push(`${t('summary.waterTemp')} ${record.waterTemp}°C`);
+		if (record.method === 'espresso') parts.push(`${t('summary.basket')} ${record.basket}`);
 		card.createDiv({ cls: 'brew-flow-last-record-meta', text: parts.join(' · ') });
 		if (record.note) {
 			card.createDiv({ cls: 'brew-flow-last-record-note', text: record.note });
@@ -313,7 +317,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 				? last.filter
 				: ctx.equipment.filters[0]);
 		sel.filter = initFilter;
-		filterSelect = createSelectField(form, '필터', ctx.equipment.filters, initFilter, (v) => {
+		filterSelect = createSelectField(form, t('equipment.filter'), ctx.equipment.filters, initFilter, (v) => {
 			sel.filter = v;
 			queryAndApplyDials();
 		});
@@ -325,7 +329,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 				: ctx.equipment.drippers[0]);
 		sel.dripper = initDripper;
 		if (ctx.equipment.drippers.length > 0) {
-			dripperSelect = createSelectField(form, '드리퍼', ctx.equipment.drippers, initDripper, (v) => {
+			dripperSelect = createSelectField(form, t('equipment.dripper'), ctx.equipment.drippers, initDripper, (v) => {
 				sel.dripper = v;
 				queryAndApplyDials();
 			});
@@ -335,7 +339,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	if (isEspresso) {
 		basketSelect = createSelectField(
 			form,
-			'바스켓',
+			t('equipment.basket'),
 			ctx.equipment.baskets,
 			sel.basket ?? ctx.equipment.baskets[0],
 			(v) => {
@@ -363,13 +367,13 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 
 		if (ctx.equipment.grinders.length > 1) {
 			const grinderNames = ctx.equipment.grinders.map((g) => g.name);
-			createSelectField(form, '그라인더', grinderNames, selectedGrinder.name, (v) => {
+			createSelectField(form, t('equipment.grinder'), grinderNames, selectedGrinder.name, (v) => {
 				const g = ctx.equipment.grinders.find((gr) => gr.name === v)!;
 				sel.grinder = g.name;
 				grindStepperConfig = grinderToStepperConfig(g);
 				grindStepper.destroy();
 				grindStepper = createStepper(form, {
-					label: '분쇄도',
+					label: t('form.grindSize'),
 					initial: 0,
 					...grindStepperConfig,
 					pxPerStep: 12,
@@ -386,14 +390,14 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 		syncSummary();
 	};
 	let grindStepper = createStepper(form, {
-		label: '분쇄도',
+		label: t('form.grindSize'),
 		initial: sel.grindSize ?? 0,
 		...grindStepperConfig,
 		pxPerStep: 12,
 		onChange: grindOnChange,
 	});
 	const doseStepper = createStepper(form, {
-		label: '도징량',
+		label: t('form.dose'),
 		initial: sel.dose ?? 0,
 		min: 0,
 		max: 100,
@@ -424,7 +428,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 
 	if (isFilter) {
 		waterTempStepper = createStepper(form, {
-			label: '물 온도',
+			label: t('form.waterTemp'),
 			initial: sel.waterTemp ?? 93,
 			min: 0,
 			max: 100,
@@ -447,9 +451,9 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	const recipes = ctx.plugin.vaultData.getAllRecipes();
 	if (recipes.length > 0) {
 		const recipeGroup = container.createDiv({ cls: 'brew-flow-recipe-select' });
-		recipeGroup.createEl('label', { text: '레시피' });
+		recipeGroup.createEl('label', { text: t('brew.recipe') });
 		const recipeSelect = recipeGroup.createEl('select');
-		recipeSelect.createEl('option', { text: '선택 안 함', value: '' });
+		recipeSelect.createEl('option', { text: t('brew.noRecipe'), value: '' });
 		for (const r of recipes) {
 			recipeSelect.createEl('option', { text: r.name, value: r.path });
 		}
@@ -459,7 +463,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 		});
 	}
 
-	const completeBtn = container.createEl('button', { text: '세팅 완료', cls: 'brew-flow-start-btn' });
+	const completeBtn = container.createEl('button', { text: t('brew.settingsDone'), cls: 'brew-flow-start-btn' });
 	completeBtn.addEventListener('click', () => {
 		const vars: Partial<BrewFlowSelection> = {
 			grindSize: grindStepper.getValue(),
@@ -487,9 +491,12 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 	const scaleConnected = ctx.plugin.acaiaService?.state === 'connected';
 
 	if (isEspresso) {
-		container.createDiv({ cls: 'brew-flow-espresso-msg', text: '추출이 끝나면 완료를 눌러주세요.' });
+		container.createDiv({ cls: 'brew-flow-espresso-msg', text: t('brew.espressoMsg') });
 		const controls = container.createDiv({ cls: 'brewing-controls' });
-		const doneBtn = controls.createEl('button', { text: '추출 완료', cls: 'brewing-ctrl-btn brew-flow-stop-btn' });
+		const doneBtn = controls.createEl('button', {
+			text: t('brew.extractionDone'),
+			cls: 'brewing-ctrl-btn brew-flow-stop-btn',
+		});
 		doneBtn.addEventListener('click', () => {
 			ctx.flowState.finishBrewing(undefined, undefined);
 			ctx.flowState.brewingStarted = false;
@@ -522,7 +529,7 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 	} else if (!ctx.flowState.brewingStarted && hasProfile) {
 		const chartWrapper = container.createDiv({ cls: 'brew-profile-wrapper' });
 		const expandBtn = chartWrapper.createEl('button', { text: '⛶', cls: 'brew-profile-expand-btn' });
-		expandBtn.setAttribute('aria-label', '확대');
+		expandBtn.setAttribute('aria-label', t('brew.expand'));
 		expandBtn.addEventListener('click', () => {
 			const pts = ctx.recorder.getPoints();
 			const bean = ctx.flowState.selection.bean?.name ?? '';
@@ -535,7 +542,7 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 
 	if (ctx.flowState.brewingStarted) {
 		const controls = container.createDiv({ cls: 'brewing-controls' });
-		const stopBtn = controls.createEl('button', { text: '완료', cls: 'brewing-ctrl-btn brew-flow-stop-btn' });
+		const stopBtn = controls.createEl('button', { text: t('brew.done'), cls: 'brewing-ctrl-btn brew-flow-stop-btn' });
 		stopBtn.addEventListener('click', async () => {
 			try {
 				if (chart) chart.stopLive();
@@ -557,7 +564,10 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 		});
 	} else if (!hasProfile) {
 		const controls = container.createDiv({ cls: 'brewing-controls' });
-		const startBtn = controls.createEl('button', { text: '브루잉 시작', cls: 'brewing-ctrl-btn brew-flow-start-btn' });
+		const startBtn = controls.createEl('button', {
+			text: t('brew.startBrewing'),
+			cls: 'brewing-ctrl-btn brew-flow-start-btn',
+		});
 		startBtn.addEventListener('click', async () => {
 			try {
 				ctx.flowState.brewingStarted = true;
@@ -580,19 +590,19 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 	if (!sel.time && sel.method === 'espresso') {
 		const manualForm = container.createDiv({ cls: 'brew-flow-form' });
 		createStepper(manualForm, {
-			label: '시간',
+			label: t('modal.time'),
 			initial: 0,
 			min: 0,
 			max: 120,
 			step: 1,
-			format: (v) => `${v}초`,
+			format: (v) => t('modal.seconds', { n: v }),
 			pxPerStep: 6,
 			onChange: (v) => {
 				ctx.flowState.updateVariables({ time: v || undefined });
 			},
 		});
 		createStepper(manualForm, {
-			label: '추출량',
+			label: t('modal.extractionYield'),
 			initial: 0,
 			min: 0,
 			max: 200,
@@ -609,7 +619,7 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 	const needsMilk = sel.method === 'espresso' && sel.drink === 'latte';
 	if (needsWater || needsMilk) {
 		const weightForm = container.createDiv({ cls: 'brew-flow-form' });
-		const label = needsMilk ? '우유' : '가수';
+		const label = needsMilk ? t('form.milk') : t('form.addition');
 		const weightStepper = createStepper(weightForm, {
 			label,
 			initial: 0,
@@ -626,7 +636,7 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 		attachScaleAutoBtn(weightStepper, ctx.getWeightText);
 	}
 
-	container.createEl('h4', { text: '메모', cls: 'brew-flow-section-label' });
+	container.createEl('h4', { text: t('form.memo'), cls: 'brew-flow-section-label' });
 	const noteEl = container.createEl('textarea', { cls: 'brew-flow-note', attr: { spellcheck: 'false' } });
 	noteEl.placeholder = '';
 
@@ -648,11 +658,11 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 	activeSavingRo.observe(noteEl);
 
 	const btnRow = container.createDiv({ cls: 'brewing-controls' });
-	const doneBtn = btnRow.createEl('button', { text: '저장', cls: 'brewing-ctrl-btn brew-flow-save-btn' });
+	const doneBtn = btnRow.createEl('button', { text: t('form.save'), cls: 'brewing-ctrl-btn brew-flow-save-btn' });
 
 	doneBtn.addEventListener('click', async () => {
 		doneBtn.disabled = true;
-		doneBtn.textContent = '저장 중...';
+		doneBtn.textContent = t('brew.saving');
 		try {
 			const note = noteEl.value.trim() || undefined;
 			const points = ctx.recorder.getPoints();
@@ -670,13 +680,13 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 				await ctx.plugin.vaultData.setWeight(bean.path, newWeight);
 				bean.weight = newWeight;
 			}
-			new Notice('저장 완료');
+			new Notice(t('brew.saved'));
 			ctx.resetFlow();
 		} catch (err) {
 			ctx.plugin.pluginLogger?.log('FLOW', `record save failed: ${err}`);
-			new Notice('저장 실패');
+			new Notice(t('brew.saveFailed'));
 			doneBtn.disabled = false;
-			doneBtn.textContent = '저장';
+			doneBtn.textContent = t('form.save');
 		}
 	});
 }

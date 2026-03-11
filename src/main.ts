@@ -10,9 +10,10 @@ import { BeanCodeBlock } from './views/BeanCodeBlock';
 import { BrewCodeBlock } from './views/BrewCodeBlock';
 import type { EquipmentSettings, GlobalHotkeys, LogConfig } from './brew/types';
 import { BrewingSettingTab } from './views/SettingTab';
+import { initI18n, t } from './i18n/index';
 
 const DATA_DIR = 'cubicj-brewing';
-const DATA_VERSION = 1;
+const DATA_VERSION = 2;
 
 const DEFAULT_HOTKEYS: GlobalHotkeys = {};
 
@@ -31,11 +32,14 @@ export default class CubicJBrewingPlugin extends Plugin {
 	private hotkeyManager: import('./utils/GlobalHotkeyManager').GlobalHotkeyManager | null = null;
 	private globalHotkeys: GlobalHotkeys = DEFAULT_HOTKEYS;
 	private firstInstall = false;
+	private savedDataVersion = 0;
 	private beanFolder = '';
+	private locale = 'en';
 	private beanBlock!: BeanCodeBlock;
 
 	async onload() {
 		await this.loadPluginData();
+		initI18n(this.locale);
 		this.vaultData = new VaultDataService(this.app, this.beanFolder);
 		if (this.logConfig.enabled) {
 			const vaultIO = {
@@ -121,7 +125,15 @@ export default class CubicJBrewingPlugin extends Plugin {
 			}),
 		);
 
-		this.app.workspace.onLayoutReady(() => {
+		this.app.workspace.onLayoutReady(async () => {
+			if (this.savedDataVersion < 2) {
+				const failures = await this.vaultData.migrateFrontmatterKeys();
+				if (failures.length === 0) {
+					const data = (await this.loadData()) ?? {};
+					data.dataVersion = DATA_VERSION;
+					await this.saveData(data);
+				}
+			}
 			this.vaultData.refreshRoastDays();
 			if (this.firstInstall) this.activateView();
 		});
@@ -174,13 +186,13 @@ export default class CubicJBrewingPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'open-view',
-			name: '브루잉 뷰 열기',
+			name: t('command.openView'),
 			callback: () => this.activateView(),
 		});
 
 		this.addCommand({
 			id: 'tare',
-			name: '영점 맞추기',
+			name: t('command.tare'),
 			checkCallback: (checking) => {
 				const view = getView();
 				if (!view) return false;
@@ -200,7 +212,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'auto-fill',
-			name: '무게 자동 입력',
+			name: t('command.autoFill'),
 			checkCallback: (checking) => {
 				const view = getView();
 				const hasPopover = !!document.querySelector('.bean-weight-popover');
@@ -212,7 +224,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'toggle-brewing',
-			name: '브루잉 시작 / 중지',
+			name: t('command.toggleBrewing'),
 			checkCallback: (checking) => {
 				const view = getView();
 				if (!view) return false;
@@ -223,7 +235,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'toggle-connect',
-			name: '저울 연결 / 해제',
+			name: t('command.toggleConnect'),
 			checkCallback: (checking) => {
 				const view = getView();
 				if (!view) return false;
@@ -234,7 +246,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'power-off-scale',
-			name: '저울 전원 끄기',
+			name: t('command.powerOff'),
 			checkCallback: (checking) => {
 				const view = getView();
 				if (!view || this.acaiaService?.state !== 'connected') return false;
@@ -290,11 +302,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 		const raw = await this.loadData();
 		this.firstInstall = raw === null || raw === undefined;
 		const data = raw ?? {};
-		const savedVersion = typeof data.dataVersion === 'number' ? data.dataVersion : 0;
-		if (savedVersion < DATA_VERSION) {
-			data.dataVersion = DATA_VERSION;
-			await this.saveData(data);
-		}
+		this.savedDataVersion = typeof data.dataVersion === 'number' ? data.dataVersion : 0;
 		const eq = data.equipment;
 		if (eq && typeof eq === 'object' && !Array.isArray(eq)) {
 			const keys: (keyof EquipmentSettings)[] = ['grinders', 'drippers', 'filters', 'baskets', 'accessories'];
@@ -323,6 +331,9 @@ export default class CubicJBrewingPlugin extends Plugin {
 		if (typeof data.beanFolder === 'string') {
 			this.beanFolder = data.beanFolder;
 		}
+		if (typeof data.locale === 'string') {
+			this.locale = data.locale;
+		}
 	}
 
 	async saveEquipment(): Promise<void> {
@@ -341,6 +352,17 @@ export default class CubicJBrewingPlugin extends Plugin {
 		this.beanBlock.updateVaultData(this.vaultData);
 		const data = (await this.loadData()) ?? {};
 		data.beanFolder = folder;
+		await this.saveData(data);
+	}
+
+	getLocale(): string {
+		return this.locale;
+	}
+
+	async saveLocale(locale: string): Promise<void> {
+		this.locale = locale;
+		const data = (await this.loadData()) ?? {};
+		data.locale = locale;
 		await this.saveData(data);
 	}
 

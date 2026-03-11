@@ -2,6 +2,8 @@ import { type App, type TFile, type MarkdownPostProcessorContext, setIcon } from
 import type { BrewRecordService } from '../services/BrewRecordService';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import type { BrewRecord, EquipmentSettings } from '../brew/types';
+import { getDrinkLabel, getMethodLabel } from '../brew/constants';
+import { t } from '../i18n/index';
 import { BrewProfileModal } from './BrewProfileModal';
 import { formatBrewDate } from '../utils/format';
 
@@ -46,7 +48,7 @@ export class BrewCodeBlock {
 		}
 		if (!beanName) {
 			el.empty();
-			el.createDiv({ text: 'type: bean 노트에서만 사용 가능', cls: 'brew-records-empty' });
+			el.createDiv({ text: t('record.beanOnly'), cls: 'brew-records-empty' });
 			return;
 		}
 
@@ -66,17 +68,17 @@ export class BrewCodeBlock {
 		el.empty();
 		el.addClass('brew-records');
 
-		el.createEl('h3', { text: '브루잉 기록', cls: 'brew-records-header' });
+		el.createEl('h3', { text: t('record.header'), cls: 'brew-records-header' });
 
 		if (records.length === 0) {
-			el.createDiv({ text: '아직 브루잉 기록이 없어요', cls: 'brew-records-empty' });
+			el.createDiv({ text: t('record.empty'), cls: 'brew-records-empty' });
 			return;
 		}
 
 		const table = el.createEl('table', { cls: 'brew-record-table' });
 		const thead = table.createEl('thead');
 		const headerRow = thead.createEl('tr');
-		for (const col of ['날짜', '방식', '메모', '상세']) {
+		for (const col of [t('record.date'), t('record.method'), t('record.memo'), t('record.detail')]) {
 			headerRow.createEl('th', { text: col });
 		}
 
@@ -87,8 +89,7 @@ export class BrewCodeBlock {
 			const { date, time } = formatBrewDate(record.timestamp);
 			dateTd.createDiv({ text: date });
 			dateTd.createDiv({ text: time });
-			const drinkLabels: Record<string, string> = { shot: '에스프레소', americano: '아메리카노', latte: '카페라떼' };
-			const method = record.method === 'espresso' ? (drinkLabels[record.drink ?? 'shot'] ?? '에스프레소') : '필터';
+			const method = record.method === 'espresso' ? getDrinkLabel(record.drink ?? 'shot') : getMethodLabel('filter');
 			const temp = record.temp === 'iced' ? 'Ice' : 'Hot';
 			tr.createEl('td', { text: `${method}(${temp})` });
 			tr.createEl('td', { text: record.note ?? '', cls: 'brew-record-note' });

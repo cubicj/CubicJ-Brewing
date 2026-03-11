@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Desktop-brightgreen)
-![Version](https://img.shields.io/badge/version-0.1.0-orange)
+![Version](https://img.shields.io/badge/version-0.2.0-orange)
 
 An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE scale integration, guided brew flow, and structured record keeping, all inside your vault.
 
@@ -24,6 +24,7 @@ An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE s
 - **Brew history** — per-bean records with profile charts and equipment used
 - **Equipment registry** — grinders, drippers, filters, baskets, accessories
 - **Vault-native storage** — all data as plain files, Obsidian Sync compatible
+- **Multi-language** — English and Korean, community-extensible
 - **Global hotkeys** — hands-free connect, tare, start/stop brew
 
 ## Requirements
@@ -55,7 +56,7 @@ Place a `beans` code block in any note to create a bean inventory hub:
 ````
 
 <p>
-  <img src="assets/beans-data.png" alt="Bean inventory with roast days and remaining weight" width="720">
+  <img src="assets/beans-table.png" alt="Bean inventory with roast days and remaining weight" width="720">
   <br>
   <em>Bean inventory — roast days, remaining weight, and status tracking per bean</em>
 </p>
@@ -75,10 +76,10 @@ Each bean is a regular note with `type: bean` frontmatter:
 ```yaml
 ---
 type: bean
-로스터: My Roaster
-상태: active
-로스팅 날짜: 2026-03-01
-무게: 200
+roaster: My Roaster
+status: active
+roast_date: 2026-03-01
+weight: 200
 ---
 ```
 
@@ -94,9 +95,15 @@ Each bean note includes a `brews` code block (auto-inserted on creation) that sh
 ````
 
 <p>
-  <img src="assets/brews-data.png" alt="Brew record detail with profile chart" width="720">
+  <img src="assets/brews-table.png" alt="Brew records table with date, method, and memo" width="720">
   <br>
-  <em>Brew record with weight-over-time profile chart and extraction parameters</em>
+  <em>Per-bean brew history table</em>
+</p>
+
+<p>
+  <img src="assets/brews-detail.png" alt="Brew detail modal with profile chart" width="720">
+  <br>
+  <em>Brew detail — extraction parameters and weight-over-time profile chart</em>
 </p>
 
 ---
@@ -104,7 +111,7 @@ Each bean note includes a `brews` code block (auto-inserted on creation) that sh
 ## Architecture
 
 ```
-8,200+ lines TypeScript · 119 tests (vitest) · esbuild CommonJS bundle
+8,800+ lines TypeScript · 130 tests (vitest) · esbuild CommonJS bundle
 ```
 
 | Layer | Key Components |
