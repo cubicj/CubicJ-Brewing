@@ -1,6 +1,20 @@
 import type { App, CachedMetadata, TFile } from 'obsidian';
 import type { BeanInfo, RecipeInfo, RecipeStep } from '../brew/types';
 import { MS_PER_DAY } from '../brew/constants';
+import { t } from '../i18n/index';
+
+const LEGACY_KEY_MAP: Record<string, string> = {
+	로스터: 'roaster',
+	상태: 'status',
+	'로스팅 날짜': 'roast_date',
+	'로스팅 경과': 'roast_days',
+	무게: 'weight',
+	방식: 'method',
+	도징량: 'dose',
+	총물량: 'total_water',
+	온도: 'temperature',
+	단계: 'steps',
+};
 
 export class VaultDataService {
 	constructor(
@@ -23,12 +37,12 @@ export class VaultDataService {
 		const file = this.getTFile(path);
 		if (!file) return;
 		await this.app.fileManager.processFrontMatter(file, (fm) => {
-			fm['로스팅 날짜'] = date;
+			fm['roast_date'] = date;
 			if (date) {
 				const diff = Date.now() - new Date(date).getTime();
-				fm['로스팅 경과'] = `${Math.floor(diff / MS_PER_DAY)}일차`;
+				fm['roast_days'] = Math.floor(diff / MS_PER_DAY);
 			} else {
-				fm['로스팅 경과'] = null;
+				fm['roast_days'] = null;
 			}
 		});
 	}
@@ -37,7 +51,7 @@ export class VaultDataService {
 		const file = this.getTFile(path);
 		if (!file) return;
 		await this.app.fileManager.processFrontMatter(file, (fm) => {
-			fm['무게'] = weight;
+			fm['weight'] = weight;
 		});
 	}
 
@@ -45,7 +59,7 @@ export class VaultDataService {
 		const file = this.getTFile(path);
 		if (!file) return;
 		await this.app.fileManager.processFrontMatter(file, (fm) => {
-			fm['상태'] = status;
+			fm['status'] = status;
 		});
 	}
 
@@ -60,16 +74,16 @@ export class VaultDataService {
 		const cache = this.app.metadataCache.getFileCache(file);
 		const fm = cache?.frontmatter;
 		if (fm?.type !== 'bean') return null;
-		const rawDate = fm['로스팅 날짜'];
+		const rawDate = fm['roast_date'];
 		const raw = Array.isArray(rawDate) ? rawDate[rawDate.length - 1] : rawDate;
 		const roastDate = raw ? String(raw) : null;
 		return {
 			path: file.path,
 			name: file.basename,
-			roaster: fm['로스터'] ?? '',
-			status: fm['상태'] ?? 'active',
+			roaster: fm['roaster'] ?? '',
+			status: fm['status'] ?? 'active',
 			roastDate,
-			weight: typeof fm['무게'] === 'number' ? fm['무게'] : null,
+			weight: typeof fm['weight'] === 'number' ? fm['weight'] : null,
 		};
 	}
 
@@ -77,7 +91,7 @@ export class VaultDataService {
 		const cache = this.app.metadataCache.getFileCache(file);
 		const fm = cache?.frontmatter;
 		if (fm?.type !== 'recipe') return null;
-		const steps: RecipeStep[] = (fm['단계'] ?? []).map((s: Record<string, unknown>) => ({
+		const steps: RecipeStep[] = (fm['steps'] ?? []).map((s: Record<string, unknown>) => ({
 			time: String(s.time ?? ''),
 			target: s.target != null ? Number(s.target) : undefined,
 			note: s.note as string | undefined,
@@ -85,10 +99,10 @@ export class VaultDataService {
 		return {
 			path: file.path,
 			name: file.basename,
-			method: fm['방식'] ?? '',
-			dose: fm['도징량'] ?? '',
-			totalWater: fm['총물량'] ?? '',
-			temperature: Number(fm['온도'] ?? 0),
+			method: fm['method'] ?? '',
+			dose: fm['dose'] ?? '',
+			totalWater: fm['total_water'] ?? '',
+			temperature: Number(fm['temperature'] ?? 0),
 			steps,
 		};
 	}
@@ -96,19 +110,30 @@ export class VaultDataService {
 	async createBeanNote(extraContent?: string): Promise<string> {
 		const folder = this.beanFolder;
 		const toPath = (n: string) => (folder ? `${folder}/${n}.md` : `${n}.md`);
-		let name = '새 원두';
+		const defaultName = t('bean.defaultName');
+		let name = defaultName;
 		let path = toPath(name);
 		let counter = 1;
 		while (this.app.vault.getAbstractFileByPath(path)) {
 			counter++;
-			name = `새 원두 ${counter}`;
+			name = `${defaultName} ${counter}`;
 			path = toPath(name);
 		}
 		if (folder) {
 			const folderExists = this.app.vault.getAbstractFileByPath(folder);
 			if (!folderExists) await this.app.vault.createFolder(folder);
 		}
-		const parts = ['---', 'type: bean', '로스터:', '상태: active', '로스팅 날짜:', '로스팅 경과:', '무게:', '---', ''];
+		const parts = [
+			'---',
+			'type: bean',
+			'roaster:',
+			'status: active',
+			'roast_date:',
+			'roast_days:',
+			'weight:',
+			'---',
+			'',
+		];
 		if (extraContent) parts.push(extraContent, '');
 		await this.app.vault.create(path, parts.join('\n'));
 		return path;
@@ -129,7 +154,7 @@ export class VaultDataService {
 				if (!file) return;
 				try {
 					await this.app.fileManager.processFrontMatter(file, (fm) => {
-						fm['로스팅 경과'] = days !== null ? `${days}일차` : null;
+						fm['roast_days'] = days;
 					});
 				} catch (e) {
 					console.error(`[VaultDataService] refreshRoastDays failed for ${bean.path}:`, e);
@@ -141,14 +166,43 @@ export class VaultDataService {
 	onMetadataChanged(file: TFile, _data: string, cache: CachedMetadata): void {
 		const fm = cache.frontmatter;
 		if (fm?.type !== 'bean') return;
-		const rawDate = fm['로스팅 날짜'];
+		const rawDate = fm['roast_date'];
 		const raw = Array.isArray(rawDate) ? rawDate[rawDate.length - 1] : rawDate;
 		const roastDate = raw ? String(raw) : null;
-		const expected = roastDate ? `${Math.floor((Date.now() - new Date(roastDate).getTime()) / MS_PER_DAY)}일차` : null;
-		if (fm['로스팅 경과'] === expected) return;
+		const expected = roastDate ? Math.floor((Date.now() - new Date(roastDate).getTime()) / MS_PER_DAY) : null;
+		if (fm['roast_days'] === expected) return;
 		this.app.fileManager.processFrontMatter(file, (fmEdit) => {
-			fmEdit['로스팅 경과'] = expected;
+			fmEdit['roast_days'] = expected;
 		});
+	}
+
+	async migrateFrontmatterKeys(): Promise<string[]> {
+		const files = this.app.vault.getMarkdownFiles();
+		const failures: string[] = [];
+		for (const file of files) {
+			const cache = this.app.metadataCache.getFileCache(file);
+			const fm = cache?.frontmatter;
+			if (!fm || (fm.type !== 'bean' && fm.type !== 'recipe')) continue;
+			const hasLegacy = Object.keys(fm).some((k) => k in LEGACY_KEY_MAP);
+			if (!hasLegacy) continue;
+			try {
+				await this.app.fileManager.processFrontMatter(file, (fmEdit) => {
+					for (const [oldKey, newKey] of Object.entries(LEGACY_KEY_MAP)) {
+						if (!(oldKey in fmEdit)) continue;
+						let value = fmEdit[oldKey];
+						if (oldKey === '로스팅 경과' && typeof value === 'string') {
+							const match = value.match(/^(\d+)일차$/);
+							value = match ? Number(match[1]) : null;
+						}
+						fmEdit[newKey] = value;
+						delete fmEdit[oldKey];
+					}
+				});
+			} catch {
+				failures.push(file.path);
+			}
+		}
+		return failures;
 	}
 
 	private getTFile(path: string): TFile | null {
