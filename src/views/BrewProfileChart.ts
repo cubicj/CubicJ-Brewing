@@ -1,6 +1,7 @@
 import type { BrewProfilePoint } from '../brew/types';
 import type { BrewProfileRecorder } from './BrewProfileRecorder';
 import { processDetail, processTrend } from '../utils/signal';
+import { t as i18t } from '../i18n/index';
 
 const CHART_HEIGHT = 220;
 const PADDING = { top: 12, right: 12, bottom: 28, left: 40 };
@@ -437,9 +438,9 @@ export class BrewProfileChart {
 		pt: number,
 	): void {
 		const tSec = Math.round(t);
-		const tLabel = tSec >= 60 ? `${Math.floor(tSec / 60)}분 ${tSec % 60}초` : `${tSec}초`;
-		const line1 = `무게: ${w.toFixed(1)}g`;
-		const line2 = `시간: ${tLabel}`;
+		const tLabel = tSec >= 60 ? `${Math.floor(tSec / 60)}m ${tSec % 60}s` : `${tSec}s`;
+		const line1 = `${i18t('chart.weight')}: ${w.toFixed(1)}g`;
+		const line2 = `${i18t('chart.time')}: ${tLabel}`;
 		ctx.font = `${11 * dpr}px -apple-system, BlinkMacSystemFont, sans-serif`;
 		const tw = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width) + 8 * dpr;
 		const lineH = 16 * dpr;

@@ -2,6 +2,7 @@ import { type App, type MarkdownPostProcessorContext } from 'obsidian';
 import type { VaultDataService } from '../services/VaultDataService';
 import type { BeanInfo } from '../brew/types';
 import { BEAN_NOTE_EXTRA } from '../brew/constants';
+import { t } from '../i18n/index';
 import { renderActiveBeanRow, renderFinishedBeanRow } from './BeanRowRenderer';
 
 export class BeanCodeBlock {
@@ -47,7 +48,7 @@ export class BeanCodeBlock {
 		el.addClass('cb-bean-hub');
 
 		const header = el.createDiv({ cls: 'cb-bean-header' });
-		const newBtn = header.createEl('button', { text: '+ 새 원두', cls: 'cb-bean-btn cb-bean-new-btn' });
+		const newBtn = header.createEl('button', { text: t('bean.new'), cls: 'cb-bean-btn cb-bean-new-btn' });
 		newBtn.addEventListener('click', () => this.createNewBean());
 
 		const beans = this.vaultData.getAllBeans();
@@ -63,17 +64,17 @@ export class BeanCodeBlock {
 		};
 
 		if (active.length > 0) {
-			el.createDiv({ cls: 'cb-bean-section-title', text: '현재 보유 원두' });
+			el.createDiv({ cls: 'cb-bean-section-title', text: t('bean.activeBeans') });
 			for (const bean of active) renderActiveBeanRow(el, bean, deps);
 		}
 
 		if (finished.length > 0) {
-			el.createDiv({ cls: 'cb-bean-section-title cb-bean-section-past', text: '과거 원두' });
+			el.createDiv({ cls: 'cb-bean-section-title cb-bean-section-past', text: t('bean.pastBeans') });
 			for (const bean of finished) renderFinishedBeanRow(el, bean, deps);
 		}
 
 		if (beans.length === 0) {
-			el.createDiv({ cls: 'cb-bean-empty', text: 'type: bean frontmatter가 있는 노트가 없어요' });
+			el.createDiv({ cls: 'cb-bean-empty', text: t('bean.emptyState') });
 		}
 	}
 
@@ -115,7 +116,7 @@ function openWeightPopover(
 		const autoBtn = inputRow.createEl('button', {
 			text: 'auto',
 			cls: 'bwp-auto',
-			attr: { 'aria-label': '저울 무게 가져오기' },
+			attr: { 'aria-label': t('bean.getScaleWeight') },
 		});
 		autoBtn.addEventListener('click', () => {
 			const w = getScaleWeight?.();
@@ -125,9 +126,9 @@ function openWeightPopover(
 
 	const actions = popover.createDiv({ cls: 'bwp-actions' });
 	const actionDefs: { label: string; calc: (val: number, cur: number) => number; cls?: string }[] = [
-		{ label: '설정', calc: (val) => val },
-		{ label: '추가', calc: (val, cur) => Math.round((cur + val) * 10) / 10 },
-		{ label: '사용', calc: (val, cur) => Math.max(0, Math.round((cur - val) * 10) / 10), cls: 'is-muted' },
+		{ label: t('bean.settings'), calc: (val) => val },
+		{ label: t('bean.add'), calc: (val, cur) => Math.round((cur + val) * 10) / 10 },
+		{ label: t('bean.use'), calc: (val, cur) => Math.max(0, Math.round((cur - val) * 10) / 10), cls: 'is-muted' },
 	];
 	for (const def of actionDefs) {
 		const btn = actions.createEl('button', {

@@ -3,7 +3,8 @@ import { BrewProfileChart } from './BrewProfileChart';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import type { BrewRecordService } from '../services/BrewRecordService';
 import type { BrewProfilePoint, BrewRecord, EquipmentSettings } from '../brew/types';
-import { METHOD_LABELS } from '../brew/constants';
+import { getDrinkLabel, getMethodLabel } from '../brew/constants';
+import { t } from '../i18n/index';
 import { renderEditForm } from './BrewRecordForm';
 import { formatBrewDate } from '../utils/format';
 
@@ -54,15 +55,15 @@ export class BrewProfileModal extends Modal {
 		this.contentEl.empty();
 		this.modalEl.addClass('brew-profile-modal');
 		this.modalEl.removeClass('brew-profile-editing');
-		this.titleEl.setText('추출 상세');
+		this.titleEl.setText(t('modal.brewDetail'));
 		if (this.record) {
 			const sub = this.contentEl.createDiv({ cls: 'brew-profile-subtitle' });
 			const { date, time } = formatBrewDate(this.record.timestamp);
 			const dateStr = `20${date} | ${time}`;
-			sub.createEl('span', { cls: 'brew-profile-subtitle-label', text: '날짜/시간: ' });
+			sub.createEl('span', { cls: 'brew-profile-subtitle-label', text: t('modal.dateTime') });
 			sub.createEl('span', { text: dateStr });
 			sub.createEl('span', { cls: 'brew-profile-subtitle-sep', text: ' · ' });
-			sub.createEl('span', { cls: 'brew-profile-subtitle-label', text: '원두: ' });
+			sub.createEl('span', { cls: 'brew-profile-subtitle-label', text: t('modal.bean') });
 			sub.createEl('span', { text: this.record.bean });
 		} else {
 			this.contentEl.createDiv({ text: this.subtitle, cls: 'brew-profile-subtitle' });
@@ -92,24 +93,24 @@ export class BrewProfileModal extends Modal {
 			} as AddEventListenerOptions);
 		} else if (this.record) {
 			const espressoStats: string[] = [];
-			if (this.record.time) espressoStats.push(`${this.record.time}초`);
-			if (this.record.yield) espressoStats.push(`${this.record.yield}g`);
+			if (this.record.time) espressoStats.push(t('modal.seconds', { n: this.record.time }));
+			if (this.record.yield) espressoStats.push(t('modal.grams', { n: this.record.yield }));
 			if (espressoStats.length > 0) {
 				const statsEl = this.contentEl.createDiv({ cls: 'brew-espresso-stats' });
 				if (this.record.time) {
 					const cell = statsEl.createDiv({ cls: 'brew-espresso-stat' });
-					cell.createDiv({ cls: 'brew-espresso-stat-label', text: '추출 시간' });
-					cell.createDiv({ cls: 'brew-espresso-stat-value', text: `${this.record.time}초` });
+					cell.createDiv({ cls: 'brew-espresso-stat-label', text: t('modal.extractionTime') });
+					cell.createDiv({ cls: 'brew-espresso-stat-value', text: t('modal.seconds', { n: this.record.time }) });
 				}
 				if (this.record.yield) {
 					const cell = statsEl.createDiv({ cls: 'brew-espresso-stat' });
-					cell.createDiv({ cls: 'brew-espresso-stat-label', text: '추출량' });
-					cell.createDiv({ cls: 'brew-espresso-stat-value', text: `${this.record.yield}g` });
+					cell.createDiv({ cls: 'brew-espresso-stat-label', text: t('modal.extractionYield') });
+					cell.createDiv({ cls: 'brew-espresso-stat-value', text: t('modal.grams', { n: this.record.yield }) });
 				}
 				if (this.record.dose && this.record.yield) {
 					const ratio = (this.record.yield / this.record.dose).toFixed(1);
 					const cell = statsEl.createDiv({ cls: 'brew-espresso-stat' });
-					cell.createDiv({ cls: 'brew-espresso-stat-label', text: '수율' });
+					cell.createDiv({ cls: 'brew-espresso-stat-label', text: t('modal.yield') });
 					cell.createDiv({ cls: 'brew-espresso-stat-value', text: `1 : ${ratio}` });
 				}
 			}
@@ -117,15 +118,15 @@ export class BrewProfileModal extends Modal {
 
 		const footer = this.contentEl.createDiv({ cls: 'brew-profile-footer' });
 		if (this.mode.type === 'detail') {
-			const deleteBtn = footer.createEl('button', { text: '삭제', cls: 'mod-warning' });
+			const deleteBtn = footer.createEl('button', { text: t('form.delete'), cls: 'mod-warning' });
 			deleteBtn.addEventListener('click', () => this.confirmDelete());
 			const rightGroup = footer.createDiv({ cls: 'brew-profile-footer-right' });
-			const editBtn = rightGroup.createEl('button', { text: '수정' });
+			const editBtn = rightGroup.createEl('button', { text: t('common.edit') });
 			editBtn.addEventListener('click', () => this.enterEditMode());
-			const okBtn = rightGroup.createEl('button', { text: '확인', cls: 'mod-cta' });
+			const okBtn = rightGroup.createEl('button', { text: t('common.confirm'), cls: 'mod-cta' });
 			okBtn.addEventListener('click', () => this.close());
 		} else {
-			const okBtn = footer.createEl('button', { text: '확인', cls: 'mod-cta' });
+			const okBtn = footer.createEl('button', { text: t('common.confirm'), cls: 'mod-cta' });
 			okBtn.addEventListener('click', () => this.close());
 		}
 	}
@@ -134,18 +135,14 @@ export class BrewProfileModal extends Modal {
 		if (!this.record || this.mode.type !== 'detail') return;
 		const record = this.record;
 		const { recordService, profileStorage } = this.mode;
-		const modal = new ConfirmModal(
-			this.app,
-			'선택한 브루잉 기록을 삭제합니다. 삭제된 기록은 복구할 수 없습니다.',
-			async () => {
-				try {
-					await recordService.removeWithProfile(record.id, record.profilePath, profileStorage);
-					this.close();
-				} catch (err) {
-					console.error('[BrewProfileModal] delete failed:', err);
-				}
-			},
-		);
+		const modal = new ConfirmModal(this.app, t('form.deleteConfirm'), async () => {
+			try {
+				await recordService.removeWithProfile(record.id, record.profilePath, profileStorage);
+				this.close();
+			} catch (err) {
+				console.error('[BrewProfileModal] delete failed:', err);
+			}
+		});
 		modal.open();
 	}
 
@@ -154,7 +151,7 @@ export class BrewProfileModal extends Modal {
 		this.removeWheelHandler();
 		this.contentEl.empty();
 		this.modalEl.addClass('brew-profile-editing');
-		this.titleEl.setText('추출 수정');
+		this.titleEl.setText(t('modal.editBrew'));
 		this.contentEl.createDiv({ text: this.subtitle, cls: 'brew-profile-subtitle' });
 		renderEditForm(this.contentEl, this.record, {
 			app: this.app,
@@ -189,34 +186,33 @@ export class BrewProfileModal extends Modal {
 
 		const equipRow: [string, string][] = [];
 		if (record.grinder) {
-			equipRow.push(['그라인더', record.grinder]);
-			equipRow.push(['분쇄도', fmtGrind(record.grindSize)]);
+			equipRow.push([t('equipment.grinder'), record.grinder]);
+			equipRow.push([t('form.grindSize'), fmtGrind(record.grindSize)]);
 		}
 		if (record.method === 'filter') {
-			if (record.dripper) equipRow.push(['드리퍼', record.dripper]);
-			equipRow.push(['필터', record.filter]);
+			if (record.dripper) equipRow.push([t('equipment.dripper'), record.dripper]);
+			equipRow.push([t('equipment.filter'), record.filter]);
 		} else {
-			equipRow.push(['바스켓', record.basket]);
+			equipRow.push([t('equipment.basket'), record.basket]);
 			if (record.accessories && record.accessories.length > 0) {
-				equipRow.push(['악세서리', record.accessories.join(', ')]);
+				equipRow.push([t('equipment.accessory'), record.accessories.join(', ')]);
 			}
 		}
 
 		const temp = record.temp === 'iced' ? 'Ice' : 'Hot';
 		const dataRow: [string, string][] = [];
 		if (record.method === 'espresso') {
-			dataRow.push(['방식', METHOD_LABELS[record.method]]);
-			const drinkLabel = record.drink === 'shot' ? '샷' : record.drink === 'americano' ? '아메리카노' : '카페라떼';
-			dataRow.push(['음료', `${drinkLabel}(${temp})`]);
+			dataRow.push([t('form.method'), getMethodLabel(record.method)]);
+			dataRow.push([t('form.drink'), `${getDrinkLabel(record.drink)}(${temp})`]);
 		} else {
-			dataRow.push(['방식', `${METHOD_LABELS[record.method]}(${temp})`]);
+			dataRow.push([t('form.method'), `${getMethodLabel(record.method)}(${temp})`]);
 		}
-		dataRow.push(['로스팅', record.roastDays !== null ? `${record.roastDays}일차` : '-']);
-		if (!record.grinder) dataRow.push(['분쇄도', fmtGrind(record.grindSize)]);
-		dataRow.push(['도징량', `${record.dose}g`]);
-		if (record.method === 'filter' && record.waterTemp) dataRow.push(['물 온도', `${record.waterTemp}°C`]);
-		if (record.waterWeight != null) dataRow.push(['가수', `${record.waterWeight}g`]);
-		if (record.milkWeight != null) dataRow.push(['우유', `${record.milkWeight}g`]);
+		dataRow.push([t('modal.roasting'), record.roastDays !== null ? t('bean.roastDays', { n: record.roastDays }) : '-']);
+		if (!record.grinder) dataRow.push([t('form.grindSize'), fmtGrind(record.grindSize)]);
+		dataRow.push([t('form.dose'), t('modal.grams', { n: record.dose })]);
+		if (record.method === 'filter' && record.waterTemp) dataRow.push([t('form.waterTemp'), `${record.waterTemp}°C`]);
+		if (record.waterWeight != null) dataRow.push([t('form.addition'), `${record.waterWeight}g`]);
+		if (record.milkWeight != null) dataRow.push([t('form.milk'), `${record.milkWeight}g`]);
 
 		const layout = this.contentEl.createDiv({ cls: 'brew-detail-layout' });
 
@@ -233,7 +229,7 @@ export class BrewProfileModal extends Modal {
 		}
 
 		const right = layout.createDiv({ cls: 'brew-detail-right' });
-		right.createDiv({ cls: 'brew-detail-label', text: '메모' });
+		right.createDiv({ cls: 'brew-detail-label', text: t('form.memo') });
 		right.createDiv({ cls: 'brew-detail-note', text: record.note || '-' });
 	}
 }
@@ -249,15 +245,15 @@ export class ConfirmModal extends Modal {
 	}
 
 	onOpen(): void {
-		this.titleEl.setText('확인');
+		this.titleEl.setText(t('common.confirm'));
 		this.contentEl.createDiv({ text: this.message, cls: 'cubicj-confirm-message' });
 		const footer = this.contentEl.createDiv({ cls: 'cubicj-confirm-footer' });
-		const confirmBtn = footer.createEl('button', { text: '삭제', cls: 'mod-warning' });
+		const confirmBtn = footer.createEl('button', { text: t('form.delete'), cls: 'mod-warning' });
 		confirmBtn.addEventListener('click', () => {
 			this.onConfirm();
 			this.close();
 		});
-		const cancelBtn = footer.createEl('button', { text: '취소' });
+		const cancelBtn = footer.createEl('button', { text: t('common.cancel') });
 		cancelBtn.addEventListener('click', () => this.close());
 	}
 }

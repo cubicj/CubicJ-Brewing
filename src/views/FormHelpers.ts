@@ -1,3 +1,5 @@
+import { t } from '../i18n/index';
+
 export function createToggleGroup<T extends string>(
 	container: HTMLElement,
 	items: { value: T; label: string }[],
@@ -52,7 +54,7 @@ export function attachScaleAutoBtn(
 	const btn = label.createEl('button', {
 		text: 'auto',
 		cls: 'cubicj-stepper-scale-btn',
-		attr: { 'aria-label': '저울 무게 가져오기' },
+		attr: { 'aria-label': t('bean.getScaleWeight') },
 	});
 	btn.addEventListener('click', () => {
 		const w = parseFloat(getWeightText());
@@ -67,7 +69,7 @@ export function createAccessoryChecklist(
 	onChange?: (selected: string[]) => void,
 ): Set<string> {
 	const group = container.createDiv({ cls: 'cubicj-accessories' });
-	group.createEl('label', { text: '악세서리' });
+	group.createEl('label', { text: t('equipment.accessory') });
 	const selected = new Set(initial);
 	for (const acc of accessories) {
 		const row = group.createDiv({ cls: 'cubicj-accessory-item' });

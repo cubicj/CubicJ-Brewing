@@ -2,15 +2,10 @@ import { Modal, setIcon } from 'obsidian';
 import type CubicJBrewingPlugin from '../main';
 import type { GrinderConfig, EquipmentSettings } from '../brew/types';
 import { BEAN_NOTE_EXTRA } from '../brew/constants';
+import { t } from '../i18n/index';
 import { renderActiveBeanRow, renderFinishedBeanRow } from './BeanRowRenderer';
 
 type TabId = 'bean' | 'recipe' | 'equip';
-
-function hasJongseong(str: string): boolean {
-	const last = str.charCodeAt(str.length - 1);
-	if (last < 0xac00 || last > 0xd7a3) return false;
-	return (last - 0xac00) % 28 !== 0;
-}
 
 interface TabDef {
 	id: TabId;
@@ -29,9 +24,9 @@ export class DataManageModal extends Modal {
 		super(plugin.app);
 		this.plugin = plugin;
 		this.tabs = [
-			{ id: 'bean', label: '원두', render: (el) => this.renderBeanTab(el) },
-			{ id: 'recipe', label: '레시피', render: (el) => this.renderRecipeTab(el) },
-			{ id: 'equip', label: '장비', render: (el) => this.renderEquipTab(el) },
+			{ id: 'bean', label: t('dataManage.beans'), render: (el) => this.renderBeanTab(el) },
+			{ id: 'recipe', label: t('dataManage.recipes'), render: (el) => this.renderRecipeTab(el) },
+			{ id: 'equip', label: t('dataManage.equipment'), render: (el) => this.renderEquipTab(el) },
 		];
 	}
 
@@ -87,7 +82,7 @@ export class DataManageModal extends Modal {
 
 	private renderBeanTab(container: HTMLElement): void {
 		const headerEl = container.createDiv({ cls: 'cb-bean-header' });
-		const newBtn = headerEl.createEl('button', { text: '+ 새 원두', cls: 'cb-bean-btn cb-bean-new-btn' });
+		const newBtn = headerEl.createEl('button', { text: t('bean.new'), cls: 'cb-bean-btn cb-bean-new-btn' });
 		newBtn.addEventListener('click', () => this.createNewBean());
 
 		const listEl = container.createDiv({ cls: 'dm-bean-list' });
@@ -105,17 +100,17 @@ export class DataManageModal extends Modal {
 		};
 
 		if (active.length > 0) {
-			listEl.createDiv({ cls: 'cb-bean-section-title', text: '현재 보유 원두' });
+			listEl.createDiv({ cls: 'cb-bean-section-title', text: t('bean.activeBeans') });
 			for (const bean of active) renderActiveBeanRow(listEl, bean, deps);
 		}
 
 		if (finished.length > 0) {
-			listEl.createDiv({ cls: 'cb-bean-section-title cb-bean-section-past', text: '과거 원두' });
+			listEl.createDiv({ cls: 'cb-bean-section-title cb-bean-section-past', text: t('bean.pastBeans') });
 			for (const bean of finished) renderFinishedBeanRow(listEl, bean, deps);
 		}
 
 		if (beans.length === 0) {
-			listEl.createDiv({ cls: 'dm-empty', text: 'type: bean frontmatter가 있는 노트가 없어요' });
+			listEl.createDiv({ cls: 'dm-empty', text: t('bean.emptyState') });
 		}
 	}
 
@@ -130,20 +125,22 @@ export class DataManageModal extends Modal {
 	}
 
 	private renderRecipeTab(container: HTMLElement): void {
-		container.createDiv({ cls: 'dm-empty', text: '준비 중' });
+		container.createDiv({ cls: 'dm-empty', text: t('dataManage.comingSoon') });
 	}
 
 	private renderEquipTab(container: HTMLElement): void {
 		const eq = this.plugin.equipment;
 
-		this.renderEquipSection(container, '공용', [{ label: '그라인더', items: eq.grinders, key: 'grinders' }]);
-		this.renderEquipSection(container, '필터 브루잉', [
-			{ label: '드리퍼', items: eq.drippers, key: 'drippers' },
-			{ label: '필터', items: eq.filters, key: 'filters' },
+		this.renderEquipSection(container, t('equip.shared'), [
+			{ label: t('equipment.grinder'), items: eq.grinders, key: 'grinders' },
 		]);
-		this.renderEquipSection(container, '에스프레소', [
-			{ label: '바스켓', items: eq.baskets, key: 'baskets' },
-			{ label: '악세서리', items: eq.accessories, key: 'accessories' },
+		this.renderEquipSection(container, t('equip.filterBrewing'), [
+			{ label: t('equipment.dripper'), items: eq.drippers, key: 'drippers' },
+			{ label: t('equipment.filter'), items: eq.filters, key: 'filters' },
+		]);
+		this.renderEquipSection(container, t('method.espresso'), [
+			{ label: t('equipment.basket'), items: eq.baskets, key: 'baskets' },
+			{ label: t('equipment.accessory'), items: eq.accessories, key: 'accessories' },
 		]);
 	}
 
@@ -180,7 +177,7 @@ export class DataManageModal extends Modal {
 		const renderItems = () => {
 			listEl.empty();
 			if (items.length === 0) {
-				listEl.createDiv({ cls: 'dm-empty', text: `${label}${hasJongseong(label) ? '을' : '를'} 추가하세요` });
+				listEl.createDiv({ cls: 'dm-empty', text: t('dataManage.addPrompt', { label }) });
 				return;
 			}
 			for (let i = 0; i < items.length; i++) {
@@ -205,13 +202,13 @@ export class DataManageModal extends Modal {
 			const input = formEl.createEl('input', {
 				type: 'text',
 				cls: 'dm-equip-input',
-				placeholder: `${label} 이름`,
+				placeholder: label,
 				attr: { spellcheck: 'false' },
 			});
 
 			const btnRow = formEl.createDiv({ cls: 'dm-equip-grinder-actions' });
-			const saveBtn = btnRow.createEl('button', { text: '추가', cls: 'dm-btn dm-btn-accent' });
-			const cancelBtn = btnRow.createEl('button', { text: '취소', cls: 'dm-btn dm-btn-muted' });
+			const saveBtn = btnRow.createEl('button', { text: t('bean.add'), cls: 'dm-btn dm-btn-accent' });
+			const cancelBtn = btnRow.createEl('button', { text: t('common.cancel'), cls: 'dm-btn dm-btn-muted' });
 
 			input.focus();
 
@@ -248,14 +245,17 @@ export class DataManageModal extends Modal {
 		const renderItems = () => {
 			listEl.empty();
 			if (grinders.length === 0) {
-				listEl.createDiv({ cls: 'dm-empty', text: `${label}${hasJongseong(label) ? '을' : '를'} 추가하세요` });
+				listEl.createDiv({ cls: 'dm-empty', text: t('dataManage.addPrompt', { label }) });
 				return;
 			}
 			for (let i = 0; i < grinders.length; i++) {
 				const g = grinders[i];
 				const row = listEl.createDiv({ cls: 'dm-equip-row' });
 				row.createSpan({ cls: 'dm-equip-grinder-name', text: g.name });
-				row.createSpan({ cls: 'dm-equip-grinder-meta', text: `분쇄도 범위: ${g.min}~${g.max}, 최소 단위: ${g.step}` });
+				row.createSpan({
+					cls: 'dm-equip-grinder-meta',
+					text: `${t('equip.grindRange')}: ${g.min}~${g.max}, ${t('equip.stepSize')}: ${g.step}`,
+				});
 				const delBtn = row.createEl('button', { text: '\u2715', cls: 'dm-btn dm-equip-del-btn' });
 				delBtn.addEventListener('click', async () => {
 					try {
@@ -275,12 +275,12 @@ export class DataManageModal extends Modal {
 			const nameInput = formEl.createEl('input', {
 				type: 'text',
 				cls: 'dm-equip-input',
-				placeholder: '이름',
+				placeholder: t('equip.name'),
 				attr: { spellcheck: 'false' },
 			});
 
 			const rangeRow = formEl.createDiv({ cls: 'dm-equip-grinder-row' });
-			rangeRow.createSpan({ text: '분쇄도 범위' });
+			rangeRow.createSpan({ text: t('equip.grindRange') });
 			const minInput = rangeRow.createEl('input', {
 				type: 'number',
 				cls: 'dm-equip-input dm-equip-num',
@@ -294,7 +294,7 @@ export class DataManageModal extends Modal {
 			});
 
 			const stepRow = formEl.createDiv({ cls: 'dm-equip-grinder-row' });
-			stepRow.createSpan({ text: '최소 단위' });
+			stepRow.createSpan({ text: t('equip.stepSize') });
 			const stepSelect = stepRow.createEl('select', { cls: 'dm-equip-select' });
 			for (const s of [0.01, 0.1, 1]) {
 				stepSelect.createEl('option', { text: String(s), value: String(s) });
@@ -304,8 +304,8 @@ export class DataManageModal extends Modal {
 			maxInput.value = '50';
 
 			const btnRow = formEl.createDiv({ cls: 'dm-equip-grinder-actions' });
-			const saveBtn = btnRow.createEl('button', { text: '추가', cls: 'dm-btn dm-btn-accent' });
-			const cancelBtn = btnRow.createEl('button', { text: '취소', cls: 'dm-btn dm-btn-muted' });
+			const saveBtn = btnRow.createEl('button', { text: t('bean.add'), cls: 'dm-btn dm-btn-accent' });
+			const cancelBtn = btnRow.createEl('button', { text: t('common.cancel'), cls: 'dm-btn dm-btn-muted' });
 
 			nameInput.focus();
 
