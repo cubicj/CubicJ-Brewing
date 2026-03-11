@@ -48,6 +48,15 @@ export class BrewingSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
+		new Setting(containerEl)
+			.setName('브루잉 뷰 열기')
+			.setDesc('사이드바에 브루잉 패널을 표시합니다.')
+			.addButton((btn) =>
+				btn.setButtonText('열기').onClick(() => {
+					(this.app as any).commands.executeCommandById('cubicj-brewing:open-view');
+				}),
+			);
+
 		containerEl.createEl('h2', { text: '원두 노트' });
 
 		new Setting(containerEl)

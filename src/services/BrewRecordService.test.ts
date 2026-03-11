@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { BrewRecordService, type StorageAdapter } from './BrewRecordService';
+import { BrewRecordService, BREW_RECORDS_VERSION, type StorageAdapter } from './BrewRecordService';
 import type { FilterRecord } from '../brew/types';
 
 class InMemoryAdapter implements StorageAdapter {
@@ -228,5 +228,39 @@ describe('BrewRecordService', () => {
 		const svc = new BrewRecordService(adapter);
 		const records = await svc.getAll();
 		expect(records).toEqual([]);
+	});
+
+	it('reads legacy bare-array format', async () => {
+		const record = makeFilter();
+		adapter.data = JSON.stringify([record]);
+		const svc = new BrewRecordService(adapter);
+		const records = await svc.getAll();
+		expect(records).toHaveLength(1);
+		expect(records[0].id).toBe(record.id);
+	});
+
+	it('reads envelope format', async () => {
+		const record = makeFilter();
+		adapter.data = JSON.stringify({ version: 1, records: [record] });
+		const svc = new BrewRecordService(adapter);
+		const records = await svc.getAll();
+		expect(records).toHaveLength(1);
+		expect(records[0].id).toBe(record.id);
+	});
+
+	it('saves in envelope format', async () => {
+		await service.add(makeFilter());
+		const saved = JSON.parse(adapter.data);
+		expect(saved.version).toBe(BREW_RECORDS_VERSION);
+		expect(Array.isArray(saved.records)).toBe(true);
+		expect(saved.records).toHaveLength(1);
+	});
+
+	it('warns but loads future version', async () => {
+		const record = makeFilter();
+		adapter.data = JSON.stringify({ version: 99, records: [record] });
+		const svc = new BrewRecordService(adapter);
+		const records = await svc.getAll();
+		expect(records).toHaveLength(1);
 	});
 });
