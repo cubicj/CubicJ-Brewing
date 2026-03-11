@@ -91,6 +91,10 @@ npm run check        # typecheck only
 npm run lint         # eslint
 ```
 
+## Acknowledgments
+
+- [Matrix Sans](https://github.com/FriedOrange/MatrixSans) dot-matrix font — [SIL Open Font License 1.1](FONT-LICENSE-OFL.txt)
+
 ## License
 
 [MIT](LICENSE)
