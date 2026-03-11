@@ -236,81 +236,6 @@
 	flex-direction: column;
 }
 
-.cubicj-data-manage-modal .dm-bean-section-title {
-	font-size: 0.85em;
-	font-weight: 600;
-	color: var(--text-muted);
-	padding: 4px 0;
-	margin-top: 4px;
-}
-.cubicj-data-manage-modal .dm-bean-section-past {
-	margin-top: 12px;
-	border-top: 1px solid var(--background-modifier-border);
-	padding-top: 8px;
-}
-
-.cubicj-data-manage-modal .dm-bean-row {
-	display: grid;
-	grid-template-columns: 1fr 80px 95px auto;
-	align-items: center;
-	gap: 0 12px;
-	padding: 5px 8px;
-	border-radius: 4px;
-}
-.cubicj-data-manage-modal .dm-bean-row:hover {
-	background: var(--background-modifier-hover);
-}
-.cubicj-data-manage-modal .dm-bean-row.is-finished {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	opacity: 0.6;
-}
-.cubicj-data-manage-modal .dm-bean-row.is-finished .dm-bean-name {
-	flex: 1;
-}
-.cubicj-data-manage-modal .dm-bean-row.is-finished .dm-btn {
-	margin-left: auto;
-}
-
-.cubicj-data-manage-modal .dm-bean-name {
-	cursor: pointer;
-	color: var(--text-accent);
-	text-decoration: none;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	min-width: 0;
-}
-.cubicj-data-manage-modal .dm-bean-name:hover {
-	text-decoration: underline;
-}
-
-.cubicj-data-manage-modal .dm-bean-days {
-	font-size: 0.85em;
-	color: var(--text-muted);
-	white-space: nowrap;
-}
-.cubicj-data-manage-modal .dm-bean-weight {
-	font-size: 0.85em;
-	color: var(--text-muted);
-	white-space: nowrap;
-}
-
-.cubicj-data-manage-modal .dm-bean-date-row {
-	display: flex;
-	gap: 4px;
-	align-items: center;
-}
-.cubicj-data-manage-modal .dm-bean-date-row input[type='date'] {
-	font-size: 0.85em;
-	padding: 2px 4px;
-}
-.cubicj-data-manage-modal .dm-bean-date-btns {
-	display: flex;
-	gap: 4px;
-}
-
 .cubicj-data-manage-modal .dm-btn {
 	padding: var(--size-2-1) var(--size-2-3);
 	border-radius: var(--radius-s);
@@ -532,12 +457,12 @@
 }
 
 /* Stepper (shared: sidebar + modal) */
-.brew-flow-stepper-controls {
+.cubicj-stepper-controls {
 	display: flex;
 	align-items: center;
 	gap: 4px;
 }
-.brew-flow-stepper-btn {
+.cubicj-stepper-btn {
 	flex: 0 0 auto;
 	min-width: 36px;
 	padding: 4px 8px;
@@ -546,7 +471,7 @@
 	box-shadow: none;
 	border-radius: var(--radius-s);
 }
-.brew-flow-stepper-scale-btn {
+.cubicj-stepper-scale-btn {
 	all: unset;
 	display: inline-flex;
 	align-items: center;
@@ -558,24 +483,24 @@
 	font-size: var(--font-ui-smaller);
 	line-height: 1;
 }
-.brew-flow-stepper-scale-btn:hover {
+.cubicj-stepper-scale-btn:hover {
 	color: var(--text-normal);
 	background: var(--background-modifier-hover);
 }
-.brew-flow-stepper-value {
+.cubicj-stepper-value {
 	flex: 1;
 	text-align: center;
 	font-weight: var(--font-semibold);
 	font-size: var(--font-ui-medium);
 	user-select: none;
 }
-.brew-flow-stepper-value.is-draggable {
+.cubicj-stepper-value.is-draggable {
 	cursor: ew-resize;
 }
-.brew-flow-stepper-value.is-dragging {
+.cubicj-stepper-value.is-dragging {
 	color: var(--text-accent);
 }
-.brew-flow-stepper-input {
+.cubicj-stepper-input {
 	width: 100%;
 	text-align: center;
 	font-weight: var(--font-semibold);
@@ -685,31 +610,34 @@
 	display: none;
 }
 
-.block-language-beans .bean-hub {
+/* Shared Bean Row (cb-bean-*) — used by BeanCodeBlock + DataManageModal */
+.cb-bean-hub {
 	padding: 8px 0;
 }
 
-.block-language-beans .bean-hub-header {
+.cb-bean-header {
 	display: flex;
 	justify-content: flex-end;
 	padding-bottom: 4px;
 }
+.cubicj-data-manage-modal .cb-bean-header {
+	padding-bottom: 8px;
+}
 
-.block-language-beans .bean-hub-section-title {
+.cb-bean-section-title {
 	font-size: 0.85em;
 	font-weight: 600;
 	color: var(--text-muted);
 	padding: 4px 0;
 	margin-top: 4px;
 }
-
-.block-language-beans .bean-hub-section-past {
+.cb-bean-section-past {
 	margin-top: 12px;
 	border-top: 1px solid var(--background-modifier-border);
 	padding-top: 8px;
 }
 
-.block-language-beans .bean-hub-row {
+.cb-bean-row {
 	display: grid;
 	grid-template-columns: 1fr 80px 95px auto;
 	align-items: center;
@@ -717,25 +645,23 @@
 	padding: 5px 8px;
 	border-radius: 4px;
 }
-
-.block-language-beans .bean-hub-row:hover {
+.cb-bean-row:hover {
 	background: var(--background-modifier-hover);
 }
-
-.block-language-beans .bean-hub-row.is-finished {
+.cb-bean-row.is-finished {
 	display: flex;
 	align-items: center;
 	gap: 8px;
 	opacity: 0.6;
 }
-.block-language-beans .bean-hub-row.is-finished .bean-hub-name {
+.cb-bean-row.is-finished .cb-bean-name {
 	flex: 1;
 }
-.block-language-beans .bean-hub-row.is-finished .bean-hub-btn {
+.cb-bean-row.is-finished .cb-bean-btn {
 	margin-left: auto;
 }
 
-.block-language-beans .bean-hub-name {
+.cb-bean-name {
 	cursor: pointer;
 	color: var(--text-accent);
 	text-decoration: none;
@@ -744,34 +670,34 @@
 	white-space: nowrap;
 	min-width: 0;
 }
-
-.block-language-beans .bean-hub-name:hover {
+.cb-bean-name:hover {
 	text-decoration: underline;
 }
 
-.block-language-beans .bean-hub-days {
+.cb-bean-days {
 	font-size: 0.85em;
 	color: var(--text-muted);
 	white-space: nowrap;
 	text-align: left;
 }
 
-.block-language-beans .bean-hub-weight {
+.cb-bean-weight {
 	font-size: 0.85em;
 	color: var(--text-muted);
 	white-space: nowrap;
 	text-align: left;
+}
+.block-language-beans .cb-bean-weight {
 	cursor: pointer;
 	border-radius: var(--radius-s);
 	padding: 1px 4px;
 	margin: -1px -4px;
 }
-
-.block-language-beans .bean-hub-weight:hover {
+.block-language-beans .cb-bean-weight:hover {
 	background: var(--background-modifier-border);
 }
 
-.block-language-beans .bean-hub-btn {
+.cb-bean-btn {
 	font-size: 0.8em;
 	padding: 2px 8px;
 	cursor: pointer;
@@ -781,51 +707,40 @@
 	color: var(--text-normal);
 	box-shadow: none;
 }
-
-.block-language-beans .bean-hub-btn:hover {
+.cb-bean-btn:hover {
 	background: var(--background-modifier-border);
 }
 
-.block-language-beans .bean-hub-status-btn {
+.cb-bean-new-btn {
+	font-size: 0.85em;
+}
+.cb-bean-status-btn {
 	font-size: 0.75em;
 }
 
-.block-language-beans .bean-hub-date-row {
+.cb-bean-date-row {
 	display: flex;
 	gap: 4px;
 	padding: 4px 0 0 0;
 	align-items: center;
 }
-
-.block-language-beans .bean-hub-date-row input[type='date'] {
+.cb-bean-date-row input[type='date'] {
 	font-size: 0.85em;
 	padding: 2px 4px;
 }
-
-.block-language-beans .bean-hub-date-btns {
+.cb-bean-date-btns {
 	display: flex;
 	gap: 4px;
 	margin-left: auto;
 }
-
-.block-language-beans .bean-hub-add-btn {
+.cb-bean-confirm-btn {
 	font-size: 0.8em;
 }
 
-.block-language-beans .bean-hub-empty {
+.cb-bean-empty {
 	color: var(--text-muted);
 	font-size: 0.85em;
 	padding: 8px;
-}
-
-.cubicj-data-manage-modal .dm-bean-header {
-	display: flex;
-	justify-content: flex-end;
-	padding-bottom: 8px;
-}
-
-.cubicj-data-manage-modal .dm-new-bean-btn {
-	font-size: 0.85em;
 }
 
 /* Brew Records Code Block */
@@ -1048,16 +963,16 @@
 	resize: vertical;
 }
 /* Stepper in modal — clone sidebar stepper styles */
-.brew-profile-modal .brew-flow-stepper label {
+.brew-profile-modal .cubicj-stepper label {
 	font-size: var(--font-ui-smaller);
 	color: var(--text-muted);
 }
 
 /* Confirm modal */
-.brew-confirm-message {
+.cubicj-confirm-message {
 	margin-bottom: 16px;
 }
-.brew-confirm-footer {
+.cubicj-confirm-footer {
 	display: flex;
 	justify-content: flex-end;
 	gap: 8px;
@@ -1238,17 +1153,17 @@
 }
 
 /* Accessories checklist (shared: sidebar + modal) */
-.brew-flow-accessories {
+.cubicj-accessories {
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
 }
-.brew-flow-accessories > label {
+.cubicj-accessories > label {
 	font-size: var(--font-ui-smaller);
 	color: var(--text-muted);
 	margin-bottom: 0;
 }
-.brew-flow-accessory-item {
+.cubicj-accessory-item {
 	display: flex;
 	align-items: center;
 	gap: 6px;
@@ -1256,7 +1171,7 @@
 	font-size: var(--font-ui-small);
 	color: var(--text-normal);
 }
-.brew-flow-accessory-item input[type='checkbox'] {
+.cubicj-accessory-item input[type='checkbox'] {
 	margin: 0;
 	flex-shrink: 0;
 }

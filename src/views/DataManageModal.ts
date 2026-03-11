@@ -1,7 +1,8 @@
 import { Modal, setIcon } from 'obsidian';
 import type CubicJBrewingPlugin from '../main';
-import type { BeanInfo, GrinderConfig, EquipmentSettings } from '../brew/types';
+import type { GrinderConfig, EquipmentSettings } from '../brew/types';
 import { BEAN_NOTE_EXTRA } from '../brew/constants';
+import { renderActiveBeanRow, renderFinishedBeanRow } from './BeanRowRenderer';
 
 type TabId = 'bean' | 'recipe' | 'equip';
 
@@ -85,8 +86,8 @@ export class DataManageModal extends Modal {
 	}
 
 	private renderBeanTab(container: HTMLElement): void {
-		const headerEl = container.createDiv({ cls: 'dm-bean-header' });
-		const newBtn = headerEl.createEl('button', { text: '+ 새 원두', cls: 'dm-btn dm-new-bean-btn' });
+		const headerEl = container.createDiv({ cls: 'cb-bean-header' });
+		const newBtn = headerEl.createEl('button', { text: '+ 새 원두', cls: 'cb-bean-btn cb-bean-new-btn' });
 		newBtn.addEventListener('click', () => this.createNewBean());
 
 		const listEl = container.createDiv({ cls: 'dm-bean-list' });
@@ -94,78 +95,28 @@ export class DataManageModal extends Modal {
 		const active = [...beans.filter((b) => b.status === 'active')].sort((a, b) => a.name.localeCompare(b.name));
 		const finished = [...beans.filter((b) => b.status === 'finished')].sort((a, b) => a.name.localeCompare(b.name));
 
+		const deps = {
+			vaultData: this.plugin.vaultData,
+			onNameClick: (bean: { path: string }) => {
+				this.close();
+				this.plugin.app.workspace.openLinkText(bean.path, '');
+			},
+			onStatusChange: () => this.renderActiveTab(),
+		};
+
 		if (active.length > 0) {
-			listEl.createDiv({ cls: 'dm-bean-section-title', text: '현재 보유 원두' });
-			for (const bean of active) this.renderActiveBeanRow(listEl, bean);
+			listEl.createDiv({ cls: 'cb-bean-section-title', text: '현재 보유 원두' });
+			for (const bean of active) renderActiveBeanRow(listEl, bean, deps);
 		}
 
 		if (finished.length > 0) {
-			listEl.createDiv({ cls: 'dm-bean-section-title dm-bean-section-past', text: '과거 원두' });
-			for (const bean of finished) this.renderFinishedBeanRow(listEl, bean);
+			listEl.createDiv({ cls: 'cb-bean-section-title cb-bean-section-past', text: '과거 원두' });
+			for (const bean of finished) renderFinishedBeanRow(listEl, bean, deps);
 		}
 
 		if (beans.length === 0) {
 			listEl.createDiv({ cls: 'dm-empty', text: 'type: bean frontmatter가 있는 노트가 없어요' });
 		}
-	}
-
-	private renderActiveBeanRow(listEl: HTMLElement, bean: BeanInfo): void {
-		const row = listEl.createDiv({ cls: 'dm-bean-row' });
-
-		const nameEl = row.createEl('a', { cls: 'dm-bean-name', text: bean.name });
-		nameEl.addEventListener('click', (e) => {
-			e.preventDefault();
-			this.close();
-			this.plugin.app.workspace.openLinkText(bean.path, '');
-		});
-
-		const days = this.plugin.vaultData.getDaysSinceRoast(bean);
-		row.createSpan({ cls: 'dm-bean-days', text: days !== null ? `로스팅 ${days}일차` : '' });
-
-		const weightText = bean.weight != null ? `남은 원두 ${bean.weight}g` : '남은 원두 N/A';
-		row.createSpan({ cls: 'dm-bean-weight', text: weightText });
-
-		const statusBtn = row.createEl('button', { text: '소진', cls: 'dm-btn dm-btn-muted' });
-		statusBtn.addEventListener('click', async (e) => {
-			e.stopPropagation();
-			await this.plugin.vaultData.setBeanStatus(bean.path, 'finished');
-			this.renderActiveTab();
-		});
-	}
-
-	private renderFinishedBeanRow(listEl: HTMLElement, bean: BeanInfo): void {
-		const row = listEl.createDiv({ cls: 'dm-bean-row is-finished' });
-
-		const nameEl = row.createEl('a', { cls: 'dm-bean-name', text: bean.name });
-		nameEl.addEventListener('click', (e) => {
-			e.preventDefault();
-			this.close();
-			this.plugin.app.workspace.openLinkText(bean.path, '');
-		});
-
-		const statusBtn = row.createEl('button', { text: '재구매', cls: 'dm-btn dm-btn-accent' });
-		statusBtn.addEventListener('click', (e) => {
-			e.stopPropagation();
-			statusBtn.style.display = 'none';
-
-			const dateRow = row.createDiv({ cls: 'dm-bean-date-row' });
-			const input = dateRow.createEl('input', { type: 'date' });
-			input.valueAsDate = new Date();
-
-			const btns = dateRow.createDiv({ cls: 'dm-bean-date-btns' });
-			const confirmBtn = btns.createEl('button', { text: '확인', cls: 'dm-btn dm-btn-accent' });
-			confirmBtn.addEventListener('click', async () => {
-				if (!input.value) return;
-				await this.plugin.vaultData.setRoastDate(bean.path, input.value);
-				await this.plugin.vaultData.setBeanStatus(bean.path, 'active');
-				this.renderActiveTab();
-			});
-			const cancelBtn = btns.createEl('button', { text: '취소', cls: 'dm-btn dm-btn-muted' });
-			cancelBtn.addEventListener('click', () => {
-				dateRow.remove();
-				statusBtn.style.display = '';
-			});
-		});
 	}
 
 	private async createNewBean(): Promise<void> {

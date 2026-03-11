@@ -51,7 +51,7 @@ export function attachScaleAutoBtn(
 	const label = stepper.el.querySelector('label') as HTMLElement;
 	const btn = label.createEl('button', {
 		text: 'auto',
-		cls: 'brew-flow-stepper-scale-btn',
+		cls: 'cubicj-stepper-scale-btn',
 		attr: { 'aria-label': '저울 무게 가져오기' },
 	});
 	btn.addEventListener('click', () => {
@@ -66,11 +66,11 @@ export function createAccessoryChecklist(
 	initial: string[],
 	onChange?: (selected: string[]) => void,
 ): Set<string> {
-	const group = container.createDiv({ cls: 'brew-flow-accessories' });
+	const group = container.createDiv({ cls: 'cubicj-accessories' });
 	group.createEl('label', { text: '악세서리' });
 	const selected = new Set(initial);
 	for (const acc of accessories) {
-		const row = group.createDiv({ cls: 'brew-flow-accessory-item' });
+		const row = group.createDiv({ cls: 'cubicj-accessory-item' });
 		const cb = row.createEl('input', { type: 'checkbox' });
 		cb.checked = selected.has(acc);
 		row.createSpan({ text: acc });

@@ -5,7 +5,7 @@ import { BrewFlowState } from '../brew/BrewFlowState';
 import { DataManageModal } from './DataManageModal';
 import { TimerController } from './TimerController';
 import { ScaleDisplayManager } from './ScaleDisplayManager';
-import { type FlowStep, renderStep, getStepSummary, type StepRenderContext } from './StepRenderers';
+import { type FlowStep, renderStep, getStepSummary, cleanupSavingRo, type StepRenderContext } from './StepRenderers';
 import { AccordionManager } from './AccordionManager';
 import { BrewProfileRecorder } from './BrewProfileRecorder';
 
@@ -22,9 +22,7 @@ export class BrewingView extends ItemView {
 	private accordion!: AccordionManager;
 
 	private timerController!: TimerController;
-	private brewingStarted = false;
 	private recorder = new BrewProfileRecorder();
-	private savingRoRef = { current: null as ResizeObserver | null };
 
 	constructor(leaf: WorkspaceLeaf, plugin: CubicJBrewingPlugin) {
 		super(leaf);
@@ -80,10 +78,7 @@ export class BrewingView extends ItemView {
 	async onClose(): Promise<void> {
 		this.log('onClose');
 		this.timerController.destroy();
-		if (this.savingRoRef.current) {
-			this.savingRoRef.current.disconnect();
-			this.savingRoRef.current = null;
-		}
+		cleanupSavingRo();
 		const service = this.plugin.acaiaService!;
 		for (const { event, fn } of this.listeners) {
 			service.removeListener(event, fn);
@@ -99,7 +94,7 @@ export class BrewingView extends ItemView {
 
 	autoFill(): void {
 		const container = this.containerEl.children[1] as HTMLElement;
-		const btns = container.querySelectorAll('.brew-flow-stepper-scale-btn') as NodeListOf<HTMLButtonElement>;
+		const btns = container.querySelectorAll('.cubicj-stepper-scale-btn') as NodeListOf<HTMLButtonElement>;
 		if (btns.length > 0) btns[btns.length - 1].click();
 	}
 
@@ -146,7 +141,6 @@ export class BrewingView extends ItemView {
 
 	private renderContent(): void {
 		if (this.flowState.step === 'idle') {
-			this.brewingStarted = false;
 			this.flowState.startBrew();
 		}
 
@@ -162,7 +156,6 @@ export class BrewingView extends ItemView {
 	private resetFlow(): void {
 		this.log('resetFlow');
 		this.flowState.cancel();
-		this.brewingStarted = false;
 		this.recorder.reset();
 		this.flowState.startBrew();
 		this.accordion.clearExpandedSteps();
@@ -174,25 +167,18 @@ export class BrewingView extends ItemView {
 			flowState: this.flowState,
 			plugin: this.plugin,
 			renderContent: () => this.renderContent(),
-			updateAccordion: () => this.accordion.update(),
+			accordion: {
+				update: () => this.accordion.update(),
+				expand: (step) => this.accordion.expandStep(step),
+				animateContentChange: (step, fn) => this.accordion.animateContentChange(step, fn),
+				updateSummaries: () => this.accordion.updateSummaries(),
+			},
 			timerController: this.timerController,
 			getWeightText: () => this.scaleDisplay.getWeightText(),
-			brewingStarted: this.brewingStarted,
-			setBrewingStarted: (v) => {
-				this.brewingStarted = v;
-			},
 			resetFlow: () => this.resetFlow(),
 			recorder: this.recorder,
-			expandStep: (step) => this.accordion.expandStep(step),
-			animateContentChange: (step, mutation) => this.accordion.animateContentChange(step, mutation),
 			profileStorage: this.plugin.profileStorage,
-			grinders: this.plugin.equipment.grinders,
-			drippers: this.plugin.equipment.drippers,
-			filters: this.plugin.equipment.filters,
-			baskets: this.plugin.equipment.baskets,
-			accessories: this.plugin.equipment.accessories,
-			updateSummaries: () => this.accordion.updateSummaries(),
-			savingRo: this.savingRoRef,
+			equipment: this.plugin.equipment,
 		};
 	}
 

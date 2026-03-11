@@ -1,6 +1,14 @@
 import type CubicJBrewingPlugin from '../main';
 import type { BrewFlowState } from '../brew/BrewFlowState';
-import type { BrewMethod, BrewTemp, EspressoDrink, BrewFlowSelection, BrewRecord, GrinderConfig } from '../brew/types';
+import type {
+	BrewMethod,
+	BrewTemp,
+	EspressoDrink,
+	BrewFlowSelection,
+	BrewRecord,
+	GrinderConfig,
+	EquipmentSettings,
+} from '../brew/types';
 import type { TimerController } from './TimerController';
 import { formatTimer } from './TimerController';
 import type { BrewProfileRecorder } from './BrewProfileRecorder';
@@ -26,27 +34,33 @@ export const STEP_CONFIG: Array<{ step: FlowStep; label: string }> = [
 
 export const STEP_ORDER: FlowStep[] = STEP_CONFIG.map((c) => c.step);
 
+export interface AccordionActions {
+	update: () => void;
+	expand: (step: FlowStep) => void;
+	animateContentChange: (step: FlowStep, fn: () => void) => void;
+	updateSummaries: () => void;
+}
+
 export interface StepRenderContext {
 	flowState: BrewFlowState;
 	plugin: CubicJBrewingPlugin;
 	renderContent: () => void;
-	updateAccordion: () => void;
+	accordion: AccordionActions;
 	timerController: TimerController;
 	getWeightText: () => string;
-	brewingStarted: boolean;
-	setBrewingStarted: (v: boolean) => void;
 	resetFlow: () => void;
 	recorder: BrewProfileRecorder;
-	expandStep: (step: FlowStep) => void;
-	animateContentChange: (step: FlowStep, mutation: () => void) => void;
 	profileStorage: BrewProfileStorage;
-	grinders: GrinderConfig[];
-	drippers: string[];
-	filters: string[];
-	baskets: string[];
-	accessories: string[];
-	updateSummaries: () => void;
-	savingRo: { current: ResizeObserver | null };
+	equipment: EquipmentSettings;
+}
+
+let activeSavingRo: ResizeObserver | null = null;
+
+export function cleanupSavingRo(): void {
+	if (activeSavingRo) {
+		activeSavingRo.disconnect();
+		activeSavingRo = null;
+	}
 }
 
 export function renderStep(step: FlowStep, container: HTMLElement, ctx: StepRenderContext): void {
@@ -129,7 +143,7 @@ function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
 			selectedMethod = val;
 			const show = selectedMethod === 'espresso';
 			if (!show) selectedDrink = null;
-			ctx.animateContentChange('method', () => {
+			ctx.accordion.animateContentChange('method', () => {
 				drinkRow.style.display = show ? '' : 'none';
 			});
 			syncSelection();
@@ -182,7 +196,7 @@ function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
 			ctx.renderContent();
 		} else if (ctx.flowState.step !== 'method') {
 			ctx.flowState.goToStep('method');
-			ctx.updateAccordion();
+			ctx.accordion.update();
 		}
 	};
 }
@@ -215,7 +229,7 @@ async function renderBean(container: HTMLElement, ctx: StepRenderContext): Promi
 		item.addEventListener('click', async () => {
 			if (isSelected) {
 				ctx.flowState.deselectBean();
-				ctx.updateAccordion();
+				ctx.accordion.update();
 			} else {
 				const lastRecord = await ctx.plugin.recordService.getLastRecord(
 					bean.name,
@@ -275,7 +289,7 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	let basketSelect: HTMLSelectElement | null = null;
 	let dripperSelect: HTMLSelectElement | null = null;
 	let waterTempStepper: ReturnType<typeof createStepper> | null = null;
-	const syncSummary = () => ctx.updateSummaries();
+	const syncSummary = () => ctx.accordion.updateSummaries();
 
 	const queryAndApplyDials = async () => {
 		const equip: { filter?: string; grinder?: string; dripper?: string } = {};
@@ -291,21 +305,23 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	if (isFilter) {
 		const initFilter =
 			sel.filter ??
-			(last?.method === 'filter' && last.filter && ctx.filters.includes(last.filter) ? last.filter : ctx.filters[0]);
+			(last?.method === 'filter' && last.filter && ctx.equipment.filters.includes(last.filter)
+				? last.filter
+				: ctx.equipment.filters[0]);
 		sel.filter = initFilter;
-		filterSelect = createSelectField(form, '필터', ctx.filters, initFilter, (v) => {
+		filterSelect = createSelectField(form, '필터', ctx.equipment.filters, initFilter, (v) => {
 			sel.filter = v;
 			queryAndApplyDials();
 		});
 
 		const initDripper =
 			sel.dripper ??
-			(last?.method === 'filter' && last.dripper && ctx.drippers.includes(last.dripper)
+			(last?.method === 'filter' && last.dripper && ctx.equipment.drippers.includes(last.dripper)
 				? last.dripper
-				: ctx.drippers[0]);
+				: ctx.equipment.drippers[0]);
 		sel.dripper = initDripper;
-		if (ctx.drippers.length > 0) {
-			dripperSelect = createSelectField(form, '드리퍼', ctx.drippers, initDripper, (v) => {
+		if (ctx.equipment.drippers.length > 0) {
+			dripperSelect = createSelectField(form, '드리퍼', ctx.equipment.drippers, initDripper, (v) => {
 				sel.dripper = v;
 				queryAndApplyDials();
 			});
@@ -313,31 +329,38 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	}
 
 	if (isEspresso) {
-		basketSelect = createSelectField(form, '바스켓', ctx.baskets, sel.basket ?? ctx.baskets[0], (v) => {
-			sel.basket = v;
-			syncSummary();
-		});
+		basketSelect = createSelectField(
+			form,
+			'바스켓',
+			ctx.equipment.baskets,
+			sel.basket ?? ctx.equipment.baskets[0],
+			(v) => {
+				sel.basket = v;
+				syncSummary();
+			},
+		);
 	}
 
 	let selectedGrinder: GrinderConfig | undefined;
 	let grindStepperConfig = { step: 0.1, min: 0, max: 50, format: (v: number) => v.toFixed(1) };
 
-	if (ctx.grinders.length > 0) {
+	if (ctx.equipment.grinders.length > 0) {
 		const initGrinderName =
-			sel.grinder ?? (last?.grinder && ctx.grinders.find((g) => g.name === last.grinder) ? last.grinder : undefined);
+			sel.grinder ??
+			(last?.grinder && ctx.equipment.grinders.find((g) => g.name === last.grinder) ? last.grinder : undefined);
 		if (initGrinderName) {
-			selectedGrinder = ctx.grinders.find((g) => g.name === initGrinderName);
+			selectedGrinder = ctx.equipment.grinders.find((g) => g.name === initGrinderName);
 		}
 		if (!selectedGrinder) {
-			selectedGrinder = ctx.grinders[0];
+			selectedGrinder = ctx.equipment.grinders[0];
 		}
 		sel.grinder = selectedGrinder.name;
 		grindStepperConfig = grinderToStepperConfig(selectedGrinder);
 
-		if (ctx.grinders.length > 1) {
-			const grinderNames = ctx.grinders.map((g) => g.name);
+		if (ctx.equipment.grinders.length > 1) {
+			const grinderNames = ctx.equipment.grinders.map((g) => g.name);
 			createSelectField(form, '그라인더', grinderNames, selectedGrinder.name, (v) => {
-				const g = ctx.grinders.find((gr) => gr.name === v)!;
+				const g = ctx.equipment.grinders.find((gr) => gr.name === v)!;
 				sel.grinder = g.name;
 				grindStepperConfig = grinderToStepperConfig(g);
 				grindStepper.destroy();
@@ -411,8 +434,8 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 		});
 	}
 
-	if (isEspresso && ctx.accessories.length > 0) {
-		createAccessoryChecklist(form, ctx.accessories, sel.accessories ?? [], (list) => {
+	if (isEspresso && ctx.equipment.accessories.length > 0) {
+		createAccessoryChecklist(form, ctx.equipment.accessories, sel.accessories ?? [], (list) => {
 			sel.accessories = list.length > 0 ? list : undefined;
 		});
 	}
@@ -465,9 +488,9 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 		const doneBtn = controls.createEl('button', { text: '추출 완료', cls: 'brewing-ctrl-btn brew-flow-stop-btn' });
 		doneBtn.addEventListener('click', () => {
 			ctx.flowState.finishBrewing(undefined, undefined);
-			ctx.setBrewingStarted(false);
-			ctx.expandStep('saving');
-			ctx.updateAccordion();
+			ctx.flowState.brewingStarted = false;
+			ctx.accordion.expand('saving');
+			ctx.accordion.update();
 		});
 		return;
 	}
@@ -488,11 +511,11 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 	let chart: BrewProfileChart | null = null;
 	const hasProfile = ctx.recorder.getPoints().length > 0;
 
-	if (ctx.brewingStarted && scaleConnected) {
+	if (ctx.flowState.brewingStarted && scaleConnected) {
 		const chartContainer = container.createDiv({ cls: 'brew-profile-container' });
 		chart = new BrewProfileChart(chartContainer);
 		chart.startLive(ctx.recorder);
-	} else if (!ctx.brewingStarted && hasProfile) {
+	} else if (!ctx.flowState.brewingStarted && hasProfile) {
 		const chartWrapper = container.createDiv({ cls: 'brew-profile-wrapper' });
 		const expandBtn = chartWrapper.createEl('button', { text: '⛶', cls: 'brew-profile-expand-btn' });
 		expandBtn.setAttribute('aria-label', '확대');
@@ -506,7 +529,7 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 		staticChart.renderStatic(ctx.recorder.getPoints());
 	}
 
-	if (ctx.brewingStarted) {
+	if (ctx.flowState.brewingStarted) {
 		const controls = container.createDiv({ cls: 'brewing-controls' });
 		const stopBtn = controls.createEl('button', { text: '완료', cls: 'brewing-ctrl-btn brew-flow-stop-btn' });
 		stopBtn.addEventListener('click', async () => {
@@ -520,20 +543,20 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 			} else {
 				ctx.flowState.finishBrewing(undefined, undefined);
 			}
-			ctx.setBrewingStarted(false);
-			ctx.expandStep('saving');
-			ctx.updateAccordion();
+			ctx.flowState.brewingStarted = false;
+			ctx.accordion.expand('saving');
+			ctx.accordion.update();
 		});
 	} else if (!hasProfile) {
 		const controls = container.createDiv({ cls: 'brewing-controls' });
 		const startBtn = controls.createEl('button', { text: '브루잉 시작', cls: 'brewing-ctrl-btn brew-flow-start-btn' });
 		startBtn.addEventListener('click', async () => {
-			ctx.setBrewingStarted(true);
+			ctx.flowState.brewingStarted = true;
 			if (scaleConnected) {
 				ctx.recorder.start();
 				await ctx.timerController.handleTimerClick();
 			}
-			ctx.updateAccordion();
+			ctx.accordion.update();
 		});
 	}
 }
@@ -595,9 +618,9 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 	const noteEl = container.createEl('textarea', { cls: 'brew-flow-note', attr: { spellcheck: 'false' } });
 	noteEl.placeholder = '';
 
-	if (ctx.savingRo.current) ctx.savingRo.current.disconnect();
+	cleanupSavingRo();
 	let roReady = false;
-	ctx.savingRo.current = new ResizeObserver(() => {
+	activeSavingRo = new ResizeObserver(() => {
 		if (!roReady) {
 			roReady = true;
 			return;
@@ -610,7 +633,7 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 			body.style.transition = '';
 		}
 	});
-	ctx.savingRo.current.observe(noteEl);
+	activeSavingRo.observe(noteEl);
 
 	const btnRow = container.createDiv({ cls: 'brewing-controls' });
 	const doneBtn = btnRow.createEl('button', { text: '저장', cls: 'brewing-ctrl-btn brew-flow-save-btn' });
