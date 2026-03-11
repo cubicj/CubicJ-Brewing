@@ -43,12 +43,6 @@ An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE s
 - Equipment registry (grinders, drippers, filters, baskets, accessories)
 - Brew profiles stored as JSON — weight-over-time curves for every brew
 
-<p>
-  <img src="assets/beans-data.png" alt="Bean inventory with roast days and remaining weight" width="720">
-  <br>
-  <em>Bean inventory — roast days, remaining weight, and status tracking per bean</em>
-</p>
-
 ### Vault-Native Storage
 - All data lives in your vault as plain files — Obsidian Sync compatible
 - Bean/recipe discovery via Obsidian's metadata cache
@@ -78,9 +72,34 @@ An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE s
 
 ## Usage
 
+### Bean Inventory (`beans` code block)
+
+Place a `beans` code block in any note to create a bean inventory hub:
+
+````markdown
+```beans
+```
+````
+
+<p>
+  <img src="assets/beans-data.png" alt="Bean inventory with roast days and remaining weight" width="720">
+  <br>
+  <em>Bean inventory — roast days, remaining weight, and status tracking per bean</em>
+</p>
+
+This block renders a live dashboard of all beans in your vault:
+
+- **Active / Finished** sections — beans are grouped by status
+- **Roast days** — automatically calculated from `roast_date` and refreshed daily
+- **Remaining weight** — click to set, add, or subtract (with optional scale auto-read)
+- **Status toggle** — mark as finished ("소진") or repurchase ("재구매") with new roast date
+- **New bean button** — creates a bean note with frontmatter template and a `brews` block
+
+> The `beans` block is **not created automatically** — add it manually to a note of your choice (e.g., a "Coffee Dashboard" note). One block per vault is enough.
+
 ### Bean Notes
 
-Create a note with `type: bean` frontmatter to register a bean:
+Each bean is a regular note with `type: bean` frontmatter:
 
 ```yaml
 ---
@@ -93,16 +112,11 @@ status: active
 ---
 ```
 
-Add a `beans` code block anywhere in your vault to display the bean inventory:
+The plugin discovers beans via Obsidian's metadata cache — no special folder structure required.
 
-````markdown
-```beans
-```
-````
+### Brew Records (`brews` code block)
 
-### Brew Records
-
-Each bean note can include a `brews` code block to show its brew history:
+Each bean note includes a `brews` code block (auto-inserted on creation) that shows its brew history:
 
 ````markdown
 ```brews
