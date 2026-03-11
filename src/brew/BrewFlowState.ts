@@ -83,7 +83,6 @@ export class BrewFlowState {
 
 	startBrewing(): void {
 		if (this.step !== 'configure') return;
-		this.brewingStarted = true;
 		this.step = 'brewing';
 	}
 
