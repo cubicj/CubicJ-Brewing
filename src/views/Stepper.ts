@@ -19,21 +19,21 @@ export function createStepper(
 	destroy: () => void;
 } {
 	let value = config.initial;
-	const group = container.createDiv({ cls: 'brew-flow-stepper' });
+	const group = container.createDiv({ cls: 'cubicj-stepper' });
 	group.createEl('label', { text: config.label });
-	const controls = group.createDiv({ cls: 'brew-flow-stepper-controls' });
+	const controls = group.createDiv({ cls: 'cubicj-stepper-controls' });
 
 	const precision = Math.max(0, -Math.floor(Math.log10(config.step)));
 	const round = (v: number) => parseFloat(v.toFixed(precision));
 	const clamp = (v: number) => Math.max(config.min, Math.min(config.max, round(v)));
-	const display = controls.createDiv({ cls: 'brew-flow-stepper-value is-draggable' });
+	const display = controls.createDiv({ cls: 'cubicj-stepper-value is-draggable' });
 	let initialized = false;
 	const update = () => {
 		display.textContent = config.format(value);
 		if (initialized) config.onChange?.(value);
 	};
 
-	const decBtn = controls.createEl('button', { text: '◀', cls: 'brew-flow-stepper-btn' });
+	const decBtn = controls.createEl('button', { text: '◀', cls: 'cubicj-stepper-btn' });
 	controls.insertBefore(decBtn, display);
 	decBtn.addEventListener('click', () => {
 		value = clamp(value - config.step);
@@ -43,7 +43,7 @@ export function createStepper(
 	update();
 	initialized = true;
 
-	const incBtn = controls.createEl('button', { text: '▶', cls: 'brew-flow-stepper-btn' });
+	const incBtn = controls.createEl('button', { text: '▶', cls: 'cubicj-stepper-btn' });
 	incBtn.addEventListener('click', () => {
 		value = clamp(value + config.step);
 		update();
@@ -82,7 +82,7 @@ export function createStepper(
 		input.type = 'number';
 		input.step = 'any';
 		input.value = String(value);
-		input.className = 'brew-flow-stepper-input';
+		input.className = 'cubicj-stepper-input';
 		display.textContent = '';
 		display.appendChild(input);
 		input.focus();

@@ -15,6 +15,7 @@ const FLOW_ORDER: BrewFlowStep[] = ['idle', 'method', 'bean', 'configure', 'brew
 export class BrewFlowState {
 	step: BrewFlowStep = 'idle';
 	selection: BrewFlowSelection = {};
+	brewingStarted = false;
 
 	startBrew(): void {
 		this.step = 'method';
@@ -82,6 +83,7 @@ export class BrewFlowState {
 
 	startBrewing(): void {
 		if (this.step !== 'configure') return;
+		this.brewingStarted = true;
 		this.step = 'brewing';
 	}
 
@@ -107,6 +109,7 @@ export class BrewFlowState {
 	cancel(): void {
 		this.step = 'idle';
 		this.selection = {};
+		this.brewingStarted = false;
 	}
 
 	get roastDays(): number | null {

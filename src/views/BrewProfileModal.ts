@@ -246,8 +246,8 @@ export class ConfirmModal extends Modal {
 
 	onOpen(): void {
 		this.titleEl.setText('확인');
-		this.contentEl.createDiv({ text: this.message, cls: 'brew-confirm-message' });
-		const footer = this.contentEl.createDiv({ cls: 'brew-confirm-footer' });
+		this.contentEl.createDiv({ text: this.message, cls: 'cubicj-confirm-message' });
+		const footer = this.contentEl.createDiv({ cls: 'cubicj-confirm-footer' });
 		const confirmBtn = footer.createEl('button', { text: '삭제', cls: 'mod-warning' });
 		confirmBtn.addEventListener('click', () => {
 			this.onConfirm();

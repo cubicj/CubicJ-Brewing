@@ -126,14 +126,20 @@ export class VaultDataService {
 
 	async refreshRoastDays(): Promise<void> {
 		const beans = this.getAllBeans();
-		for (const bean of beans) {
-			const days = this.getDaysSinceRoast(bean);
-			const file = this.getTFile(bean.path);
-			if (!file) continue;
-			await this.app.fileManager.processFrontMatter(file, (fm) => {
-				fm.roast_days = days !== null ? `${days}일차` : null;
-			});
-		}
+		await Promise.all(
+			beans.map(async (bean) => {
+				const days = this.getDaysSinceRoast(bean);
+				const file = this.getTFile(bean.path);
+				if (!file) return;
+				try {
+					await this.app.fileManager.processFrontMatter(file, (fm) => {
+						fm.roast_days = days !== null ? `${days}일차` : null;
+					});
+				} catch (e) {
+					console.error(`[VaultDataService] refreshRoastDays failed for ${bean.path}:`, e);
+				}
+			}),
+		);
 	}
 
 	private getTFile(path: string): TFile | null {
