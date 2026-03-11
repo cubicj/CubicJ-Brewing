@@ -56,7 +56,6 @@ export interface Noble {
 	stopScanningAsync(): Promise<void>;
 }
 
-export const NOBLE_PATH = process.env.NOBLE_PATH as string;
 export const SCALE_PREFIXES = ['PEARL', 'ACAIA', 'PROCH', 'PYXIS', 'LUNAR'];
 
 const MODEL_NAMES: [string, string][] = [

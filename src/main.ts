@@ -151,7 +151,9 @@ export default class CubicJBrewingPlugin extends Plugin {
 			this.blePacketLogger.log(`\n=== session ${new Date().toISOString()} ===`);
 		}
 
-		this.acaiaService = new AcaiaService({ logger });
+		const basePath = (this.app.vault.adapter as any).getBasePath();
+		const noblePath = require('path').join(basePath, this.manifest.dir, 'noble');
+		this.acaiaService = new AcaiaService({ logger, noblePath });
 
 		this.beanBlock.setScaleWeightGetter(() => {
 			if (this.acaiaService?.state !== 'connected') return null;

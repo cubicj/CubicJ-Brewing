@@ -3,7 +3,6 @@ import type { AcaiaEvents } from './types';
 import {
 	AcaiaState,
 	ButtonEvent,
-	NOBLE_PATH,
 	SCALE_PREFIXES,
 	WRITE_UUID,
 	NOTIFY_UUID,
@@ -34,6 +33,7 @@ export interface BleLogger {
 
 export interface AcaiaServiceOptions {
 	nobleFactory?: () => Noble | null;
+	noblePath?: string;
 	logger?: BleLogger;
 }
 
@@ -93,11 +93,12 @@ export class AcaiaService extends EventEmitter {
 		super();
 		this.on('error', () => {});
 		this.logger = options?.logger;
+		const noblePath = options?.noblePath ?? '@stoprocent/noble';
 		this.nobleFactory =
 			options?.nobleFactory ??
 			(() => {
 				try {
-					const noble = require(NOBLE_PATH);
+					const noble = require(noblePath);
 					noble.removeAllListeners();
 					try {
 						noble.stopScanning();

@@ -2,7 +2,7 @@
   "id": "cubicj-brewing",
   "name": "CubicJ Brewing",
   "version": "0.1.0",
-  "description": "Brewing assistant with Acaia Pearl S BLE integration",
+  "description": "Brewing assistant with Acaia Pearl S BLE integration.",
   "author": "CubicJ",
   "authorUrl": "https://github.com/cubicj",
   "minAppVersion": "1.0.0",
