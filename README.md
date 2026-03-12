@@ -2,16 +2,16 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Desktop-brightgreen)
-![Version](https://img.shields.io/badge/version-0.2.0-orange)
+![Version](https://img.shields.io/badge/version-0.2.1-orange)
 
 An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE scale integration, guided brew flow, and structured record keeping, all inside your vault.
 
 > Currently supports **Acaia Pearl S** on **Windows**. Other Acaia models and platforms are planned.
 
 <p align="center">
-  <img src="assets/sidebar.png" alt="Brewing sidebar with real-time scale display" width="360">
+  <video src="assets/Brewing.mp4" alt="Real-time BLE brewing session with live weight chart" width="360" autoplay loop muted playsinline></video>
   <br>
-  <em>Dot-matrix scale display with 6-step guided brew flow</em>
+  <em>Live brewing session — real-time weight tracking and profile chart via Acaia Pearl S</em>
 </p>
 
 ## Features
