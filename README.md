@@ -9,7 +9,7 @@ An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE s
 > Currently supports **Acaia Pearl S** on **Windows**. Other Acaia models and platforms are planned.
 
 <p align="center">
-  <video src="assets/Brewing.mp4" alt="Real-time BLE brewing session with live weight chart" width="360" autoplay loop muted playsinline></video>
+  <img src="assets/Brewing.gif" alt="Real-time BLE brewing session with live weight chart" width="360">
   <br>
   <em>Live brewing session — real-time weight tracking and profile chart via Acaia Pearl S</em>
 </p>
