@@ -639,6 +639,10 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 	container.createEl('h4', { text: t('form.memo'), cls: 'brew-flow-section-label' });
 	const noteEl = container.createEl('textarea', { cls: 'brew-flow-note', attr: { spellcheck: 'false' } });
 	noteEl.placeholder = '';
+	if (sel.note) noteEl.value = sel.note;
+	noteEl.addEventListener('input', () => {
+		sel.note = noteEl.value;
+	});
 
 	cleanupSavingRo();
 	let roReady = false;
