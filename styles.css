@@ -102,7 +102,7 @@
 }
 
 .cubicj-brewing-view .brewing-stability-dot.is-stable {
-	background: #00e676;
+	background: var(--color-green);
 }
 
 .cubicj-brewing-view .brewing-weight {

@@ -1,10 +1,10 @@
 {
   "name": "cubicj-brewing",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "private": true,
   "scripts": {
     "dev": "node esbuild.config.mjs",
-    "build": "vitest run --config vitest.config.ts --pool forks && tsc --noEmit && node esbuild.config.mjs production",
+    "build": "npm run test && npm run check && node esbuild.config.mjs production",
     "check": "tsc --noEmit",
     "test": "vitest run --config vitest.config.ts --pool forks",
     "test:watch": "vitest --config vitest.config.ts --pool forks",

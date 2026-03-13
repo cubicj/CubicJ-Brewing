@@ -71,6 +71,12 @@
   "settings.packetLog": "BLE Packet Log",
   "settings.packetLogDesc": "Log raw BLE packets (high volume).",
 
+  "settings.usageGuide": "Usage Guide",
+  "settings.beansCodeBlock": "Beans Widget",
+  "settings.beansCodeBlockDesc": "Add a ```beans``` code block to any note to display the bean management widget. In a note with type: bean frontmatter, it shows that bean's brew records.",
+  "settings.brewsCodeBlock": "Brew Records Widget",
+  "settings.brewsCodeBlockDesc": "Add a ```brews``` code block to a bean note (with type: bean frontmatter) to display a brew history table for that bean.",
+
   "equip.shared": "Shared",
   "equip.filterBrewing": "Filter Brewing",
   "equip.grindRange": "Grind Range",
