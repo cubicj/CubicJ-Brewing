@@ -24,7 +24,7 @@ export function renderActiveBeanRow(container: HTMLElement, bean: BeanInfo, deps
 	const days = deps.vaultData.getDaysSinceRoast(bean);
 	row.createSpan({ cls: 'cb-bean-days', text: days !== null ? t('bean.roastDays', { n: days }) : '' });
 
-	const weightText = bean.weight != null ? t('bean.remaining', { weight: bean.weight }) : '';
+	const weightText = bean.weight != null ? t('bean.remaining', { weight: bean.weight }) : 'N/A';
 	const weightEl = row.createSpan({ cls: 'cb-bean-weight', text: weightText });
 	if (deps.onWeightClick) {
 		const handler = deps.onWeightClick;
