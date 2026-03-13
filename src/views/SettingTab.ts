@@ -87,11 +87,12 @@ export class BrewingSettingTab extends PluginSettingTab {
 				});
 			});
 
-		containerEl.createEl('h2', { text: t('settings.debugLog') });
+		const details = containerEl.createEl('details');
+		details.createEl('summary', { text: t('settings.debugLog') });
 
 		const logConfig = this.plugin.getLogConfig();
 
-		new Setting(containerEl)
+		new Setting(details)
 			.setName(t('settings.debugLog'))
 			.setDesc(t('settings.debugLogDesc'))
 			.addToggle((toggle) =>
@@ -101,7 +102,7 @@ export class BrewingSettingTab extends PluginSettingTab {
 				}),
 			);
 
-		new Setting(containerEl)
+		new Setting(details)
 			.setName(t('settings.logCategories'))
 			.setDesc(t('settings.logCategoriesDesc'))
 			.addText((text) =>
@@ -117,7 +118,7 @@ export class BrewingSettingTab extends PluginSettingTab {
 					}),
 			);
 
-		new Setting(containerEl)
+		new Setting(details)
 			.setName(t('settings.packetLog'))
 			.setDesc(t('settings.packetLogDesc'))
 			.addToggle((toggle) =>
@@ -126,5 +127,11 @@ export class BrewingSettingTab extends PluginSettingTab {
 					await this.plugin.saveLogConfig(logConfig);
 				}),
 			);
+
+		containerEl.createEl('h2', { text: t('settings.usageGuide') });
+
+		new Setting(containerEl).setName(t('settings.beansCodeBlock')).setDesc(t('settings.beansCodeBlockDesc'));
+
+		new Setting(containerEl).setName(t('settings.brewsCodeBlock')).setDesc(t('settings.brewsCodeBlockDesc'));
 	}
 }

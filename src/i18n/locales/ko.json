@@ -71,6 +71,12 @@
   "settings.packetLog": "BLE 패킷 로그",
   "settings.packetLogDesc": "BLE 원시 패킷을 로그합니다 (고용량).",
 
+  "settings.usageGuide": "사용 가이드",
+  "settings.beansCodeBlock": "원두 위젯",
+  "settings.beansCodeBlockDesc": "노트에 ```beans``` 코드블럭을 추가하면 원두 관리 위젯이 표시됩니다. type: bean frontmatter가 있는 노트에서는 해당 원두의 추출 기록도 함께 보여줍니다.",
+  "settings.brewsCodeBlock": "추출 기록 위젯",
+  "settings.brewsCodeBlockDesc": "type: bean frontmatter가 있는 원두 노트에 ```brews``` 코드블럭을 추가하면 해당 원두의 추출 기록 테이블이 표시됩니다.",
+
   "equip.shared": "공용",
   "equip.filterBrewing": "필터 브루잉",
   "equip.grindRange": "분쇄도 범위",
