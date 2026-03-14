@@ -32,6 +32,7 @@
   "bean.emptyState": "type: bean frontmatter가 있는 노트가 없어요",
   "bean.roastDays": "{{n}}일차",
   "bean.remaining": "남은 원두 {{weight}}g",
+  "bean.remainingLabel": "남은 원두",
   "bean.depleted": "소진",
   "bean.repurchase": "재구매",
   "bean.getScaleWeight": "저울 무게 가져오기",

@@ -639,7 +639,7 @@
 
 .cb-bean-row {
 	display: grid;
-	grid-template-columns: 1fr 80px 95px auto;
+	grid-template-columns: 1fr 80px 95px;
 	align-items: center;
 	gap: 0 12px;
 	padding: 5px 8px;
@@ -682,10 +682,16 @@
 }
 
 .cb-bean-weight {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
 	font-size: 0.85em;
 	color: var(--text-muted);
 	white-space: nowrap;
-	text-align: left;
+}
+.cb-bean-weight-value {
+	font-weight: var(--font-semibold);
+	color: var(--text-normal);
 }
 .block-language-beans .cb-bean-weight {
 	cursor: pointer;
@@ -695,6 +701,18 @@
 }
 .block-language-beans .cb-bean-weight:hover {
 	background: var(--background-modifier-border);
+}
+body.is-mobile .cb-bean-row {
+	grid-template-columns: 1fr 50px 50px;
+}
+body.is-mobile .cb-bean-weight span:first-child {
+	display: none;
+}
+body.is-mobile .cb-bean-days {
+	text-align: right;
+}
+body.is-mobile .cb-bean-weight {
+	justify-content: flex-end;
 }
 
 .cb-bean-btn {
@@ -1081,10 +1099,15 @@ body.is-mobile .block-language-brews th:nth-child(3) {
 	pointer-events: auto;
 }
 .bwp-current {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	font-size: var(--font-ui-medium);
+	margin-bottom: 8px;
+}
+.bwp-current span:last-child {
 	font-size: var(--font-ui-large);
 	font-weight: var(--font-semibold);
-	text-align: center;
-	margin-bottom: 8px;
 }
 .bwp-input-row {
 	display: flex;
