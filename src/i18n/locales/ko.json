@@ -127,6 +127,7 @@
   "modal.extractionYield": "추출량",
   "modal.seconds": "{{n}}초",
   "modal.grams": "{{n}}g",
+  "modal.viewChart": "그래프 보기",
 
   "summary.grindSize": "분쇄도",
   "summary.dose": "도징량",
