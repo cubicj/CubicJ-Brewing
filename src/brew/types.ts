@@ -80,7 +80,7 @@ interface BrewRecordBase {
 export interface FilterRecord extends BrewRecordBase {
 	method: 'filter';
 	waterTemp: number;
-	filter: string;
+	filter?: string;
 	dripper?: string;
 }
 

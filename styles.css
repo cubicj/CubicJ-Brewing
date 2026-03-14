@@ -951,6 +951,49 @@ body.is-mobile .block-language-brews th:nth-child(3) {
 	margin-left: auto;
 }
 
+body.is-mobile .modal.brew-profile-modal {
+	width: 90vw;
+	max-width: 90vw;
+}
+body.is-mobile .brew-profile-modal .brew-profile-subtitle {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0 6px;
+}
+body.is-mobile .brew-profile-modal .brew-profile-subtitle-sep {
+	display: none;
+}
+body.is-mobile .brew-profile-modal .brew-detail-layout {
+	flex-direction: column;
+	gap: 12px;
+}
+body.is-mobile .brew-profile-modal .brew-detail-grid {
+	grid-template-columns: 1fr;
+	gap: 0;
+	padding: 0;
+}
+body.is-mobile .brew-profile-modal .brew-detail-cell {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+body.is-mobile .brew-profile-modal .brew-detail-cell:last-child {
+	border-bottom: none;
+}
+body.is-mobile .brew-profile-modal .brew-detail-label {
+	margin-bottom: 0;
+}
+body.is-mobile .brew-profile-modal .brew-espresso-stats {
+	flex-wrap: wrap;
+	gap: 16px;
+	padding: 16px;
+}
+body.is-mobile .brew-profile-modal .brew-profile-footer {
+	gap: 8px;
+}
+
 /* Edit form — mirrors sidebar configure step layout */
 .brew-profile-modal .brew-edit-form {
 	display: flex;

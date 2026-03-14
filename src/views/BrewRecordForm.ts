@@ -92,6 +92,7 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 	const filterRow = filterGroup.createDiv({ cls: 'brew-edit-row' });
 	filterRow.createEl('label', { text: t('form.filter') });
 	const filterSelect = filterRow.createEl('select');
+	filterSelect.createEl('option', { text: '-', value: '' });
 	for (const f of deps.equipment.filters) {
 		const opt = filterSelect.createEl('option', { text: f, value: f });
 		if (record.method === 'filter' && record.filter === f) opt.selected = true;
@@ -225,7 +226,7 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 					...base,
 					method: 'filter' as const,
 					waterTemp: waterTempStepper.getValue(),
-					filter: filterSelect.value,
+					filter: filterSelect.value || undefined,
 					dripper: dripperSelect?.value || undefined,
 				};
 			} else {
@@ -273,7 +274,7 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 						...shared,
 						method: 'filter',
 						waterTemp: waterTempStepper.getValue(),
-						filter: filterSelect.value,
+						filter: filterSelect.value || undefined,
 						dripper: dripperSelect?.value || undefined,
 					};
 				}
