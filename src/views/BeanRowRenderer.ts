@@ -34,17 +34,6 @@ export function renderActiveBeanRow(container: HTMLElement, bean: BeanInfo, deps
 		});
 	}
 
-	const statusBtn = row.createEl('button', { text: t('bean.depleted'), cls: 'cb-bean-btn cb-bean-status-btn' });
-	statusBtn.addEventListener('click', async (e) => {
-		e.stopPropagation();
-		try {
-			await deps.vaultData.setBeanStatus(bean.path, 'finished');
-			deps.onStatusChange();
-		} catch (err) {
-			console.error('[BeanRow] status change failed:', err);
-		}
-	});
-
 	return row;
 }
 
