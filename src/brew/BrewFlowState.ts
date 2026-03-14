@@ -142,6 +142,6 @@ export class BrewFlowState {
 		if (s.method === 'espresso') {
 			return { ...base, method: 'espresso', drink: s.drink!, basket: s.basket!, accessories: s.accessories };
 		}
-		return { ...base, method: 'filter', waterTemp: s.waterTemp!, filter: s.filter!, dripper: s.dripper };
+		return { ...base, method: 'filter', waterTemp: s.waterTemp!, filter: s.filter, dripper: s.dripper };
 	}
 }

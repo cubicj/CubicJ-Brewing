@@ -191,7 +191,7 @@ export class BrewProfileModal extends Modal {
 		}
 		if (record.method === 'filter') {
 			if (record.dripper) equipRow.push([t('equipment.dripper'), record.dripper]);
-			equipRow.push([t('equipment.filter'), record.filter]);
+			if (record.filter) equipRow.push([t('equipment.filter'), record.filter]);
 		} else {
 			equipRow.push([t('equipment.basket'), record.basket]);
 			if (record.accessories && record.accessories.length > 0) {
