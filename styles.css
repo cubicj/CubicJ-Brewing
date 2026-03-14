@@ -714,10 +714,6 @@
 .cb-bean-new-btn {
 	font-size: 0.85em;
 }
-.cb-bean-status-btn {
-	font-size: 0.75em;
-}
-
 .cb-bean-date-row {
 	display: flex;
 	gap: 4px;
@@ -1154,6 +1150,23 @@ body.is-mobile .block-language-brews th:nth-child(3) {
 }
 .bwp-action.is-muted:hover {
 	color: var(--text-normal);
+}
+.bwp-depleted {
+	all: unset;
+	box-sizing: border-box;
+	width: 100%;
+	margin-top: 4px;
+	padding: 5px 0;
+	text-align: center;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	cursor: pointer;
+}
+.bwp-depleted:hover {
+	color: var(--text-error);
+	border-color: var(--text-error);
 }
 
 /* Accessories checklist (shared: sidebar + modal) */

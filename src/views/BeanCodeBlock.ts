@@ -99,9 +99,7 @@ function openWeightPopover(
 
 	const popover = document.body.createDiv({ cls: 'bean-weight-popover' });
 
-	if (bean.weight != null) {
-		popover.createDiv({ cls: 'bwp-current', text: `${bean.weight}g` });
-	}
+	popover.createDiv({ cls: 'bwp-current', text: bean.weight != null ? `${bean.weight}g` : 'N/A' });
 
 	const inputRow = popover.createDiv({ cls: 'bwp-input-row' });
 	const input = inputRow.createEl('input', {
@@ -137,6 +135,20 @@ function openWeightPopover(
 		});
 		btn.addEventListener('click', () => applyAction(def.calc));
 	}
+
+	const depletedBtn = popover.createEl('button', {
+		text: t('bean.depleted'),
+		cls: 'bwp-depleted',
+	});
+	depletedBtn.addEventListener('click', async () => {
+		try {
+			await vaultData.setBeanStatus(bean.path, 'finished');
+			onSave();
+			close();
+		} catch (err) {
+			console.error('[BeanCodeBlock] depleted failed:', err);
+		}
+	});
 
 	const close = () => {
 		popover.remove();
