@@ -1,14 +1,13 @@
 import { realpathSync } from 'fs';
+import { resolve } from 'path';
 import { defineConfig } from 'vitest/config';
 
-const normalizedCwd = realpathSync.native(process.cwd());
-if (process.cwd() !== normalizedCwd) {
-	process.chdir(normalizedCwd);
-}
+const projectRoot = realpathSync.native(resolve(__dirname));
+process.chdir(projectRoot);
 
 export default defineConfig({
 	test: {
-		root: normalizedCwd,
+		root: projectRoot,
 		include: ['src/**/*.test.ts'],
 		pool: 'forks',
 		fileParallelism: false,
