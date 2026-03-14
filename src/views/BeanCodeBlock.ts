@@ -99,7 +99,9 @@ function openWeightPopover(
 
 	const popover = document.body.createDiv({ cls: 'bean-weight-popover' });
 
-	popover.createDiv({ cls: 'bwp-current', text: bean.weight != null ? `${bean.weight}g` : 'N/A' });
+	const currentRow = popover.createDiv({ cls: 'bwp-current' });
+	currentRow.createSpan({ text: t('bean.remainingLabel') });
+	currentRow.createSpan({ text: bean.weight != null ? `${bean.weight}g` : 'N/A' });
 
 	const inputRow = popover.createDiv({ cls: 'bwp-input-row' });
 	const input = inputRow.createEl('input', {

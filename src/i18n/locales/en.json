@@ -32,6 +32,7 @@
   "bean.emptyState": "No notes with type: bean frontmatter found",
   "bean.roastDays": "Day {{n}}",
   "bean.remaining": "{{weight}}g remaining",
+  "bean.remainingLabel": "Remaining",
   "bean.depleted": "Depleted",
   "bean.repurchase": "Repurchase",
   "bean.getScaleWeight": "Get Scale Weight",
