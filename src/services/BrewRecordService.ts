@@ -1,4 +1,5 @@
-import type { BrewRecord, BrewMethod, BrewTemp } from '../brew/types';
+import type { BrewRecord, BrewMethod, BrewTemp, BrewProfilePoint } from '../brew/types';
+import { estimateYield } from '../brew/yieldEstimator';
 
 export const BREW_RECORDS_VERSION = 1;
 
@@ -139,5 +140,24 @@ export class BrewRecordService {
 				return true;
 			})
 			.sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0];
+	}
+
+	async migrateYields(profileStorage: { load(path: string): Promise<BrewProfilePoint[]> }): Promise<void> {
+		const records = await this.load();
+		let changed = false;
+		for (const record of records) {
+			if (record.method !== 'filter' || !record.profilePath) continue;
+			try {
+				const points = await profileStorage.load(record.profilePath);
+				const estimated = estimateYield(points);
+				if (estimated !== undefined && estimated !== record.yield) {
+					record.yield = estimated;
+					changed = true;
+				}
+			} catch {
+				continue;
+			}
+		}
+		if (changed) await this.save();
 	}
 }

@@ -13,6 +13,7 @@ import type { TimerController } from './TimerController';
 import { formatTimer } from './TimerController';
 import type { BrewProfileRecorder } from './BrewProfileRecorder';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
+import { estimateYield } from '../brew/yieldEstimator';
 import { BrewProfileChart } from './BrewProfileChart';
 import { BrewProfileModal } from './BrewProfileModal';
 import { createStepper } from './Stepper';
@@ -555,7 +556,9 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 					ctx.recorder.stop();
 					await ctx.timerController.freeze();
 					const totalSeconds = ctx.timerController.getElapsedSeconds();
-					const yieldGrams = parseFloat(ctx.getWeightText()) || undefined;
+					const yieldGrams =
+						(ctx.flowState.selection.method === 'filter' ? estimateYield(ctx.recorder.getPoints()) : undefined) ??
+						(parseFloat(ctx.getWeightText()) || undefined);
 					ctx.flowState.finishBrewing(totalSeconds || undefined, yieldGrams);
 				} else {
 					ctx.flowState.finishBrewing(undefined, undefined);

@@ -264,3 +264,69 @@ describe('BrewRecordService', () => {
 		expect(records).toHaveLength(1);
 	});
 });
+
+describe('migrateYields', () => {
+	it('updates yield for filter records with profilePath', async () => {
+		const record = makeFilter({ profilePath: 'profiles/test.json', yield: 5 });
+		const adapter = new InMemoryAdapter();
+		adapter.data = JSON.stringify({ version: 1, records: [record] });
+		const service = new BrewRecordService(adapter);
+
+		const mockProfileStorage = {
+			load: async (_path: string) => [
+				{ t: 0, w: 0 },
+				{ t: 10, w: 180 },
+				{ t: 20, w: 185 },
+				{ t: 21, w: 185.2 },
+				{ t: 22, w: 185.1 },
+				{ t: 23, w: 185.3 },
+				{ t: 24, w: 185.0 },
+				{ t: 25, w: 5 },
+				{ t: 26, w: 3 },
+			],
+		};
+
+		await service.migrateYields(mockProfileStorage as any);
+		const records = await service.getAll();
+		expect(records[0].yield).toBeGreaterThanOrEqual(184);
+		expect(records[0].yield).toBeLessThanOrEqual(186);
+	});
+
+	it('skips espresso records', async () => {
+		const record = {
+			id: 'esp-1',
+			timestamp: new Date().toISOString(),
+			bean: 'Test',
+			roastDate: '',
+			roastDays: null,
+			method: 'espresso' as const,
+			temp: 'hot' as const,
+			grindSize: 15,
+			dose: 18,
+			yield: 36,
+			drink: 'espresso' as const,
+			basket: '18g',
+			profilePath: 'profiles/test.json',
+		};
+		const adapter = new InMemoryAdapter();
+		adapter.data = JSON.stringify({ version: 1, records: [record] });
+		const service = new BrewRecordService(adapter);
+		const mockProfileStorage = { load: async () => [] };
+
+		await service.migrateYields(mockProfileStorage as any);
+		const records = await service.getAll();
+		expect(records[0].yield).toBe(36);
+	});
+
+	it('skips records without profilePath', async () => {
+		const record = makeFilter({ yield: 200 });
+		const adapter = new InMemoryAdapter();
+		adapter.data = JSON.stringify({ version: 1, records: [record] });
+		const service = new BrewRecordService(adapter);
+		const mockProfileStorage = { load: async () => [] };
+
+		await service.migrateYields(mockProfileStorage as any);
+		const records = await service.getAll();
+		expect(records[0].yield).toBe(200);
+	});
+});
