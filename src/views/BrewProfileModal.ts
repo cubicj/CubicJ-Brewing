@@ -1,4 +1,4 @@
-import { Modal, type App } from 'obsidian';
+import { Modal, Platform, type App } from 'obsidian';
 import { BrewProfileChart } from './BrewProfileChart';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import type { BrewRecordService } from '../services/BrewRecordService';
@@ -24,6 +24,7 @@ export class BrewProfileModal extends Modal {
 	private record?: BrewRecord;
 	private resolvePoints: () => Promise<BrewProfilePoint[]>;
 	private wheelHandler: ((e: WheelEvent) => void) | null = null;
+	private cachedPoints: BrewProfilePoint[] | null = null;
 
 	constructor(app: App, subtitle: string, mode: ModalMode) {
 		super(app);
@@ -74,23 +75,11 @@ export class BrewProfileModal extends Modal {
 		}
 
 		const points = await this.resolvePoints();
-		if (points.length > 0) {
-			const chartContainer = this.contentEl.createDiv({ cls: 'brew-profile-container' });
-			const modalHeight = Math.min(500, Math.round(window.innerHeight * 0.5));
-			const chart = new BrewProfileChart(chartContainer, modalHeight, 8, true);
-			chart.renderStatic(points);
-
-			this.wheelHandler = (e: WheelEvent) => {
-				const dx = e.deltaX || (e.shiftKey ? e.deltaY : 0);
-				if (!dx) return;
-				e.preventDefault();
-				e.stopPropagation();
-				chartContainer.scrollLeft += dx;
-			};
-			this.modalEl.addEventListener('wheel', this.wheelHandler, {
-				capture: true,
-				passive: false,
-			} as AddEventListenerOptions);
+		const hasChart = points.length > 0;
+		if (hasChart && !Platform.isMobile) {
+			this.renderChart(points);
+		} else if (hasChart && Platform.isMobile) {
+			this.cachedPoints = points;
 		} else if (this.record) {
 			const espressoStats: string[] = [];
 			if (this.record.time) espressoStats.push(t('modal.seconds', { n: this.record.time }));
@@ -121,6 +110,10 @@ export class BrewProfileModal extends Modal {
 			const deleteBtn = footer.createEl('button', { text: t('form.delete'), cls: 'mod-warning' });
 			deleteBtn.addEventListener('click', () => this.confirmDelete());
 			const rightGroup = footer.createDiv({ cls: 'brew-profile-footer-right' });
+			if (this.cachedPoints && Platform.isMobile) {
+				const chartBtn = rightGroup.createEl('button', { text: t('modal.viewChart') });
+				chartBtn.addEventListener('click', () => this.enterChartMode());
+			}
 			const editBtn = rightGroup.createEl('button', { text: t('common.edit') });
 			editBtn.addEventListener('click', () => this.enterEditMode());
 			const okBtn = rightGroup.createEl('button', { text: t('common.confirm'), cls: 'mod-cta' });
@@ -165,6 +158,46 @@ export class BrewProfileModal extends Modal {
 			onDeleted: () => this.close(),
 			onCancel: () => this.renderReadMode(),
 		});
+	}
+
+	private renderChart(points: BrewProfilePoint[], height?: number, container?: HTMLElement): void {
+		const chartContainer = container ?? this.contentEl.createDiv({ cls: 'brew-profile-container' });
+		chartContainer.addClass('brew-profile-container');
+		const modalHeight = height ?? Math.min(500, Math.round(window.innerHeight * 0.5));
+		const chart = new BrewProfileChart(chartContainer, modalHeight, 8, true);
+		chart.renderStatic(points);
+
+		this.wheelHandler = (e: WheelEvent) => {
+			const dx = e.deltaX || (e.shiftKey ? e.deltaY : 0);
+			if (!dx) return;
+			e.preventDefault();
+			e.stopPropagation();
+			chartContainer.scrollLeft += dx;
+		};
+		this.modalEl.addEventListener('wheel', this.wheelHandler, {
+			capture: true,
+			passive: false,
+		} as AddEventListenerOptions);
+	}
+
+	private enterChartMode(): void {
+		if (!this.cachedPoints) return;
+		this.removeWheelHandler();
+		this.contentEl.empty();
+		this.modalEl.addClass('brew-profile-chart-mode');
+		this.titleEl.setText(t('modal.brewDetail'));
+
+		const footer = this.contentEl.createDiv({ cls: 'brew-profile-footer' });
+		const backBtn = footer.createEl('button', { text: t('common.confirm'), cls: 'mod-cta' });
+		backBtn.addEventListener('click', () => {
+			this.modalEl.removeClass('brew-profile-chart-mode');
+			this.renderReadMode();
+		});
+
+		const chartHeight = Math.round(window.innerHeight * 0.6);
+		const chartDiv = this.contentEl.createDiv();
+		this.contentEl.insertBefore(chartDiv, footer);
+		this.renderChart(this.cachedPoints, chartHeight, chartDiv);
 	}
 
 	private removeWheelHandler(): void {

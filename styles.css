@@ -954,6 +954,16 @@ body.is-mobile .block-language-brews th:nth-child(3) {
 body.is-mobile .modal.brew-profile-modal {
 	width: 90vw;
 	max-width: 90vw;
+	height: 85vh;
+	max-height: 85vh;
+}
+body.is-mobile .brew-profile-modal .modal-content {
+	display: flex !important;
+	flex-direction: column;
+	height: 100%;
+}
+body.is-mobile .brew-profile-modal .brew-profile-footer {
+	margin-top: auto;
 }
 body.is-mobile .brew-profile-modal .brew-profile-subtitle {
 	display: flex;
@@ -961,7 +971,9 @@ body.is-mobile .brew-profile-modal .brew-profile-subtitle {
 	gap: 0 6px;
 }
 body.is-mobile .brew-profile-modal .brew-profile-subtitle-sep {
-	display: none;
+	flex-basis: 100%;
+	height: 0;
+	overflow: hidden;
 }
 body.is-mobile .brew-profile-modal .brew-detail-layout {
 	flex-direction: column;
@@ -992,6 +1004,12 @@ body.is-mobile .brew-profile-modal .brew-espresso-stats {
 }
 body.is-mobile .brew-profile-modal .brew-profile-footer {
 	gap: 8px;
+}
+body.is-mobile .brew-profile-chart-mode .modal-content {
+	overflow-y: clip;
+}
+body.is-mobile .brew-profile-chart-mode .brew-profile-footer {
+	justify-content: flex-end;
 }
 
 /* Edit form — mirrors sidebar configure step layout */

@@ -127,6 +127,7 @@
   "modal.extractionYield": "Extraction Yield",
   "modal.seconds": "{{n}}s",
   "modal.grams": "{{n}}g",
+  "modal.viewChart": "View Chart",
 
   "summary.grindSize": "Grind",
   "summary.dose": "Dose",
