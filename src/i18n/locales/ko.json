@@ -23,6 +23,7 @@
   "brew.saving": "저장 중...",
   "brew.saved": "저장 완료",
   "brew.saveFailed": "저장 실패",
+  "brew.unexpectedError": "오류가 발생했습니다",
 
   "bean.new": "+ 새 원두",
   "bean.defaultName": "새 원두",

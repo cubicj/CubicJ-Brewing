@@ -23,6 +23,7 @@
   "brew.saving": "Saving...",
   "brew.saved": "Saved",
   "brew.saveFailed": "Save failed",
+  "brew.unexpectedError": "Something went wrong",
 
   "bean.new": "+ New Bean",
   "bean.defaultName": "New Bean",

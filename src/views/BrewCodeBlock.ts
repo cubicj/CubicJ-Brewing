@@ -43,7 +43,12 @@ export class BrewCodeBlock {
 		el.dataset.sourcePath = sourcePath;
 		let beanName = this.resolveBeanName(sourcePath);
 		if (!beanName) {
-			await new Promise((r) => setTimeout(r, 500));
+			await new Promise<void>((resolve) => {
+				const ref = this.app.metadataCache.on('resolved', () => {
+					this.app.metadataCache.offref(ref);
+					resolve();
+				});
+			});
 			beanName = this.resolveBeanName(sourcePath);
 		}
 		if (!beanName) {

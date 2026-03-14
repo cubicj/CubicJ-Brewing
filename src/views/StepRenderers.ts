@@ -189,18 +189,23 @@ function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
 	);
 
 	const tryAdvance = async () => {
-		const complete = !!selectedMethod && !!selectedTemp && (selectedMethod !== 'espresso' || !!selectedDrink);
-		if (complete) {
-			ctx.flowState.selectMethod(selectedMethod!, selectedTemp!, selectedDrink ?? undefined);
-			const bean = ctx.flowState.selection.bean;
-			if (bean) {
-				const lastRecord = await ctx.plugin.recordService.getLastRecord(bean.name, selectedMethod!, selectedTemp!);
-				ctx.flowState.selectBean(bean, lastRecord);
+		try {
+			const complete = !!selectedMethod && !!selectedTemp && (selectedMethod !== 'espresso' || !!selectedDrink);
+			if (complete) {
+				ctx.flowState.selectMethod(selectedMethod!, selectedTemp!, selectedDrink ?? undefined);
+				const bean = ctx.flowState.selection.bean;
+				if (bean) {
+					const lastRecord = await ctx.plugin.recordService.getLastRecord(bean.name, selectedMethod!, selectedTemp!);
+					ctx.flowState.selectBean(bean, lastRecord);
+				}
+				ctx.renderContent();
+			} else if (ctx.flowState.step !== 'method') {
+				ctx.flowState.goToStep('method');
+				ctx.accordion.update();
 			}
-			ctx.renderContent();
-		} else if (ctx.flowState.step !== 'method') {
-			ctx.flowState.goToStep('method');
-			ctx.accordion.update();
+		} catch (e) {
+			console.error('[CubicJ Brewing] tryAdvance failed:', e);
+			new Notice(t('brew.unexpectedError'));
 		}
 	};
 }
