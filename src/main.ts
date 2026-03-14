@@ -13,7 +13,7 @@ import { BrewingSettingTab } from './views/SettingTab';
 import { initI18n, t } from './i18n/index';
 
 const DATA_DIR = 'cubicj-brewing';
-const DATA_VERSION = 2;
+const DATA_VERSION = 3;
 
 const DEFAULT_HOTKEYS: GlobalHotkeys = {};
 
@@ -128,11 +128,17 @@ export default class CubicJBrewingPlugin extends Plugin {
 		this.app.workspace.onLayoutReady(async () => {
 			if (this.savedDataVersion < 2) {
 				const failures = await this.vaultData.migrateFrontmatterKeys();
-				if (failures.length === 0) {
-					const data = (await this.loadData()) ?? {};
-					data.dataVersion = DATA_VERSION;
-					await this.saveData(data);
+				if (failures.length > 0) {
+					console.warn('[CubicJ-Brewing] frontmatter migration had failures, skipping version bump');
 				}
+			}
+			if (this.savedDataVersion < 3) {
+				await this.recordService.migrateYields(this.profileStorage);
+			}
+			if (this.savedDataVersion < DATA_VERSION) {
+				const data = (await this.loadData()) ?? {};
+				data.dataVersion = DATA_VERSION;
+				await this.saveData(data);
 			}
 			this.vaultData.refreshRoastDays();
 			if (this.firstInstall) this.activateView();
