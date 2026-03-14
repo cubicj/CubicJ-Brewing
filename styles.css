@@ -812,6 +812,10 @@
 	margin: 0 0 8px;
 	font-size: var(--font-ui-medium);
 }
+body.is-mobile .block-language-brews .brew-record-note,
+body.is-mobile .block-language-brews th:nth-child(3) {
+	display: none;
+}
 
 /* Brew Profile Expand Button (sidebar) */
 .cubicj-brewing-view .brew-profile-wrapper {
