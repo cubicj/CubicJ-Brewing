@@ -628,7 +628,7 @@
 .cb-bean-header {
 	display: flex;
 	justify-content: flex-end;
-	padding-bottom: 4px;
+	padding-bottom: 8px;
 }
 .cb-bean-section-title {
 	font-size: 0.85em;
@@ -648,8 +648,7 @@
 	grid-template-columns: 1fr 80px 95px;
 	align-items: center;
 	gap: 0 12px;
-	height: 36px;
-	padding: 0 8px;
+	padding: 7px 8px;
 	border-radius: 4px;
 }
 .cb-bean-row:hover {
@@ -657,6 +656,7 @@
 }
 .cb-bean-row.is-finished {
 	display: flex;
+	flex-wrap: nowrap;
 	align-items: center;
 	gap: 8px;
 	opacity: 0.6;
@@ -718,12 +718,14 @@ body.is-mobile .cb-bean-weight {
 	justify-content: flex-end;
 }
 
-.cb-bean-btn {
+.cb-bean-row .cb-bean-btn,
+.cubicj-data-manage-modal .cb-bean-row .cb-bean-btn {
 	font-size: 0.8em;
-	padding: 1px 8px;
-	line-height: 1.4;
-	min-height: 0;
+	padding: 0 8px;
+	margin: -1px 0;
+	line-height: inherit;
 	height: auto;
+	min-height: 0;
 	cursor: pointer;
 	background: var(--background-modifier-hover);
 	border: 1px solid var(--background-modifier-border);
@@ -731,7 +733,7 @@ body.is-mobile .cb-bean-weight {
 	color: var(--text-normal);
 	box-shadow: none;
 }
-.cb-bean-btn:hover {
+.cb-bean-row .cb-bean-btn:hover {
 	background: var(--background-modifier-border);
 }
 
@@ -741,15 +743,17 @@ body.is-mobile .cb-bean-weight {
 .cb-bean-date-row {
 	display: flex;
 	gap: 4px;
-	padding: 4px 0 0 0;
 	align-items: center;
+	margin-left: auto;
 }
 .cb-bean-date-row input[type='date'] {
 	font-size: 0.8em;
 	padding: 0 4px;
-	line-height: 1.4;
+	margin: -1px 0;
+	line-height: inherit;
 	min-height: 0;
-	height: auto;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
 }
 .cb-bean-date-btns {
 	display: flex;
