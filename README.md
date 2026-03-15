@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Desktop-brightgreen)
-![Version](https://img.shields.io/badge/version-0.2.1-orange)
+![Version](https://img.shields.io/badge/version-0.2.7-orange)
 
 An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE scale integration, guided brew flow, and structured record keeping, all inside your vault.
 
@@ -111,7 +111,7 @@ Each bean note includes a `brews` code block (auto-inserted on creation) that sh
 ## Architecture
 
 ```
-8,800+ lines TypeScript · 130 tests (vitest) · esbuild CommonJS bundle
+TypeScript · vitest · esbuild CommonJS bundle
 ```
 
 | Layer | Key Components |
