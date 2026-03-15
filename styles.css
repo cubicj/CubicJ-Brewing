@@ -231,9 +231,19 @@
 	padding: 0;
 }
 
-.cubicj-data-manage-modal .dm-bean-list {
-	display: flex;
-	flex-direction: column;
+.dm-card {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	padding: 10px 12px;
+	margin-bottom: 12px;
+}
+.dm-card-title {
+	font-size: 0.75em;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--text-muted);
+	margin-bottom: 4px;
 }
 
 .cubicj-data-manage-modal .dm-btn {
@@ -313,7 +323,7 @@
 
 .cubicj-brewing-view .brew-accordion-indicator.is-done {
 	background: var(--color-green);
-	color: #fff;
+	color: var(--text-on-accent);
 	border-color: var(--color-green);
 }
 
@@ -620,10 +630,6 @@
 	justify-content: flex-end;
 	padding-bottom: 4px;
 }
-.cubicj-data-manage-modal .cb-bean-header {
-	padding-bottom: 8px;
-}
-
 .cb-bean-section-title {
 	font-size: 0.85em;
 	font-weight: 600;
@@ -642,7 +648,8 @@
 	grid-template-columns: 1fr 80px 95px;
 	align-items: center;
 	gap: 0 12px;
-	padding: 5px 8px;
+	height: 36px;
+	padding: 0 8px;
 	border-radius: 4px;
 }
 .cb-bean-row:hover {
@@ -664,14 +671,10 @@
 .cb-bean-name {
 	cursor: pointer;
 	color: var(--text-accent);
-	text-decoration: none;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	min-width: 0;
-}
-.cb-bean-name:hover {
-	text-decoration: underline;
 }
 
 .cb-bean-days {
@@ -717,7 +720,10 @@ body.is-mobile .cb-bean-weight {
 
 .cb-bean-btn {
 	font-size: 0.8em;
-	padding: 2px 8px;
+	padding: 1px 8px;
+	line-height: 1.4;
+	min-height: 0;
+	height: auto;
 	cursor: pointer;
 	background: var(--background-modifier-hover);
 	border: 1px solid var(--background-modifier-border);
@@ -739,8 +745,11 @@ body.is-mobile .cb-bean-weight {
 	align-items: center;
 }
 .cb-bean-date-row input[type='date'] {
-	font-size: 0.85em;
-	padding: 2px 4px;
+	font-size: 0.8em;
+	padding: 0 4px;
+	line-height: 1.4;
+	min-height: 0;
+	height: auto;
 }
 .cb-bean-date-btns {
 	display: flex;

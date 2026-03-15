@@ -85,7 +85,6 @@ export class DataManageModal extends Modal {
 		const newBtn = headerEl.createEl('button', { text: t('bean.new'), cls: 'cb-bean-btn cb-bean-new-btn' });
 		newBtn.addEventListener('click', () => this.createNewBean());
 
-		const listEl = container.createDiv({ cls: 'dm-bean-list' });
 		const beans = this.plugin.vaultData.getAllBeans();
 		const active = [...beans.filter((b) => b.status === 'active')].sort((a, b) => a.name.localeCompare(b.name));
 		const finished = [...beans.filter((b) => b.status === 'finished')].sort((a, b) => a.name.localeCompare(b.name));
@@ -100,17 +99,19 @@ export class DataManageModal extends Modal {
 		};
 
 		if (active.length > 0) {
-			listEl.createDiv({ cls: 'cb-bean-section-title', text: t('bean.activeBeans') });
-			for (const bean of active) renderActiveBeanRow(listEl, bean, deps);
+			const card = container.createDiv({ cls: 'dm-card' });
+			card.createDiv({ cls: 'dm-card-title', text: t('bean.activeBeans') });
+			for (const bean of active) renderActiveBeanRow(card, bean, deps);
 		}
 
 		if (finished.length > 0) {
-			listEl.createDiv({ cls: 'cb-bean-section-title cb-bean-section-past', text: t('bean.pastBeans') });
-			for (const bean of finished) renderFinishedBeanRow(listEl, bean, deps);
+			const card = container.createDiv({ cls: 'dm-card' });
+			card.createDiv({ cls: 'dm-card-title', text: t('bean.pastBeans') });
+			for (const bean of finished) renderFinishedBeanRow(card, bean, deps);
 		}
 
 		if (beans.length === 0) {
-			listEl.createDiv({ cls: 'dm-empty', text: t('bean.emptyState') });
+			container.createDiv({ cls: 'dm-empty', text: t('bean.emptyState') });
 		}
 	}
 
