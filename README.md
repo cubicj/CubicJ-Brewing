@@ -4,6 +4,8 @@
 ![Platform](https://img.shields.io/badge/platform-Desktop-brightgreen)
 ![Version](https://img.shields.io/badge/version-0.2.7-orange)
 
+[한국어](README.ko.md)
+
 An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE scale integration, guided brew flow, and structured record keeping, all inside your vault.
 
 > Currently supports **Acaia Pearl S** on **Windows**. Other Acaia models and platforms are planned.
