@@ -51,10 +51,8 @@ export function createStepper(
 
 	let dragStartX = 0;
 	let dragStartVal = 0;
-	let _dragged = false;
 	const onMove = (e: MouseEvent) => {
 		const dx = e.clientX - dragStartX;
-		if (Math.abs(dx) > 3) _dragged = true;
 		const raw = dragStartVal + (dx / config.pxPerStep) * config.step;
 		value = clamp(Math.round(raw / config.step) * config.step);
 		update();
@@ -68,7 +66,6 @@ export function createStepper(
 		e.preventDefault();
 		dragStartX = e.clientX;
 		dragStartVal = value;
-		_dragged = false;
 		display.addClass('is-dragging');
 		document.addEventListener('mousemove', onMove);
 		document.addEventListener('mouseup', onUp);

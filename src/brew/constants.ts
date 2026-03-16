@@ -27,4 +27,9 @@ export const getTempLabel = (key: string): string => {
 
 export const MS_PER_DAY = 86400000;
 
+export const calcRoastDays = (roastDate: string | null): number | null => {
+	if (!roastDate) return null;
+	return Math.floor((Date.now() - new Date(roastDate).getTime()) / MS_PER_DAY);
+};
+
 export const BEAN_NOTE_EXTRA = '```brews\n```';
