@@ -8,14 +8,12 @@ import type { FileAdapter } from './services/FileAdapter';
 import { VaultDataService } from './services/VaultDataService';
 import { BeanCodeBlock } from './views/BeanCodeBlock';
 import { BrewCodeBlock } from './views/BrewCodeBlock';
-import type { EquipmentSettings, GlobalHotkeys, LogConfig } from './brew/types';
+import type { EquipmentSettings, LogConfig } from './brew/types';
 import { BrewingSettingTab } from './views/SettingTab';
 import { initI18n, t } from './i18n/index';
 
 const DATA_DIR = 'cubicj-brewing';
 const DATA_VERSION = 3;
-
-const DEFAULT_HOTKEYS: GlobalHotkeys = {};
 
 export default class CubicJBrewingPlugin extends Plugin {
 	acaiaService: AcaiaService | null = null;
@@ -29,8 +27,6 @@ export default class CubicJBrewingPlugin extends Plugin {
 	private blePacketLogger: FileLogger | null = null;
 	private fileAdapter!: FileAdapter;
 	private viewType: string | null = null;
-	private hotkeyManager: import('./utils/GlobalHotkeyManager').GlobalHotkeyManager | null = null;
-	private globalHotkeys: GlobalHotkeys = DEFAULT_HOTKEYS;
 	private firstInstall = false;
 	private savedDataVersion = 0;
 	private beanFolder = '';
@@ -258,31 +254,11 @@ export default class CubicJBrewingPlugin extends Plugin {
 			},
 		});
 
-		const win = require('electron').remote.getCurrentWindow();
-		const withFocus = (fn: () => void) => () => {
-			win.maximize();
-			fn();
-		};
-
-		const commandActions: Record<string, () => void> = {
-			tare: withFocus(() => getView()?.tare()),
-			'auto-fill': withFocus(() => doAutoFill()),
-			'toggle-brewing': withFocus(() => getView()?.toggleBrewing()),
-			'toggle-connect': withFocus(() => getView()?.toggleConnect()),
-			'power-off-scale': withFocus(() => getView()?.powerOff()),
-		};
-
-		const { GlobalHotkeyManager } = await import('./utils/GlobalHotkeyManager');
-		const gs = require('electron').remote.globalShortcut;
-		this.hotkeyManager = new GlobalHotkeyManager(gs);
-		this.hotkeyManager.register(this.globalHotkeys, commandActions, (msg) => this.pluginLogger?.log('PLUGIN', msg));
-
 		this.addRibbonIcon('coffee', 'CubicJ Brewing', () => {
 			this.activateView();
 		});
 
 		this.beforeUnloadHandler = () => {
-			this.hotkeyManager?.unregisterAll();
 			this.acaiaService?.destroy();
 			this.pluginLogger?.stop();
 			this.blePacketLogger?.stop();
@@ -295,7 +271,6 @@ export default class CubicJBrewingPlugin extends Plugin {
 		if (this.beforeUnloadHandler) {
 			window.removeEventListener('beforeunload', this.beforeUnloadHandler);
 		}
-		this.hotkeyManager?.unregisterAll();
 		this.acaiaService?.destroy();
 		this.pluginLogger?.stop();
 		this.blePacketLogger?.stop();
@@ -321,15 +296,6 @@ export default class CubicJBrewingPlugin extends Plugin {
 				categories: Array.isArray(lc.categories) ? lc.categories : [],
 				packetLog: typeof lc.packetLog === 'boolean' ? lc.packetLog : false,
 			};
-		}
-		if (data.globalHotkeys && typeof data.globalHotkeys === 'object' && !Array.isArray(data.globalHotkeys)) {
-			const hk = data.globalHotkeys as Record<string, unknown>;
-			const valid = Object.values(hk).every((v) => typeof v === 'string');
-			if (valid) {
-				this.globalHotkeys = hk as GlobalHotkeys;
-			}
-		} else {
-			this.globalHotkeys = DEFAULT_HOTKEYS;
 		}
 		if (typeof data.beanFolder === 'string') {
 			this.beanFolder = data.beanFolder;
