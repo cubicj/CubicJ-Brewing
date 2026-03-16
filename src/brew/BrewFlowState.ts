@@ -8,14 +8,13 @@ import type {
 	BrewFlowStep,
 	BrewFlowSelection,
 } from './types';
-import { MS_PER_DAY } from './constants';
+import { calcRoastDays } from './constants';
 
 const FLOW_ORDER: BrewFlowStep[] = ['idle', 'method', 'bean', 'configure', 'brewing', 'saving'];
 
 export class BrewFlowState {
 	step: BrewFlowStep = 'idle';
 	selection: BrewFlowSelection = {};
-	brewingStarted = false;
 
 	startBrew(): void {
 		this.step = 'method';
@@ -108,14 +107,10 @@ export class BrewFlowState {
 	cancel(): void {
 		this.step = 'idle';
 		this.selection = {};
-		this.brewingStarted = false;
 	}
 
 	get roastDays(): number | null {
-		const bean = this.selection.bean;
-		if (!bean?.roastDate) return null;
-		const diff = Date.now() - new Date(bean.roastDate).getTime();
-		return Math.floor(diff / MS_PER_DAY);
+		return calcRoastDays(this.selection.bean?.roastDate ?? null);
 	}
 
 	buildRecord(note?: string, profilePath?: string): BrewRecord {

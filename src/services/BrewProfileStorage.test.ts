@@ -19,9 +19,6 @@ class InMemoryFileAdapter implements FileAdapter {
 	async remove(path: string): Promise<void> {
 		this.files.delete(path);
 	}
-	async exists(path: string): Promise<boolean> {
-		return this.files.has(path);
-	}
 	async list(path: string): Promise<string[]> {
 		const prefix = path.endsWith('/') ? path : path + '/';
 		return [...this.files.keys()]

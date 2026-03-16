@@ -18,7 +18,7 @@ import { BrewProfileChart } from './BrewProfileChart';
 import { BrewProfileModal } from './BrewProfileModal';
 import { createStepper } from './Stepper';
 import { Notice } from 'obsidian';
-import { getDrinkLabel, getMethodLabel, getTempLabel, MS_PER_DAY } from '../brew/constants';
+import { getDrinkLabel, getMethodLabel, getTempLabel, calcRoastDays } from '../brew/constants';
 import { t } from '../i18n/index';
 import { createToggleGroup, createSelectField, attachScaleAutoBtn, createAccessoryChecklist } from './FormHelpers';
 
@@ -52,6 +52,7 @@ export interface StepRenderContext {
 	recorder: BrewProfileRecorder;
 	profileStorage: BrewProfileStorage;
 	equipment: EquipmentSettings;
+	brewingStarted: boolean;
 }
 
 let activeSavingRo: ResizeObserver | null = null;
@@ -94,10 +95,8 @@ export function getStepSummary(step: FlowStep, sel: BrewFlowSelection): string {
 		case 'bean': {
 			if (!sel.bean) return '';
 			const parts = [sel.bean.name];
-			if (sel.bean.roastDate) {
-				const days = Math.floor((Date.now() - new Date(sel.bean.roastDate).getTime()) / MS_PER_DAY);
-				if (days >= 0) parts.push(t('bean.roastDays', { n: days }));
-			}
+			const days = calcRoastDays(sel.bean.roastDate);
+			if (days != null && days >= 0) parts.push(t('bean.roastDays', { n: days }));
 			return parts.join(' · ');
 		}
 		case 'configure': {
@@ -503,7 +502,7 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 		});
 		doneBtn.addEventListener('click', () => {
 			ctx.flowState.finishBrewing(undefined, undefined);
-			ctx.flowState.brewingStarted = false;
+			ctx.brewingStarted = false;
 			ctx.accordion.expand('saving');
 			ctx.accordion.update();
 		});
@@ -526,11 +525,11 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 	let chart: BrewProfileChart | null = null;
 	const hasProfile = ctx.recorder.getPoints().length > 0;
 
-	if (ctx.flowState.brewingStarted && scaleConnected) {
+	if (ctx.brewingStarted && scaleConnected) {
 		const chartContainer = container.createDiv({ cls: 'brew-profile-container' });
 		chart = new BrewProfileChart(chartContainer);
 		chart.startLive(ctx.recorder);
-	} else if (!ctx.flowState.brewingStarted && hasProfile) {
+	} else if (!ctx.brewingStarted && hasProfile) {
 		const chartWrapper = container.createDiv({ cls: 'brew-profile-wrapper' });
 		const expandBtn = chartWrapper.createEl('button', { text: '⛶', cls: 'brew-profile-expand-btn' });
 		expandBtn.setAttribute('aria-label', t('brew.expand'));
@@ -544,7 +543,7 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 		staticChart.renderStatic(ctx.recorder.getPoints());
 	}
 
-	if (ctx.flowState.brewingStarted) {
+	if (ctx.brewingStarted) {
 		const controls = container.createDiv({ cls: 'brewing-controls' });
 		const stopBtn = controls.createEl('button', { text: t('brew.done'), cls: 'brewing-ctrl-btn brew-flow-stop-btn' });
 		stopBtn.addEventListener('click', async () => {
@@ -561,7 +560,7 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 				} else {
 					ctx.flowState.finishBrewing(undefined, undefined);
 				}
-				ctx.flowState.brewingStarted = false;
+				ctx.brewingStarted = false;
 				ctx.accordion.expand('saving');
 				ctx.accordion.update();
 			} catch (err) {
@@ -576,7 +575,7 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 		});
 		startBtn.addEventListener('click', async () => {
 			try {
-				ctx.flowState.brewingStarted = true;
+				ctx.brewingStarted = true;
 				if (scaleConnected) {
 					ctx.recorder.start();
 					await ctx.timerController.handleTimerClick();

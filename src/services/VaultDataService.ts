@@ -1,6 +1,6 @@
 import type { App, CachedMetadata, TFile } from 'obsidian';
 import type { BeanInfo, RecipeInfo, RecipeStep } from '../brew/types';
-import { MS_PER_DAY } from '../brew/constants';
+import { calcRoastDays } from '../brew/constants';
 import { t } from '../i18n/index';
 
 const LEGACY_KEY_MAP: Record<string, string> = {
@@ -38,12 +38,7 @@ export class VaultDataService {
 		if (!file) return;
 		await this.app.fileManager.processFrontMatter(file, (fm) => {
 			fm['roast_date'] = date;
-			if (date) {
-				const diff = Date.now() - new Date(date).getTime();
-				fm['roast_days'] = Math.floor(diff / MS_PER_DAY);
-			} else {
-				fm['roast_days'] = null;
-			}
+			fm['roast_days'] = calcRoastDays(date || null);
 		});
 	}
 
@@ -140,9 +135,7 @@ export class VaultDataService {
 	}
 
 	getDaysSinceRoast(bean: BeanInfo): number | null {
-		if (!bean.roastDate) return null;
-		const diff = Date.now() - new Date(bean.roastDate).getTime();
-		return Math.floor(diff / MS_PER_DAY);
+		return calcRoastDays(bean.roastDate);
 	}
 
 	async refreshRoastDays(): Promise<void> {
@@ -152,6 +145,8 @@ export class VaultDataService {
 				const days = this.getDaysSinceRoast(bean);
 				const file = this.getTFile(bean.path);
 				if (!file) return;
+				const cache = this.app.metadataCache.getFileCache(file);
+				if (cache?.frontmatter?.['roast_days'] === days) return;
 				try {
 					await this.app.fileManager.processFrontMatter(file, (fm) => {
 						fm['roast_days'] = days;
@@ -169,7 +164,7 @@ export class VaultDataService {
 		const rawDate = fm['roast_date'];
 		const raw = Array.isArray(rawDate) ? rawDate[rawDate.length - 1] : rawDate;
 		const roastDate = raw ? String(raw) : null;
-		const expected = roastDate ? Math.floor((Date.now() - new Date(roastDate).getTime()) / MS_PER_DAY) : null;
+		const expected = calcRoastDays(roastDate);
 		if (fm['roast_days'] === expected) return;
 		this.app.fileManager.processFrontMatter(file, (fmEdit) => {
 			fmEdit['roast_days'] = expected;

@@ -16,6 +16,7 @@ export class BrewingView extends ItemView {
 	private plugin: CubicJBrewingPlugin;
 	private listeners: Array<{ event: string; fn: (...args: any[]) => void }> = [];
 	private flowState = new BrewFlowState();
+	private brewingStarted = false;
 
 	private scaleConnectBtn!: HTMLButtonElement;
 	private scalePowerOffBtn!: HTMLButtonElement;
@@ -157,6 +158,7 @@ export class BrewingView extends ItemView {
 	private resetFlow(): void {
 		this.log('resetFlow');
 		this.flowState.cancel();
+		this.brewingStarted = false;
 		this.recorder.reset();
 		this.flowState.startBrew();
 		this.accordion.clearExpandedSteps();
@@ -164,6 +166,10 @@ export class BrewingView extends ItemView {
 	}
 
 	private buildRenderContext(): StepRenderContext {
+		const getBrewing = () => this.brewingStarted;
+		const setBrewing = (v: boolean) => {
+			this.brewingStarted = v;
+		};
 		return {
 			flowState: this.flowState,
 			plugin: this.plugin,
@@ -180,6 +186,12 @@ export class BrewingView extends ItemView {
 			recorder: this.recorder,
 			profileStorage: this.plugin.profileStorage,
 			equipment: this.plugin.equipment,
+			get brewingStarted() {
+				return getBrewing();
+			},
+			set brewingStarted(v: boolean) {
+				setBrewing(v);
+			},
 		};
 	}
 

@@ -79,9 +79,6 @@ export default class CubicJBrewingPlugin extends Plugin {
 			remove: async (path) => {
 				await this.app.vault.adapter.remove(path);
 			},
-			exists: async (path) => {
-				return await this.app.vault.adapter.exists(path);
-			},
 			list: async (path) => {
 				try {
 					const listed = await this.app.vault.adapter.list(path);
@@ -342,10 +339,14 @@ export default class CubicJBrewingPlugin extends Plugin {
 		}
 	}
 
-	async saveEquipment(): Promise<void> {
+	private async patchData(patch: Record<string, unknown>): Promise<void> {
 		const data = (await this.loadData()) ?? {};
-		data.equipment = this.equipment;
+		Object.assign(data, patch);
 		await this.saveData(data);
+	}
+
+	async saveEquipment(): Promise<void> {
+		await this.patchData({ equipment: this.equipment });
 	}
 
 	getBeanFolder(): string {
@@ -356,9 +357,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 		this.beanFolder = folder;
 		this.vaultData = new VaultDataService(this.app, folder);
 		this.beanBlock.updateVaultData(this.vaultData);
-		const data = (await this.loadData()) ?? {};
-		data.beanFolder = folder;
-		await this.saveData(data);
+		await this.patchData({ beanFolder: folder });
 	}
 
 	getLocale(): string {
@@ -367,9 +366,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 
 	async saveLocale(locale: string): Promise<void> {
 		this.locale = locale;
-		const data = (await this.loadData()) ?? {};
-		data.locale = locale;
-		await this.saveData(data);
+		await this.patchData({ locale });
 	}
 
 	getLogConfig(): LogConfig {
@@ -378,9 +375,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 
 	async saveLogConfig(config: LogConfig): Promise<void> {
 		this.logConfig = config;
-		const data = (await this.loadData()) ?? {};
-		data.logConfig = config;
-		await this.saveData(data);
+		await this.patchData({ logConfig: config });
 	}
 
 	private async activateView(): Promise<void> {
