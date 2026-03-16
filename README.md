@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Desktop-brightgreen)
-![Version](https://img.shields.io/badge/version-0.2.7-orange)
+![Version](https://img.shields.io/badge/version-0.2.8-orange)
 
 [한국어](README.ko.md)
 
