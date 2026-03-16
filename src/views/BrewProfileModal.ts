@@ -3,7 +3,7 @@ import { BrewProfileChart } from './BrewProfileChart';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import type { BrewRecordService } from '../services/BrewRecordService';
 import type { BrewProfilePoint, BrewRecord, EquipmentSettings } from '../brew/types';
-import { getDrinkLabel, getMethodLabel } from '../brew/constants';
+import { getDrinkLabel, getMethodLabel, getTempLabel } from '../brew/constants';
 import { t } from '../i18n/index';
 import { renderEditForm } from './BrewRecordForm';
 import { formatBrewDate } from '../utils/format';
@@ -232,7 +232,7 @@ export class BrewProfileModal extends Modal {
 			}
 		}
 
-		const temp = record.temp === 'iced' ? 'Ice' : 'Hot';
+		const temp = getTempLabel(record.temp);
 		const dataRow: [string, string][] = [];
 		if (record.method === 'espresso') {
 			dataRow.push([t('form.method'), getMethodLabel(record.method)]);

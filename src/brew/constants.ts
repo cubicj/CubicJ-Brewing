@@ -17,6 +17,14 @@ export const getMethodLabel = (key: string): string => {
 	return map[key]?.() ?? key;
 };
 
+export const getTempLabel = (key: string): string => {
+	const map: Record<string, () => string> = {
+		hot: () => t('temp.hot'),
+		iced: () => t('temp.iced'),
+	};
+	return map[key]?.() ?? key;
+};
+
 export const MS_PER_DAY = 86400000;
 
 export const BEAN_NOTE_EXTRA = '```brews\n```';

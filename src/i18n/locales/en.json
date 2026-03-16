@@ -98,6 +98,9 @@
   "method.filter": "Filter",
   "method.espresso": "Espresso",
 
+  "temp.hot": "Hot",
+  "temp.iced": "Ice",
+
   "form.method": "Method",
   "form.temperature": "Temperature",
   "form.grinder": "Grinder",

@@ -18,13 +18,11 @@ import { BrewProfileChart } from './BrewProfileChart';
 import { BrewProfileModal } from './BrewProfileModal';
 import { createStepper } from './Stepper';
 import { Notice } from 'obsidian';
-import { getDrinkLabel, getMethodLabel, MS_PER_DAY } from '../brew/constants';
+import { getDrinkLabel, getMethodLabel, getTempLabel, MS_PER_DAY } from '../brew/constants';
 import { t } from '../i18n/index';
 import { createToggleGroup, createSelectField, attachScaleAutoBtn, createAccessoryChecklist } from './FormHelpers';
 
 export type FlowStep = 'method' | 'bean' | 'configure' | 'brewing' | 'saving';
-
-const TEMP_LABELS: Record<BrewTemp, string> = { hot: 'Hot', iced: 'Ice' };
 
 export const STEP_CONFIG: Array<{ step: FlowStep; label: () => string }> = [
 	{ step: 'method', label: () => t('brew.step.method') },
@@ -89,7 +87,7 @@ export function getStepSummary(step: FlowStep, sel: BrewFlowSelection): string {
 	switch (step) {
 		case 'method': {
 			if (!sel.method) return '';
-			const parts = [getMethodLabel(sel.method), TEMP_LABELS[sel.temp!]];
+			const parts = [getMethodLabel(sel.method), getTempLabel(sel.temp!)];
 			if (sel.drink) parts.push(getDrinkLabel(sel.drink));
 			return parts.join(' · ');
 		}
@@ -160,8 +158,8 @@ function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
 	createToggleGroup(
 		container,
 		[
-			{ value: 'hot' as BrewTemp, label: TEMP_LABELS.hot },
-			{ value: 'iced' as BrewTemp, label: TEMP_LABELS.iced },
+			{ value: 'hot' as BrewTemp, label: getTempLabel('hot') },
+			{ value: 'iced' as BrewTemp, label: getTempLabel('iced') },
 		],
 		selectedTemp,
 		(val) => {

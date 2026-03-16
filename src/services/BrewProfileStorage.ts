@@ -7,16 +7,23 @@ export class BrewProfileStorage {
 		private adapter: FileAdapter,
 	) {}
 
+	private safePath(profilePath: string): string {
+		const normalized = profilePath.replace(/\\/g, '/');
+		if (normalized.includes('..') || normalized.startsWith('/'))
+			throw new Error(`Invalid profile path: ${profilePath}`);
+		return `${this.baseDir}/${normalized}`;
+	}
+
 	async save(timestamp: string, points: BrewProfilePoint[]): Promise<string> {
 		const safeTimestamp = timestamp.replace(/:/g, '-');
 		const relativePath = `brew-profiles/${safeTimestamp}.json`;
 		await this.adapter.mkdir(`${this.baseDir}/brew-profiles`);
-		await this.adapter.write(`${this.baseDir}/${relativePath}`, JSON.stringify(points));
+		await this.adapter.write(this.safePath(relativePath), JSON.stringify(points));
 		return relativePath;
 	}
 
 	async load(profilePath: string): Promise<BrewProfilePoint[]> {
-		const raw = await this.adapter.read(`${this.baseDir}/${profilePath}`);
+		const raw = await this.adapter.read(this.safePath(profilePath));
 		if (!raw) return [];
 		let parsed: unknown;
 		try {
@@ -24,7 +31,7 @@ export class BrewProfileStorage {
 		} catch {
 			console.error(`Profile ${profilePath} corrupt`);
 			try {
-				await this.adapter.write(`${this.baseDir}/${profilePath}.bak`, raw);
+				await this.adapter.write(this.safePath(`${profilePath}.bak`), raw);
 			} catch {
 				/* best effort */
 			}
@@ -37,6 +44,6 @@ export class BrewProfileStorage {
 	}
 
 	async delete(profilePath: string): Promise<void> {
-		await this.adapter.remove(`${this.baseDir}/${profilePath}`);
+		await this.adapter.remove(this.safePath(profilePath));
 	}
 }

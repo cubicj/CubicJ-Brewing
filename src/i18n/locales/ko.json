@@ -98,6 +98,9 @@
   "method.filter": "필터",
   "method.espresso": "에스프레소",
 
+  "temp.hot": "핫",
+  "temp.iced": "아이스",
+
   "form.method": "방식",
   "form.temperature": "온도",
   "form.grinder": "그라인더",
