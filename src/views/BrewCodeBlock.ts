@@ -2,7 +2,7 @@ import { type App, type TFile, type MarkdownPostProcessorContext, setIcon } from
 import type { BrewRecordService } from '../services/BrewRecordService';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import type { BrewRecord, EquipmentSettings } from '../brew/types';
-import { getDrinkLabel, getMethodLabel } from '../brew/constants';
+import { getDrinkLabel, getMethodLabel, getTempLabel } from '../brew/constants';
 import { t } from '../i18n/index';
 import { BrewProfileModal } from './BrewProfileModal';
 import { formatBrewDate } from '../utils/format';
@@ -95,7 +95,7 @@ export class BrewCodeBlock {
 			dateTd.createDiv({ text: date });
 			dateTd.createDiv({ text: time });
 			const method = record.method === 'espresso' ? getDrinkLabel(record.drink ?? 'shot') : getMethodLabel('filter');
-			const temp = record.temp === 'iced' ? 'Ice' : 'Hot';
+			const temp = getTempLabel(record.temp);
 			tr.createEl('td', { text: `${method}(${temp})` });
 			tr.createEl('td', { text: record.note ?? '', cls: 'brew-record-note' });
 

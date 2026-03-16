@@ -315,7 +315,9 @@ export class BrewProfileChart {
 		}
 
 		const viewEnd = this.viewStart + dur;
-		const maxW = Math.max(...points.map((p) => p.w), 10) * 1.1;
+		let maxW = 10;
+		for (const p of points) if (p.w > maxW) maxW = p.w;
+		maxW *= 1.1;
 
 		const toX = (t: number) => m.pl + ((t - this.viewStart) / dur) * m.plotW;
 		const toY = (w: number) => m.pt + m.plotH - (w / maxW) * m.plotH;

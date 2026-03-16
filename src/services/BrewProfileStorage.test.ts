@@ -96,4 +96,16 @@ describe('BrewProfileStorage', () => {
 		const loaded = await storage.load(path);
 		expect(loaded).toEqual([]);
 	});
+
+	it('rejects path traversal in load', async () => {
+		await expect(storage.load('../../.obsidian/app.json')).rejects.toThrow('Invalid profile path');
+	});
+
+	it('rejects path traversal in delete', async () => {
+		await expect(storage.delete('../secrets.json')).rejects.toThrow('Invalid profile path');
+	});
+
+	it('rejects absolute path', async () => {
+		await expect(storage.load('/etc/passwd')).rejects.toThrow('Invalid profile path');
+	});
 });

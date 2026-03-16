@@ -2,7 +2,7 @@ import type { App } from 'obsidian';
 import type { BrewRecord, BrewMethod, BrewTemp, EspressoDrink, EquipmentSettings } from '../brew/types';
 import type { BrewRecordService } from '../services/BrewRecordService';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
-import { getDrinkLabel, getMethodLabel } from '../brew/constants';
+import { getDrinkLabel, getMethodLabel, getTempLabel } from '../brew/constants';
 import { t } from '../i18n/index';
 import { createStepper } from './Stepper';
 import { createAccessoryChecklist } from './FormHelpers';
@@ -38,8 +38,8 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 	tempRow.createEl('label', { text: t('form.temperature') });
 	const tempSelect = tempRow.createEl('select');
 	for (const t of [
-		{ v: 'hot' as const, l: 'Hot' },
-		{ v: 'iced' as const, l: 'Ice' },
+		{ v: 'hot' as const, l: getTempLabel('hot') },
+		{ v: 'iced' as const, l: getTempLabel('iced') },
 	]) {
 		const opt = tempSelect.createEl('option', { text: t.l, value: t.v });
 		if (t.v === record.temp) opt.selected = true;
