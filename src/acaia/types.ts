@@ -95,3 +95,15 @@ export const EVENT_TYPE = {
 	BUTTON: 8,
 	HEARTBEAT_RESP: 11,
 } as const;
+
+export const BUTTON_CODE = {
+	TARE: 0,
+	TIMER_START: 8,
+	TIMER_RESET: 9,
+	TIMER_STOP: 10,
+} as const;
+
+export const BUTTON_PAYLOAD = {
+	WITH_WEIGHT: 5,
+	WITH_TIMER: 7,
+} as const;

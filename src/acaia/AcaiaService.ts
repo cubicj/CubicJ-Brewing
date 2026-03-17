@@ -8,6 +8,8 @@ import {
 	NOTIFY_UUID,
 	MSG_TYPE,
 	EVENT_TYPE,
+	BUTTON_CODE,
+	BUTTON_PAYLOAD,
 	Noble,
 	NoblePeripheral,
 	NobleCharacteristic,
@@ -518,25 +520,26 @@ export class AcaiaService extends EventEmitter {
 	}
 
 	private handleButtonEvent(packet: Buffer, typeOffset: number): void {
-		const p0 = packet[typeOffset + 1];
-		const p1 = packet[typeOffset + 2];
+		const code = packet[typeOffset + 1];
+		const payload = packet[typeOffset + 2];
 		let event: ButtonEvent | null = null;
 
-		if (p0 === 0 && p1 === 5) {
+		if (code === BUTTON_CODE.TARE && payload === BUTTON_PAYLOAD.WITH_WEIGHT) {
 			event = { type: 'tare' };
 			if (typeOffset + 9 <= packet.length) event.weight = decodeWeight(packet, typeOffset + 3).weight;
-		} else if (p0 === 8) {
+		} else if (code === BUTTON_CODE.TIMER_START) {
 			event = { type: 'timer_start' };
-			if (p1 === 5 && typeOffset + 9 <= packet.length) event.weight = decodeWeight(packet, typeOffset + 3).weight;
-		} else if (p0 === 10) {
+			if (payload === BUTTON_PAYLOAD.WITH_WEIGHT && typeOffset + 9 <= packet.length)
+				event.weight = decodeWeight(packet, typeOffset + 3).weight;
+		} else if (code === BUTTON_CODE.TIMER_STOP) {
 			event = { type: 'timer_stop' };
-			if (p1 === 7 && typeOffset + 7 <= packet.length) {
+			if (payload === BUTTON_PAYLOAD.WITH_TIMER && typeOffset + 7 <= packet.length) {
 				event.timer = decodeTimer(packet, typeOffset + 3);
 				if (typeOffset + 13 <= packet.length) event.weight = decodeWeight(packet, typeOffset + 7).weight;
 			}
-		} else if (p0 === 9) {
+		} else if (code === BUTTON_CODE.TIMER_RESET) {
 			event = { type: 'timer_reset' };
-			if (p1 === 7 && typeOffset + 7 <= packet.length) {
+			if (payload === BUTTON_PAYLOAD.WITH_TIMER && typeOffset + 7 <= packet.length) {
 				event.timer = decodeTimer(packet, typeOffset + 3);
 				if (typeOffset + 13 <= packet.length) event.weight = decodeWeight(packet, typeOffset + 7).weight;
 			}
