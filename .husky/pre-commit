@@ -1,4 +1,4 @@
 STAGED=$(git diff --cached --name-only --diff-filter=ACMR -- '*.ts' '*.css' '*.mjs')
 if [ -n "$STAGED" ]; then
-  npx lint-staged
+  ./node_modules/.bin/lint-staged
 fi
