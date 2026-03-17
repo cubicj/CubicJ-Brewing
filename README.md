@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Desktop%20%2B%20Mobile-brightgreen)
-![Version](https://img.shields.io/badge/version-0.2.8-orange)
+![Version](https://img.shields.io/badge/version-0.2.9-orange)
 
 [한국어](README.ko.md)
 
@@ -27,7 +27,6 @@ An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE s
 - **Equipment registry** — grinders, drippers, filters, baskets, accessories
 - **Vault-native storage** — all data as plain files, Obsidian Sync compatible
 - **Multi-language** — English and Korean, community-extensible
-- **Global hotkeys** — hands-free connect, tare, start/stop brew
 
 ## Platform Strategy
 

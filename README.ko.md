@@ -1,8 +1,8 @@
 # CubicJ Brewing
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Platform](https://img.shields.io/badge/platform-Desktop-brightgreen)
-![Version](https://img.shields.io/badge/version-0.2.8-orange)
+![Platform](https://img.shields.io/badge/platform-Desktop%20%2B%20Mobile-brightgreen)
+![Version](https://img.shields.io/badge/version-0.2.9-orange)
 
 [English](README.md)
 
@@ -27,7 +27,6 @@
 - **장비 관리** — 그라인더, 드리퍼, 필터, 바스켓, 액세서리
 - **볼트 네이티브 저장** — 모든 데이터를 일반 파일로, Obsidian Sync 호환
 - **다국어 지원** — 한국어, 영어, 커뮤니티 확장 가능
-- **글로벌 단축키** — 핸즈프리 연결, 영점, 추출 시작/중지
 
 ## 요구사항
 
