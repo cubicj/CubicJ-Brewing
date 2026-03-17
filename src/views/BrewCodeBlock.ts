@@ -57,7 +57,8 @@ export class BrewCodeBlock {
 			return;
 		}
 
-		const records = await this.recordService.getByBean(beanName);
+		const byBeanResult = await this.recordService.getByBean(beanName);
+		const records = byBeanResult.ok ? byBeanResult.data : [];
 		this.render(el, records, beanName);
 	}
 

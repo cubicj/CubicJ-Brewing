@@ -35,10 +35,12 @@ export class BrewProfileModal extends Modal {
 		} else {
 			this.record = mode.record;
 			this.resolvePoints = mode.record.profilePath
-				? () =>
-						(mode as { type: 'detail'; profileStorage: BrewProfileStorage; record: BrewRecord }).profileStorage.load(
-							mode.record.profilePath!,
-						)
+				? async () => {
+						const result = await (
+							mode as { type: 'detail'; profileStorage: BrewProfileStorage; record: BrewRecord }
+						).profileStorage.load(mode.record.profilePath!);
+						return result.ok ? result.data : [];
+					}
 				: async () => [];
 		}
 	}
@@ -129,11 +131,11 @@ export class BrewProfileModal extends Modal {
 		const record = this.record;
 		const { recordService, profileStorage } = this.mode;
 		const modal = new ConfirmModal(this.app, t('form.deleteConfirm'), async () => {
-			try {
-				await recordService.removeWithProfile(record.id, record.profilePath, profileStorage);
+			const delResult = await recordService.removeWithProfile(record.id, record.profilePath, profileStorage);
+			if (delResult.ok) {
 				this.close();
-			} catch (err) {
-				console.error('[BrewProfileModal] delete failed:', err);
+			} else {
+				console.error(`[BrewProfileModal] delete failed: [${delResult.error.code}] ${delResult.error.message}`);
 			}
 		});
 		modal.open();

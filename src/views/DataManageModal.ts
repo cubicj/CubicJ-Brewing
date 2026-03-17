@@ -117,9 +117,10 @@ export class DataManageModal extends Modal {
 
 	private async createNewBean(): Promise<void> {
 		try {
-			const path = await this.plugin.vaultData.createBeanNote(BEAN_NOTE_EXTRA);
+			const result = await this.plugin.vaultData.createBeanNote(BEAN_NOTE_EXTRA);
+			if (!result.ok) throw new Error(result.error.message);
 			this.close();
-			await this.app.workspace.openLinkText(path, '');
+			await this.app.workspace.openLinkText(result.data, '');
 		} catch (err) {
 			console.error('[DataManageModal] createNewBean failed:', err);
 		}

@@ -80,8 +80,9 @@ export class BeanCodeBlock {
 
 	private async createNewBean(): Promise<void> {
 		try {
-			const path = await this.vaultData.createBeanNote(BEAN_NOTE_EXTRA);
-			await this.app.workspace.openLinkText(path, '');
+			const result = await this.vaultData.createBeanNote(BEAN_NOTE_EXTRA);
+			if (!result.ok) throw new Error(result.error.message);
+			await this.app.workspace.openLinkText(result.data, '');
 		} catch (err) {
 			console.error('[BeanCodeBlock] createNewBean failed:', err);
 		}
@@ -143,12 +144,12 @@ function openWeightPopover(
 		cls: 'bwp-depleted',
 	});
 	depletedBtn.addEventListener('click', async () => {
-		try {
-			await vaultData.setBeanStatus(bean.path, 'finished');
+		const statusResult = await vaultData.setBeanStatus(bean.path, 'finished');
+		if (statusResult.ok) {
 			onSave();
 			close();
-		} catch (err) {
-			console.error('[BeanCodeBlock] depleted failed:', err);
+		} else {
+			console.error(`[BeanCodeBlock] depleted failed: [${statusResult.error.code}] ${statusResult.error.message}`);
 		}
 	});
 
@@ -160,14 +161,14 @@ function openWeightPopover(
 	const applyAction = async (calc: (val: number, cur: number) => number) => {
 		const val = parseFloat(input.value);
 		if (isNaN(val) || val < 0) return;
-		try {
-			const newWeight = calc(val, bean.weight ?? 0);
-			await vaultData.setWeight(bean.path, newWeight);
+		const newWeight = calc(val, bean.weight ?? 0);
+		const weightResult = await vaultData.setWeight(bean.path, newWeight);
+		if (weightResult.ok) {
 			bean.weight = newWeight;
 			onSave();
 			close();
-		} catch (err) {
-			console.error('[BeanCodeBlock] weight update failed:', err);
+		} else {
+			console.error(`[BeanCodeBlock] weight update failed: [${weightResult.error.code}] ${weightResult.error.message}`);
 		}
 	};
 
