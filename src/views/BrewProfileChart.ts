@@ -2,6 +2,7 @@ import type { BrewProfilePoint } from '../brew/types';
 import type { BrewProfileRecorder } from './BrewProfileRecorder';
 import { processDetail, processTrend } from '../utils/signal';
 import { t as i18t } from '../i18n/index';
+import { niceStep, filterVisible, interpolateWeight } from './chartMath';
 
 const CHART_HEIGHT = 220;
 const PADDING = { top: 12, right: 12, bottom: 28, left: 40 };
@@ -327,8 +328,8 @@ export class BrewProfileChart {
 
 	private getProcessedData(points: BrewProfilePoint[], viewEnd: number) {
 		this.updateCache(points);
-		const visibleDetail = this.filterVisible(this.cachedDetail, this.viewStart, viewEnd);
-		const visibleTrend = this.filterVisible(this.cachedTrend, this.viewStart, viewEnd);
+		const visibleDetail = filterVisible(this.cachedDetail, this.viewStart, viewEnd);
+		const visibleTrend = filterVisible(this.cachedTrend, this.viewStart, viewEnd);
 		return { visibleDetail, visibleTrend };
 	}
 
@@ -408,7 +409,7 @@ export class BrewProfileChart {
 		const x = toX(t);
 		if (x < pl || x > pl + plotW) return;
 
-		const w = this.interpolateWeight(trend, t);
+		const w = interpolateWeight(trend, t);
 
 		ctx.beginPath();
 		ctx.moveTo(x, pt);
@@ -463,36 +464,6 @@ export class BrewProfileChart {
 		ctx.fillText(line2, lx + 4 * dpr, ly + 13 * dpr + lineH);
 	}
 
-	private interpolateWeight(trend: BrewProfilePoint[], t: number): number {
-		if (t <= trend[0].t) return trend[0].w;
-		if (t >= trend[trend.length - 1].t) return trend[trend.length - 1].w;
-		for (let i = 0; i < trend.length - 1; i++) {
-			if (trend[i].t <= t && trend[i + 1].t >= t) {
-				const frac = (t - trend[i].t) / (trend[i + 1].t - trend[i].t);
-				return trend[i].w + frac * (trend[i + 1].w - trend[i].w);
-			}
-		}
-		return trend[trend.length - 1].w;
-	}
-
-	private filterVisible(points: BrewProfilePoint[], start: number, end: number): BrewProfilePoint[] {
-		let lo = 0;
-		let hi = points.length;
-		for (let i = 0; i < points.length; i++) {
-			if (points[i].t >= start) {
-				lo = Math.max(0, i - 1);
-				break;
-			}
-		}
-		for (let i = points.length - 1; i >= 0; i--) {
-			if (points[i].t <= end) {
-				hi = Math.min(points.length, i + 2);
-				break;
-			}
-		}
-		return points.slice(lo, hi);
-	}
-
 	private drawGrid(
 		ctx: CanvasRenderingContext2D,
 		dpr: number,
@@ -518,7 +489,7 @@ export class BrewProfileChart {
 			ctx.stroke();
 		}
 
-		const weightStep = this.niceStep(maxW, 4);
+		const weightStep = niceStep(maxW, 4);
 		for (let w = weightStep; w < maxW; w += weightStep) {
 			const y = toY(w);
 			ctx.beginPath();
@@ -566,7 +537,7 @@ export class BrewProfileChart {
 		ctx.font = `${10 * dpr}px -apple-system, BlinkMacSystemFont, sans-serif`;
 		ctx.textAlign = 'right';
 
-		const weightStep = this.niceStep(maxW, 4);
+		const weightStep = niceStep(maxW, 4);
 		for (let w = weightStep; w < maxW; w += weightStep) {
 			ctx.fillText(`${Math.round(w)}`, pl - 4 * dpr, toY(w) + 3 * dpr);
 		}
@@ -614,13 +585,5 @@ export class BrewProfileChart {
 		ctx.lineWidth = 2 * dpr;
 		ctx.lineJoin = 'round';
 		ctx.stroke();
-	}
-
-	private niceStep(max: number, targetLines: number): number {
-		const rough = max / targetLines;
-		const mag = Math.pow(10, Math.floor(Math.log10(rough)));
-		const norm = rough / mag;
-		const nice = norm < 1.5 ? 1 : norm < 3.5 ? 2 : norm < 7.5 ? 5 : 10;
-		return nice * mag;
 	}
 }
