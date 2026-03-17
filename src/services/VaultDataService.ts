@@ -2,6 +2,7 @@ import type { App, CachedMetadata, TFile } from 'obsidian';
 import type { BeanInfo, RecipeInfo, RecipeStep } from '../brew/types';
 import { calcRoastDays } from '../brew/constants';
 import { t } from '../i18n/index';
+import { type Result, ok, fail } from '../types/result';
 
 const LEGACY_KEY_MAP: Record<string, string> = {
 	로스터: 'roaster',
@@ -33,29 +34,44 @@ export class VaultDataService {
 			.filter((b): b is BeanInfo => b !== null);
 	}
 
-	async setRoastDate(path: string, date: string): Promise<void> {
+	async setRoastDate(path: string, date: string): Promise<Result<void>> {
 		const file = this.getTFile(path);
-		if (!file) return;
-		await this.app.fileManager.processFrontMatter(file, (fm) => {
-			fm['roast_date'] = date;
-			fm['roast_days'] = calcRoastDays(date || null);
-		});
+		if (!file) return fail('VAULT_FILE_NOT_FOUND', `File not found: ${path}`);
+		try {
+			await this.app.fileManager.processFrontMatter(file, (fm) => {
+				fm['roast_date'] = date;
+				fm['roast_days'] = calcRoastDays(date || null);
+			});
+			return ok(undefined);
+		} catch {
+			return fail('VAULT_OPERATION_FAILED', `Failed to set roast date for ${path}`);
+		}
 	}
 
-	async setWeight(path: string, weight: number | null): Promise<void> {
+	async setWeight(path: string, weight: number | null): Promise<Result<void>> {
 		const file = this.getTFile(path);
-		if (!file) return;
-		await this.app.fileManager.processFrontMatter(file, (fm) => {
-			fm['weight'] = weight;
-		});
+		if (!file) return fail('VAULT_FILE_NOT_FOUND', `File not found: ${path}`);
+		try {
+			await this.app.fileManager.processFrontMatter(file, (fm) => {
+				fm['weight'] = weight;
+			});
+			return ok(undefined);
+		} catch {
+			return fail('VAULT_OPERATION_FAILED', `Failed to set weight for ${path}`);
+		}
 	}
 
-	async setBeanStatus(path: string, status: 'active' | 'finished'): Promise<void> {
+	async setBeanStatus(path: string, status: 'active' | 'finished'): Promise<Result<void>> {
 		const file = this.getTFile(path);
-		if (!file) return;
-		await this.app.fileManager.processFrontMatter(file, (fm) => {
-			fm['status'] = status;
-		});
+		if (!file) return fail('VAULT_FILE_NOT_FOUND', `File not found: ${path}`);
+		try {
+			await this.app.fileManager.processFrontMatter(file, (fm) => {
+				fm['status'] = status;
+			});
+			return ok(undefined);
+		} catch {
+			return fail('VAULT_OPERATION_FAILED', `Failed to set bean status for ${path}`);
+		}
 	}
 
 	getAllRecipes(): RecipeInfo[] {
@@ -102,7 +118,7 @@ export class VaultDataService {
 		};
 	}
 
-	async createBeanNote(extraContent?: string): Promise<string> {
+	async createBeanNote(extraContent?: string): Promise<Result<string>> {
 		const folder = this.beanFolder;
 		const toPath = (n: string) => (folder ? `${folder}/${n}.md` : `${n}.md`);
 		const defaultName = t('bean.defaultName');
@@ -114,24 +130,28 @@ export class VaultDataService {
 			name = `${defaultName} ${counter}`;
 			path = toPath(name);
 		}
-		if (folder) {
-			const folderExists = this.app.vault.getAbstractFileByPath(folder);
-			if (!folderExists) await this.app.vault.createFolder(folder);
+		try {
+			if (folder) {
+				const folderExists = this.app.vault.getAbstractFileByPath(folder);
+				if (!folderExists) await this.app.vault.createFolder(folder);
+			}
+			const parts = [
+				'---',
+				'type: bean',
+				'roaster:',
+				'status: active',
+				'roast_date:',
+				'roast_days:',
+				'weight:',
+				'---',
+				'',
+			];
+			if (extraContent) parts.push(extraContent, '');
+			await this.app.vault.create(path, parts.join('\n'));
+			return ok(path);
+		} catch {
+			return fail('VAULT_OPERATION_FAILED', `Failed to create bean note: ${name}`);
 		}
-		const parts = [
-			'---',
-			'type: bean',
-			'roaster:',
-			'status: active',
-			'roast_date:',
-			'roast_days:',
-			'weight:',
-			'---',
-			'',
-		];
-		if (extraContent) parts.push(extraContent, '');
-		await this.app.vault.create(path, parts.join('\n'));
-		return path;
 	}
 
 	getDaysSinceRoast(bean: BeanInfo): number | null {
