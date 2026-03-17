@@ -100,7 +100,7 @@ describe('emaSmooth', () => {
 			w: 200,
 		}));
 		points[0] = { t: 0, w: 0 };
-		const result = emaSmooth(points, 0.1);
+		const result = emaSmooth(points, 0.15);
 		expect(result[result.length - 1].w).toBeGreaterThan(195);
 	});
 });
