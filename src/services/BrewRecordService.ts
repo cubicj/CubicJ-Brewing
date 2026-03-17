@@ -22,15 +22,22 @@ export class BrewRecordService {
 	constructor(private adapter: StorageAdapter) {}
 
 	private validateRecords(arr: unknown[]): BrewRecord[] {
-		return arr.filter(
-			(r: any) =>
+		const valid: BrewRecord[] = [];
+		for (const r of arr) {
+			if (
 				r &&
 				typeof r === 'object' &&
-				typeof r.id === 'string' &&
-				typeof r.timestamp === 'string' &&
-				typeof r.bean === 'string' &&
-				(r.method === 'filter' || r.method === 'espresso'),
-		) as BrewRecord[];
+				typeof (r as any).id === 'string' &&
+				typeof (r as any).timestamp === 'string' &&
+				typeof (r as any).bean === 'string' &&
+				((r as any).method === 'filter' || (r as any).method === 'espresso')
+			) {
+				valid.push(r as BrewRecord);
+			} else {
+				console.warn('[BrewRecordService] skipped invalid brew record:', JSON.stringify(r));
+			}
+		}
+		return valid;
 	}
 
 	private async load(): Promise<Result<BrewRecord[]>> {
