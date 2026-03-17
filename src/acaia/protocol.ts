@@ -103,6 +103,7 @@ export class PacketBuffer {
 	private buf: number[] = [];
 
 	push(data: Buffer): void {
+		if (this.buf.length > 2048) this.buf = [];
 		for (let i = 0; i < data.length; i++) {
 			this.buf.push(data[i]);
 		}
