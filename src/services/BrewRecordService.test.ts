@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BrewRecordService, BREW_RECORDS_VERSION, type StorageAdapter } from './BrewRecordService';
 import type { FilterRecord } from '../brew/types';
 
@@ -249,6 +249,17 @@ describe('BrewRecordService', () => {
 		expect(result.ok).toBe(true);
 		if (result.ok) expect(result.data).toHaveLength(0);
 		expect(deletedPaths).toEqual([]);
+	});
+
+	it('warns when invalid records are filtered out', async () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		adapter.data = JSON.stringify([makeFilter(), { id: 'bad', missing: 'fields' }, { notARecord: true }]);
+		const result = await service.getAll();
+		expect(result.ok).toBe(true);
+		if (result.ok) expect(result.data).toHaveLength(1);
+		expect(warnSpy).toHaveBeenCalledTimes(2);
+		expect(warnSpy.mock.calls[0][0]).toContain('invalid brew record');
+		warnSpy.mockRestore();
 	});
 
 	it('returns fail for non-array JSON', async () => {
