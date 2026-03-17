@@ -1,4 +1,4 @@
-import { type App, type MarkdownPostProcessorContext } from 'obsidian';
+import { Notice, type App, type MarkdownPostProcessorContext } from 'obsidian';
 import type { VaultDataService } from '../services/VaultDataService';
 import type { BeanInfo } from '../brew/types';
 import { BEAN_NOTE_EXTRA } from '../brew/constants';
@@ -85,6 +85,7 @@ export class BeanCodeBlock {
 			await this.app.workspace.openLinkText(result.data, '');
 		} catch (err) {
 			console.error('[BeanCodeBlock] createNewBean failed:', err);
+			new Notice(t('error.beanCreate'));
 		}
 	}
 }
@@ -150,6 +151,7 @@ function openWeightPopover(
 			close();
 		} else {
 			console.error(`[BeanCodeBlock] depleted failed: [${statusResult.error.code}] ${statusResult.error.message}`);
+			new Notice(t('error.beanUpdate'));
 		}
 	});
 
@@ -169,6 +171,7 @@ function openWeightPopover(
 			close();
 		} else {
 			console.error(`[BeanCodeBlock] weight update failed: [${weightResult.error.code}] ${weightResult.error.message}`);
+			new Notice(t('error.beanUpdate'));
 		}
 	};
 

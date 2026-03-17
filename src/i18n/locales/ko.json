@@ -25,6 +25,11 @@
   "brew.saveFailed": "저장 실패",
   "brew.unexpectedError": "오류가 발생했습니다",
 
+  "error.beanCreate": "원두 노트 생성 실패",
+  "error.equipSave": "장비 저장 실패",
+  "error.recordDelete": "기록 삭제 실패",
+  "error.beanUpdate": "원두 정보 업데이트 실패",
+
   "bean.new": "+ 새 원두",
   "bean.defaultName": "새 원두",
   "bean.activeBeans": "현재 보유 원두",

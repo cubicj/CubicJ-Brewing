@@ -1,4 +1,4 @@
-import type { App } from 'obsidian';
+import { Notice, type App } from 'obsidian';
 import type { BrewRecord, BrewMethod, BrewTemp, EspressoDrink, EquipmentSettings } from '../brew/types';
 import type { BrewRecordService } from '../services/BrewRecordService';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
@@ -197,6 +197,7 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 				deps.onDeleted();
 			} else {
 				console.error(`[BrewRecordForm] delete failed: [${delResult.error.code}] ${delResult.error.message}`);
+				new Notice(t('error.recordDelete'));
 			}
 		});
 		modal.open();
@@ -285,6 +286,7 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 			deps.onSaved(updated);
 		} catch (err) {
 			console.error('[BrewRecordForm] save failed:', err);
+			new Notice(t('brew.saveFailed'));
 		}
 	});
 	const cancelBtn = rightGroup.createEl('button', { text: t('form.cancel') });

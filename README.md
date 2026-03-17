@@ -1,7 +1,7 @@
 # CubicJ Brewing
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Platform](https://img.shields.io/badge/platform-Desktop-brightgreen)
+![Platform](https://img.shields.io/badge/platform-Desktop%20%2B%20Mobile-brightgreen)
 ![Version](https://img.shields.io/badge/version-0.2.8-orange)
 
 [한국어](README.ko.md)
@@ -29,9 +29,24 @@ An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE s
 - **Multi-language** — English and Korean, community-extensible
 - **Global hotkeys** — hands-free connect, tare, start/stop brew
 
-## Requirements
+## Platform Strategy
 
-- **Obsidian Desktop** (Electron-based — BLE requires native addon)
+`isDesktopOnly: false` — this is intentional. The plugin provides useful read-only features on mobile.
+
+| | Desktop | Mobile |
+|---|---------|--------|
+| Bean inventory (`beans` block) | Full | Full |
+| Brew history (`brews` block) | Full | Full |
+| Brew detail modal | Inline chart | "View Chart" button |
+| Data Manager | Full | Full |
+| **BLE scale connection** | Acaia Pearl S | Not available |
+| **Brewing sidebar** | Live brew flow | Not available |
+| **Live profile chart** | Real-time canvas | Not available |
+
+Desktop-only features (BLE, BrewingView, live chart) are loaded conditionally via `Platform.isDesktop` — they are never imported on mobile.
+
+### Desktop Requirements
+
 - **Windows** with Bluetooth LE support
 - **Acaia Pearl S** scale
 
