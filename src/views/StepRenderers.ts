@@ -193,7 +193,8 @@ function renderMethod(container: HTMLElement, ctx: StepRenderContext): void {
 				ctx.flowState.selectMethod(selectedMethod!, selectedTemp!, selectedDrink ?? undefined);
 				const bean = ctx.flowState.selection.bean;
 				if (bean) {
-					const lastRecord = await ctx.plugin.recordService.getLastRecord(bean.name, selectedMethod!, selectedTemp!);
+					const lastResult = await ctx.plugin.recordService.getLastRecord(bean.name, selectedMethod!, selectedTemp!);
+					const lastRecord = lastResult.ok ? lastResult.data : undefined;
 					ctx.flowState.selectBean(bean, lastRecord);
 				}
 				ctx.renderContent();
@@ -239,11 +240,12 @@ async function renderBean(container: HTMLElement, ctx: StepRenderContext): Promi
 					ctx.flowState.deselectBean();
 					ctx.accordion.update();
 				} else {
-					const lastRecord = await ctx.plugin.recordService.getLastRecord(
+					const lastResult = await ctx.plugin.recordService.getLastRecord(
 						bean.name,
 						ctx.flowState.selection.method!,
 						ctx.flowState.selection.temp!,
 					);
+					const lastRecord = lastResult.ok ? lastResult.data : undefined;
 					ctx.flowState.selectBean(bean, lastRecord);
 					ctx.renderContent();
 				}
@@ -307,7 +309,8 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 		if (sel.filter) equip.filter = sel.filter;
 		if (sel.grinder) equip.grinder = sel.grinder;
 		if (sel.dripper) equip.dripper = sel.dripper;
-		const record = await ctx.plugin.recordService.getLastRecord(sel.bean!.name, sel.method!, sel.temp!, equip);
+		const lastResult = await ctx.plugin.recordService.getLastRecord(sel.bean!.name, sel.method!, sel.temp!, equip);
+		const record = lastResult.ok ? lastResult.data : undefined;
 		sel.lastRecord = record;
 		updateCard(record);
 		if (record) applyDials(record);
@@ -678,10 +681,13 @@ function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 			let profilePath: string | undefined;
 			if (points.length > 0) {
 				const timestamp = new Date().toISOString();
-				profilePath = await ctx.profileStorage.save(timestamp, points);
+				const saveResult = await ctx.profileStorage.save(timestamp, points);
+				if (!saveResult.ok) throw new Error(saveResult.error.message);
+				profilePath = saveResult.data;
 			}
 			const record = ctx.flowState.buildRecord(note, profilePath);
-			await ctx.plugin.recordService.add(record);
+			const addResult = await ctx.plugin.recordService.add(record);
+			if (!addResult.ok) throw new Error(addResult.error.message);
 			ctx.plugin.pluginLogger?.log('FLOW', `record saved — ${record.method} ${record.bean}`);
 			const bean = ctx.flowState.selection.bean;
 			if (bean?.weight != null) {

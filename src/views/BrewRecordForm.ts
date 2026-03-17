@@ -192,11 +192,11 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 	const deleteBtn = footer.createEl('button', { text: t('form.delete'), cls: 'mod-warning' });
 	deleteBtn.addEventListener('click', () => {
 		const modal = new ConfirmModal(deps.app, t('form.deleteConfirm'), async () => {
-			try {
-				await deps.recordService.removeWithProfile(record.id, record.profilePath, deps.profileStorage);
+			const delResult = await deps.recordService.removeWithProfile(record.id, record.profilePath, deps.profileStorage);
+			if (delResult.ok) {
 				deps.onDeleted();
-			} catch (err) {
-				console.error('[BrewRecordForm] delete failed:', err);
+			} else {
+				console.error(`[BrewRecordForm] delete failed: [${delResult.error.code}] ${delResult.error.message}`);
 			}
 		});
 		modal.open();
@@ -240,7 +240,8 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 				};
 			}
 
-			await deps.recordService.update(record.id, changes);
+			const updateResult = await deps.recordService.update(record.id, changes);
+			if (!updateResult.ok) throw new Error(updateResult.error.message);
 			let updated: BrewRecord;
 			if (method !== record.method) {
 				const shared = {
