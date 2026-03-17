@@ -305,10 +305,11 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	const syncSummary = () => ctx.accordion.updateSummaries();
 
 	const queryAndApplyDials = async () => {
-		const equip: { filter?: string; grinder?: string; dripper?: string } = {};
+		const equip: { filter?: string; grinder?: string; dripper?: string; basket?: string } = {};
 		if (sel.filter) equip.filter = sel.filter;
 		if (sel.grinder) equip.grinder = sel.grinder;
 		if (sel.dripper) equip.dripper = sel.dripper;
+		if (sel.basket) equip.basket = sel.basket;
 		const lastResult = await ctx.plugin.recordService.getLastRecord(sel.bean!.name, sel.method!, sel.temp!, equip);
 		const record = lastResult.ok ? lastResult.data : undefined;
 		sel.lastRecord = record;
@@ -343,16 +344,16 @@ function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	}
 
 	if (isEspresso) {
-		basketSelect = createSelectField(
-			form,
-			t('equipment.basket'),
-			ctx.equipment.baskets,
-			sel.basket ?? ctx.equipment.baskets[0],
-			(v) => {
-				sel.basket = v;
-				syncSummary();
-			},
-		);
+		const initBasket =
+			sel.basket ??
+			(last?.method === 'espresso' && last.basket && ctx.equipment.baskets.includes(last.basket)
+				? last.basket
+				: ctx.equipment.baskets[0]);
+		sel.basket = initBasket;
+		basketSelect = createSelectField(form, t('equipment.basket'), ctx.equipment.baskets, initBasket, (v) => {
+			sel.basket = v;
+			queryAndApplyDials();
+		});
 	}
 
 	let selectedGrinder: GrinderConfig | undefined;
