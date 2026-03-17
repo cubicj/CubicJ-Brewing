@@ -25,6 +25,11 @@
   "brew.saveFailed": "Save failed",
   "brew.unexpectedError": "Something went wrong",
 
+  "error.beanCreate": "Failed to create bean note",
+  "error.equipSave": "Failed to save equipment",
+  "error.recordDelete": "Failed to delete record",
+  "error.beanUpdate": "Failed to update bean",
+
   "bean.new": "+ New Bean",
   "bean.defaultName": "New Bean",
   "bean.activeBeans": "Active Beans",

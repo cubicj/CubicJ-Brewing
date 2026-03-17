@@ -1,4 +1,4 @@
-import { Modal, setIcon } from 'obsidian';
+import { Modal, Notice, setIcon } from 'obsidian';
 import type CubicJBrewingPlugin from '../main';
 import type { GrinderConfig, EquipmentSettings } from '../brew/types';
 import { BEAN_NOTE_EXTRA } from '../brew/constants';
@@ -123,6 +123,7 @@ export class DataManageModal extends Modal {
 			await this.app.workspace.openLinkText(result.data, '');
 		} catch (err) {
 			console.error('[DataManageModal] createNewBean failed:', err);
+			new Notice(t('error.beanCreate'));
 		}
 	}
 
@@ -193,6 +194,7 @@ export class DataManageModal extends Modal {
 						renderItems();
 					} catch (err) {
 						console.error('[DataManageModal] equipment delete failed:', err);
+						new Notice(t('error.equipSave'));
 					}
 				});
 			}
@@ -224,6 +226,7 @@ export class DataManageModal extends Modal {
 					renderItems();
 				} catch (err) {
 					console.error('[DataManageModal] equipment add failed:', err);
+					new Notice(t('error.equipSave'));
 				}
 			});
 			cancelBtn.addEventListener('click', () => formEl.remove());
@@ -266,6 +269,7 @@ export class DataManageModal extends Modal {
 						renderItems();
 					} catch (err) {
 						console.error('[DataManageModal] grinder delete failed:', err);
+						new Notice(t('error.equipSave'));
 					}
 				});
 			}
@@ -326,6 +330,7 @@ export class DataManageModal extends Modal {
 					renderItems();
 				} catch (err) {
 					console.error('[DataManageModal] grinder add failed:', err);
+					new Notice(t('error.equipSave'));
 				}
 			});
 			cancelBtn.addEventListener('click', () => formEl.remove());

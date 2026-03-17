@@ -78,6 +78,7 @@ export class BrewProfileModal extends Modal {
 
 		const points = await this.resolvePoints();
 		const hasChart = points.length > 0;
+		// Desktop: inline canvas chart. Mobile: defer to "View Chart" button (smaller viewport).
 		if (hasChart && !Platform.isMobile) {
 			this.renderChart(points);
 		} else if (hasChart && Platform.isMobile) {

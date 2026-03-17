@@ -251,6 +251,7 @@ async function renderBean(container: HTMLElement, ctx: StepRenderContext): Promi
 				}
 			} catch (err) {
 				console.error('[StepRenderers] bean select failed:', err);
+				new Notice(t('brew.unexpectedError'));
 			}
 		});
 	}
@@ -569,6 +570,7 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 				ctx.accordion.update();
 			} catch (err) {
 				console.error('[StepRenderers] brew stop failed:', err);
+				new Notice(t('brew.unexpectedError'));
 			}
 		});
 	} else if (!hasProfile) {
@@ -587,6 +589,7 @@ function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 				ctx.accordion.update();
 			} catch (err) {
 				console.error('[StepRenderers] brew start failed:', err);
+				new Notice(t('brew.unexpectedError'));
 			}
 		});
 	}
