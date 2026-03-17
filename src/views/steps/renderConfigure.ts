@@ -1,4 +1,4 @@
-import type { BrewFlowSelection, BrewRecord, GrinderConfig } from '../../brew/types';
+import type { BrewFlowSelection, BrewRecord, GrinderConfig, EspressoDrink } from '../../brew/types';
 import { t } from '../../i18n/index';
 import { createStepper } from '../Stepper';
 import { createSelectField, attachScaleAutoBtn, createAccessoryChecklist } from '../FormHelpers';
@@ -53,7 +53,8 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 	const syncSummary = () => ctx.accordion.updateSummaries();
 
 	const queryAndApplyDials = async () => {
-		const equip: { filter?: string; grinder?: string; dripper?: string; basket?: string } = {};
+		const equip: { filter?: string; grinder?: string; dripper?: string; basket?: string; drink?: EspressoDrink } = {};
+		if (sel.drink) equip.drink = sel.drink;
 		if (sel.filter) equip.filter = sel.filter;
 		if (sel.grinder) equip.grinder = sel.grinder;
 		if (sel.dripper) equip.dripper = sel.dripper;
