@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BrewRecordService, BREW_RECORDS_VERSION, type StorageAdapter } from './BrewRecordService';
-import type { FilterRecord } from '../brew/types';
+import type { FilterRecord, EspressoRecord } from '../brew/types';
 
 class InMemoryAdapter implements StorageAdapter {
 	data = '';
@@ -15,6 +15,21 @@ class InMemoryAdapter implements StorageAdapter {
 		this.backup = content;
 	}
 }
+
+const makeEspresso = (overrides: Partial<EspressoRecord> = {}): EspressoRecord => ({
+	id: crypto.randomUUID(),
+	timestamp: new Date().toISOString(),
+	bean: '첼로 블렌드',
+	roastDate: '2026-02-20',
+	method: 'espresso',
+	temp: 'hot',
+	grindSize: 2.0,
+	dose: 18,
+	drink: 'shot',
+	basket: '18g',
+	roastDays: null,
+	...overrides,
+});
 
 const makeFilter = (overrides: Partial<FilterRecord> = {}): FilterRecord => ({
 	id: crypto.randomUUID(),
@@ -109,6 +124,17 @@ describe('BrewRecordService', () => {
 		const v60 = await service.getLastRecord('첼로 블렌드', 'filter', 'hot', { dripper: 'V60' });
 		expect(v60.ok).toBe(true);
 		if (v60.ok) expect(v60.data?.grindSize).toBe(2.5);
+	});
+
+	it('getLastRecord filters espresso by drink type', async () => {
+		await service.add(makeEspresso({ timestamp: '2026-02-25T10:00:00Z', drink: 'shot', grindSize: 2.0 }));
+		await service.add(makeEspresso({ timestamp: '2026-02-26T10:00:00Z', drink: 'americano', grindSize: 2.2 }));
+		const shot = await service.getLastRecord('첼로 블렌드', 'espresso', 'hot', { drink: 'shot' });
+		const americano = await service.getLastRecord('첼로 블렌드', 'espresso', 'hot', { drink: 'americano' });
+		expect(shot.ok).toBe(true);
+		expect(americano.ok).toBe(true);
+		if (shot.ok) expect(shot.data?.grindSize).toBe(2.0);
+		if (americano.ok) expect(americano.data?.grindSize).toBe(2.2);
 	});
 
 	it('getLastRecord without equip filter returns overall latest', async () => {
