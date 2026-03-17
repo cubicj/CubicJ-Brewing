@@ -128,7 +128,7 @@ export class BrewRecordService {
 		bean: string,
 		method: BrewMethod,
 		temp: BrewTemp,
-		equip?: { filter?: string; grinder?: string; dripper?: string },
+		equip?: { filter?: string; grinder?: string; dripper?: string; basket?: string },
 	): Promise<Result<BrewRecord | undefined>> {
 		const result = await this.load();
 		if (!result.ok) return result;
@@ -139,6 +139,7 @@ export class BrewRecordService {
 					if (equip?.filter && !(r.method === 'filter' && r.filter === equip.filter)) return false;
 					if (equip?.grinder && r.grinder !== equip.grinder) return false;
 					if (equip?.dripper && !(r.method === 'filter' && r.dripper === equip.dripper)) return false;
+					if (equip?.basket && !(r.method === 'espresso' && r.basket === equip.basket)) return false;
 					return true;
 				})
 				.sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0],
