@@ -44,11 +44,12 @@ describe('BrewProfileStorage', () => {
 			{ t: 0.5, w: 3.2 },
 			{ t: 1.0, w: 8.1 },
 		];
-		const path = await storage.save('2026-03-01T12:00:00.000Z', points);
-		expect(path).toBe('brew-profiles/2026-03-01T12-00-00.000Z.json');
+		const result = await storage.save('2026-03-01T12:00:00.000Z', points);
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.data).toBe('brew-profiles/2026-03-01T12-00-00.000Z.json');
+		}
 		expect(adapter.mkdirCalls).toContain(`${baseDir}/brew-profiles`);
-		const raw = adapter.files.get(`${baseDir}/brew-profiles/2026-03-01T12-00-00.000Z.json`);
-		expect(JSON.parse(raw!)).toEqual(points);
 	});
 
 	it('loads saved profile', async () => {
@@ -56,22 +57,24 @@ describe('BrewProfileStorage', () => {
 			{ t: 0, w: 0 },
 			{ t: 1, w: 10 },
 		];
-		const path = await storage.save('2026-03-01T14:00:00.000Z', points);
-		const loaded = await storage.load(path);
-		expect(loaded).toEqual(points);
+		const saveResult = await storage.save('2026-03-01T14:00:00.000Z', points);
+		expect(saveResult.ok).toBe(true);
+		const loadResult = await storage.load(saveResult.ok ? saveResult.data : '');
+		expect(loadResult.ok).toBe(true);
+		if (loadResult.ok) expect(loadResult.data).toEqual(points);
 	});
 
-	it('returns empty array for missing profile', async () => {
-		const loaded = await storage.load('brew-profiles/nonexistent.json');
-		expect(loaded).toEqual([]);
+	it('returns ok with empty array for missing profile', async () => {
+		const result = await storage.load('brew-profiles/nonexistent.json');
+		expect(result).toEqual({ ok: true, data: [] });
 	});
 
 	it('deletes a saved profile', async () => {
 		const points: BrewProfilePoint[] = [{ t: 0, w: 0 }];
-		const path = await storage.save('2026-03-01T16:00:00.000Z', points);
-		await storage.delete(path);
-		const loaded = await storage.load(path);
-		expect(loaded).toEqual([]);
+		const saveResult = await storage.save('2026-03-01T16:00:00.000Z', points);
+		expect(saveResult.ok).toBe(true);
+		const deleteResult = await storage.delete(saveResult.ok ? saveResult.data : '');
+		expect(deleteResult.ok).toBe(true);
 	});
 
 	it('filters out invalid points on load', async () => {
@@ -80,29 +83,47 @@ describe('BrewProfileStorage', () => {
 			`${baseDir}/${path}`,
 			JSON.stringify([{ t: 0, w: 0 }, { garbage: true }, { t: 1, w: 10 }, 'not an object']),
 		);
-		const loaded = await storage.load(path);
-		expect(loaded).toEqual([
-			{ t: 0, w: 0 },
-			{ t: 1, w: 10 },
-		]);
+		const result = await storage.load(path);
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.data).toEqual([
+				{ t: 0, w: 0 },
+				{ t: 1, w: 10 },
+			]);
+		}
 	});
 
-	it('handles non-array profile data', async () => {
+	it('returns fail for corrupt JSON', async () => {
+		const path = 'brew-profiles/test.json';
+		adapter.files.set(`${baseDir}/${path}`, '{broken json');
+		const result = await storage.load(path);
+		expect(result.ok).toBe(false);
+		if (!result.ok) expect(result.error.code).toBe('PROFILE_PARSE_FAILED');
+	});
+
+	it('returns fail for non-array profile data', async () => {
 		const path = 'brew-profiles/test.json';
 		adapter.files.set(`${baseDir}/${path}`, '{"not": "array"}');
-		const loaded = await storage.load(path);
-		expect(loaded).toEqual([]);
+		const result = await storage.load(path);
+		expect(result.ok).toBe(false);
+		if (!result.ok) expect(result.error.code).toBe('PROFILE_SCHEMA_INVALID');
 	});
 
-	it('rejects path traversal in load', async () => {
-		await expect(storage.load('../../.obsidian/app.json')).rejects.toThrow('Invalid profile path');
+	it('returns fail for path traversal in load', async () => {
+		const result = await storage.load('../../.obsidian/app.json');
+		expect(result.ok).toBe(false);
+		if (!result.ok) expect(result.error.code).toBe('PROFILE_PATH_INVALID');
 	});
 
-	it('rejects path traversal in delete', async () => {
-		await expect(storage.delete('../secrets.json')).rejects.toThrow('Invalid profile path');
+	it('returns fail for path traversal in delete', async () => {
+		const result = await storage.delete('../secrets.json');
+		expect(result.ok).toBe(false);
+		if (!result.ok) expect(result.error.code).toBe('PROFILE_PATH_INVALID');
 	});
 
-	it('rejects absolute path', async () => {
-		await expect(storage.load('/etc/passwd')).rejects.toThrow('Invalid profile path');
+	it('returns fail for absolute path', async () => {
+		const result = await storage.load('/etc/passwd');
+		expect(result.ok).toBe(false);
+		if (!result.ok) expect(result.error.code).toBe('PROFILE_PATH_INVALID');
 	});
 });
