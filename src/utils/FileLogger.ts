@@ -11,6 +11,7 @@ export class FileLogger {
 		private filePath: string,
 		private flushIntervalMs = 2000,
 		private maxLines = 1000,
+		private maxBytes = 5 * 1024 * 1024,
 	) {}
 
 	start(): void {
@@ -39,9 +40,16 @@ export class FileLogger {
 				/* new file or transient read failure — proceed with empty */
 			}
 			const combined = existing + chunk.join('\n') + '\n';
-			const lines = combined.split('\n');
-			const trimmed = lines.length > this.maxLines ? lines.slice(-this.maxLines).join('\n') : combined;
-			await this.adapter.write(this.filePath, trimmed);
+
+			if (combined.length > this.maxBytes) {
+				await this.adapter.write(this.filePath + '.old', existing);
+				const fresh = chunk.join('\n') + '\n';
+				await this.adapter.write(this.filePath, fresh);
+			} else {
+				const lines = combined.split('\n');
+				const trimmed = lines.length > this.maxLines ? lines.slice(-this.maxLines).join('\n') : combined;
+				await this.adapter.write(this.filePath, trimmed);
+			}
 		} catch (e) {
 			this.buffer.unshift(...chunk);
 			console.error('[FileLogger] flush failed:', e);
