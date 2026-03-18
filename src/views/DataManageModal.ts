@@ -163,6 +163,107 @@ export class DataManageModal extends Modal {
 		}
 	}
 
+	private makeDraggable<T>(listEl: HTMLElement, arr: T[], renderItems: () => void): void {
+		const DRAG_THRESHOLD = 5;
+		let active = false;
+
+		listEl.addEventListener('pointerdown', (e) => {
+			if (active) return;
+			const row = (e.target as HTMLElement).closest<HTMLElement>('.dm-equip-row');
+			if (!row || (e.target as HTMLElement).closest('.dm-equip-del-btn')) return;
+
+			const rows = Array.from(listEl.querySelectorAll<HTMLElement>('.dm-equip-row'));
+			const dragIdx = rows.indexOf(row);
+			if (dragIdx === -1 || rows.length < 2) return;
+			active = true;
+
+			const startY = e.clientY;
+			const rowHeight = row.getBoundingClientRect().height;
+			const gap = rows.length > 1 ? rows[1].getBoundingClientRect().top - rows[0].getBoundingClientRect().bottom : 0;
+			const stride = rowHeight + gap;
+			const minDy = -dragIdx * stride;
+			const maxDy = (rows.length - 1 - dragIdx) * stride;
+			let dragging = false;
+			let hoverIdx = dragIdx;
+			let dy = 0;
+
+			const updateTransforms = (currentIdx: number) => {
+				for (let i = 0; i < rows.length; i++) {
+					if (i === dragIdx) continue;
+					let shift = 0;
+					if (dragIdx < currentIdx && i > dragIdx && i <= currentIdx) shift = -stride;
+					else if (dragIdx > currentIdx && i >= currentIdx && i < dragIdx) shift = stride;
+					rows[i].style.transform = shift ? `translateY(${shift}px)` : '';
+				}
+			};
+
+			const onMove = (ev: PointerEvent) => {
+				dy = Math.max(minDy, Math.min(maxDy, ev.clientY - startY));
+				if (!dragging) {
+					if (Math.abs(dy) < DRAG_THRESHOLD) return;
+					dragging = true;
+					row.addClass('is-dragging');
+					for (const r of rows) {
+						if (r !== row) r.style.transition = 'transform 200ms ease';
+					}
+				}
+
+				row.style.transform = `translateY(${dy}px)`;
+
+				let newIdx = dragIdx + Math.round(dy / stride);
+				newIdx = Math.max(0, Math.min(rows.length - 1, newIdx));
+				if (newIdx !== hoverIdx) {
+					hoverIdx = newIdx;
+					updateTransforms(hoverIdx);
+				}
+			};
+
+			const onUp = async () => {
+				document.removeEventListener('pointermove', onMove);
+				document.removeEventListener('pointerup', onUp);
+
+				if (!dragging) {
+					active = false;
+					return;
+				}
+
+				const finalY = (hoverIdx - dragIdx) * stride;
+				row.style.transition = 'transform 200ms ease';
+				row.style.transform = `translateY(${finalY}px)`;
+
+				let cleaned = false;
+				const cleanup = () => {
+					if (cleaned) return;
+					cleaned = true;
+					for (const r of rows) {
+						r.style.transition = '';
+						r.style.transform = '';
+					}
+					row.removeClass('is-dragging');
+					active = false;
+					if (hoverIdx !== dragIdx) renderItems();
+				};
+
+				if (hoverIdx !== dragIdx) {
+					const [item] = arr.splice(dragIdx, 1);
+					arr.splice(hoverIdx, 0, item);
+					try {
+						await this.plugin.saveEquipment();
+					} catch (err) {
+						console.error('[DataManageModal] equipment reorder failed:', err);
+						new Notice(t('error.equipSave'));
+					}
+				}
+
+				row.addEventListener('transitionend', cleanup, { once: true });
+				setTimeout(cleanup, 250);
+			};
+
+			document.addEventListener('pointermove', onMove);
+			document.addEventListener('pointerup', onUp);
+		});
+	}
+
 	private renderStringList(
 		container: HTMLElement,
 		label: string,
@@ -200,6 +301,7 @@ export class DataManageModal extends Modal {
 			}
 		};
 		renderItems();
+		if (items.length > 1) this.makeDraggable(listEl, items, renderItems);
 
 		addBtn.addEventListener('click', () => {
 			const formEl = section.createDiv({ cls: 'dm-equip-grinder-form' });
@@ -275,6 +377,7 @@ export class DataManageModal extends Modal {
 			}
 		};
 		renderItems();
+		if (grinders.length > 1) this.makeDraggable(listEl, grinders, renderItems);
 
 		addBtn.addEventListener('click', () => {
 			const formEl = section.createDiv({ cls: 'dm-equip-grinder-form' });

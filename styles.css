@@ -1103,6 +1103,8 @@ body.is-mobile .brew-profile-chart-mode .brew-profile-footer {
 	gap: 8px;
 	padding: 4px 8px;
 	border-radius: 4px;
+	cursor: grab;
+	touch-action: none;
 }
 .dm-equip-row:hover {
 	background: var(--background-modifier-hover);
@@ -1114,6 +1116,12 @@ body.is-mobile .brew-profile-chart-mode .brew-profile-footer {
 	color: var(--text-muted);
 	font-size: 0.85em;
 	flex: none !important;
+}
+.dm-equip-row.is-dragging {
+	position: relative;
+	z-index: 1;
+	background: var(--background-primary);
+	box-shadow: var(--shadow-s);
 }
 .dm-equip-del-btn {
 	opacity: 0;
