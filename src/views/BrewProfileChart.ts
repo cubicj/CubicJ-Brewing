@@ -317,7 +317,7 @@ export class BrewProfileChart {
 
 		const viewEnd = this.viewStart + dur;
 		let maxW = 10;
-		for (const p of points) if (p.w > maxW) maxW = p.w;
+		for (const p of this.cachedTrend) if (p.w > maxW) maxW = p.w;
 		maxW *= 1.1;
 
 		const toX = (t: number) => m.pl + ((t - this.viewStart) / dur) * m.plotW;
@@ -384,6 +384,7 @@ export class BrewProfileChart {
 			return;
 		}
 
+		this.updateCache(points);
 		const scale = this.computeScale(points, m);
 		const { visibleDetail, visibleTrend } = this.getProcessedData(points, scale.viewEnd);
 
