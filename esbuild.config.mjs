@@ -1,7 +1,7 @@
 import esbuild from 'esbuild';
 import process from 'process';
 import builtins from 'module';
-import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'fs';
 import { resolve, join } from 'path';
 
 if (existsSync('.env')) {
@@ -15,13 +15,30 @@ const prod = process.argv[2] === 'production';
 const VAULT_PLUGIN_DIR = process.env.VAULT_PLUGIN_DIR;
 const NOBLE_PKG = resolve('node_modules/@stoprocent/noble');
 
+const NOBLE_COPY_FILTER = (src) => !src.includes('test') && !src.includes('examples') && !src.includes('assets');
+
+function findNodeFiles(dir) {
+	const results = [];
+	const walk = (d, rel) => {
+		for (const entry of readdirSync(d, { withFileTypes: true })) {
+			const fullPath = join(d, entry.name);
+			if (!NOBLE_COPY_FILTER(fullPath)) continue;
+			const entryRel = rel ? `${rel}/${entry.name}` : entry.name;
+			if (entry.isDirectory()) walk(fullPath, entryRel);
+			else if (entry.name.endsWith('.node')) results.push(entryRel);
+		}
+	};
+	walk(dir, '');
+	return results;
+}
+
 function copyNobleToDir(targetDir) {
 	const nobleOut = join(targetDir, 'noble');
 	try {
 		cpSync(NOBLE_PKG, nobleOut, {
 			recursive: true,
 			force: true,
-			filter: (src) => !src.includes('test') && !src.includes('examples') && !src.includes('assets'),
+			filter: NOBLE_COPY_FILTER,
 		});
 	} catch (e) {
 		if (e.code === 'EIO' || e.code === 'EBUSY') {
@@ -29,6 +46,21 @@ function copyNobleToDir(targetDir) {
 			return;
 		}
 		throw e;
+	}
+
+	const nodeFiles = findNodeFiles(NOBLE_PKG);
+	for (const relPath of nodeFiles) {
+		const src = join(NOBLE_PKG, relPath);
+		const dst = join(nobleOut, relPath);
+		if (!existsSync(dst)) {
+			console.warn(`  ⚠ noble .node file missing after copy: ${relPath}`);
+			continue;
+		}
+		const srcSize = statSync(src).size;
+		const dstSize = statSync(dst).size;
+		if (srcSize !== dstSize) {
+			console.warn(`  ⚠ noble .node file size mismatch: ${relPath} (${srcSize} → ${dstSize})`);
+		}
 	}
 
 	const deps = ['node-gyp-build', 'debug', 'ms', 'node-addon-api'];
