@@ -7,6 +7,7 @@ export const BREW_RECORDS_VERSION = 1;
 export interface BrewRecordsEnvelope {
 	version: number;
 	records: BrewRecord[];
+	_invalid?: unknown[];
 }
 
 export interface StorageAdapter {
@@ -17,6 +18,7 @@ export interface StorageAdapter {
 
 export class BrewRecordService {
 	private records: BrewRecord[] | null = null;
+	private invalidRecords: unknown[] = [];
 	onChange: (() => void) | null = null;
 
 	constructor(private adapter: StorageAdapter) {}
@@ -35,6 +37,7 @@ export class BrewRecordService {
 				valid.push(r as BrewRecord);
 			} else {
 				console.warn('[BrewRecordService] skipped invalid brew record:', JSON.stringify(r));
+				this.invalidRecords.push(r);
 			}
 		}
 		return valid;
@@ -63,6 +66,9 @@ export class BrewRecordService {
 			const envelope = parsed as { version: number; records: unknown };
 			if (Array.isArray(envelope.records)) {
 				this.records = this.validateRecords(envelope.records);
+				if (Array.isArray((parsed as any)._invalid)) {
+					this.invalidRecords = (parsed as any)._invalid;
+				}
 				return ok(this.records);
 			}
 		}
@@ -74,6 +80,7 @@ export class BrewRecordService {
 		const envelope: BrewRecordsEnvelope = {
 			version: BREW_RECORDS_VERSION,
 			records: this.records ?? [],
+			...(this.invalidRecords.length > 0 && { _invalid: this.invalidRecords }),
 		};
 		await this.adapter.write(JSON.stringify(envelope, null, 2));
 	}

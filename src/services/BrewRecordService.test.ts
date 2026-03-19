@@ -328,6 +328,32 @@ describe('BrewRecordService', () => {
 		expect(saved.records).toHaveLength(1);
 	});
 
+	it('preserves invalid records in _invalid field of envelope', async () => {
+		adapter.data = JSON.stringify([makeFilter(), { id: 'bad', garbage: true }, makeFilter()]);
+		const svc = new BrewRecordService(adapter);
+		await svc.getAll();
+		await svc.add(makeFilter());
+		const saved = JSON.parse(adapter.data);
+		expect(saved.records).toHaveLength(3);
+		expect(saved._invalid).toHaveLength(1);
+		expect(saved._invalid[0].id).toBe('bad');
+	});
+
+	it('preserves _invalid from loaded envelope', async () => {
+		adapter.data = JSON.stringify({
+			version: 1,
+			records: [makeFilter()],
+			_invalid: [{ id: 'old-bad', x: 1 }],
+		});
+		const svc = new BrewRecordService(adapter);
+		await svc.getAll();
+		await svc.add(makeFilter());
+		const saved = JSON.parse(adapter.data);
+		expect(saved.records).toHaveLength(2);
+		expect(saved._invalid).toHaveLength(1);
+		expect(saved._invalid[0].id).toBe('old-bad');
+	});
+
 	it('loads future version envelope', async () => {
 		const record = makeFilter();
 		adapter.data = JSON.stringify({ version: 99, records: [record] });
