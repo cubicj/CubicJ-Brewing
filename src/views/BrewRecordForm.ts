@@ -37,12 +37,12 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 	const tempRow = form.createDiv({ cls: 'brew-edit-row' });
 	tempRow.createEl('label', { text: t('form.temperature') });
 	const tempSelect = tempRow.createEl('select');
-	for (const t of [
+	for (const item of [
 		{ v: 'hot' as const, l: getTempLabel('hot') },
 		{ v: 'iced' as const, l: getTempLabel('iced') },
 	]) {
-		const opt = tempSelect.createEl('option', { text: t.l, value: t.v });
-		if (t.v === record.temp) opt.selected = true;
+		const opt = tempSelect.createEl('option', { text: item.l, value: item.v });
+		if (item.v === record.temp) opt.selected = true;
 	}
 
 	let grinderSelect: HTMLSelectElement | null = null;
@@ -212,18 +212,27 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 			const ww = waterWeightStepper.getValue();
 			const mw = milkWeightStepper.getValue();
 			const base = {
+				id: record.id,
+				timestamp: record.timestamp,
+				bean: record.bean,
+				roastDate: record.roastDate,
+				roastDays: record.roastDays,
 				temp,
 				grindSize: grindStepper.getValue(),
-				dose: doseStepper.getValue(),
 				grinder: grinderSelect?.value || undefined,
+				dose: doseStepper.getValue(),
+				time: record.time,
+				yield: record.yield,
+				recipe: record.recipe,
 				note: noteInput.value.trim() || undefined,
+				profilePath: record.profilePath,
 				waterWeight: ww > 0 ? ww : undefined,
 				milkWeight: mw > 0 ? mw : undefined,
 			};
 
-			let changes: Partial<BrewRecord>;
+			let updated: BrewRecord;
 			if (method === 'filter') {
-				changes = {
+				updated = {
 					...base,
 					method: 'filter' as const,
 					waterTemp: waterTempStepper.getValue(),
@@ -232,7 +241,7 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 				};
 			} else {
 				const accList = [...accChecked];
-				changes = {
+				updated = {
 					...base,
 					method: 'espresso' as const,
 					drink: drinkSelect.value as EspressoDrink,
@@ -241,48 +250,8 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 				};
 			}
 
-			const updateResult = await deps.recordService.update(record.id, changes);
+			const updateResult = await deps.recordService.update(record.id, updated);
 			if (!updateResult.ok) throw new Error(updateResult.error.message);
-			let updated: BrewRecord;
-			if (method !== record.method) {
-				const shared = {
-					id: record.id,
-					timestamp: record.timestamp,
-					bean: record.bean,
-					roastDate: record.roastDate,
-					roastDays: record.roastDays,
-					temp,
-					grindSize: grindStepper.getValue(),
-					grinder: grinderSelect?.value || undefined,
-					dose: doseStepper.getValue(),
-					time: record.time,
-					yield: record.yield,
-					recipe: record.recipe,
-					note: noteInput.value.trim() || undefined,
-					profilePath: record.profilePath,
-					waterWeight: ww > 0 ? ww : undefined,
-					milkWeight: mw > 0 ? mw : undefined,
-				};
-				if (method === 'espresso') {
-					updated = {
-						...shared,
-						method: 'espresso',
-						drink: drinkSelect.value as EspressoDrink,
-						basket: basketSelect.value,
-						accessories: [...accChecked].length > 0 ? [...accChecked] : undefined,
-					};
-				} else {
-					updated = {
-						...shared,
-						method: 'filter',
-						waterTemp: waterTempStepper.getValue(),
-						filter: filterSelect.value || undefined,
-						dripper: dripperSelect?.value || undefined,
-					};
-				}
-			} else {
-				updated = { ...record, ...changes } as BrewRecord;
-			}
 			deps.onSaved(updated);
 		} catch (err) {
 			console.error('[BrewRecordForm] save failed:', err);
