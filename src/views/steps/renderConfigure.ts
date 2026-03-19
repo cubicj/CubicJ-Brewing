@@ -14,13 +14,27 @@ function grinderToStepperConfig(g: GrinderConfig) {
 	};
 }
 
-export function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
-	container.addClass('brew-flow-configure');
-	const sel = ctx.flowState.selection;
-	const isFilter = sel.method === 'filter';
-	const isEspresso = sel.method === 'espresso';
-	const last = sel.lastRecord;
+function resolveEquipmentDefault(
+	current: string | undefined,
+	last: BrewRecord | undefined,
+	method: string,
+	items: string[],
+	lastKey: 'filter' | 'dripper' | 'basket',
+): string | undefined {
+	if (current) return current;
+	if (
+		last?.method === method &&
+		last[lastKey as keyof typeof last] &&
+		items.includes(last[lastKey as keyof typeof last] as string)
+	)
+		return last[lastKey as keyof typeof last] as string;
+	return items[0];
+}
 
+function renderLastRecordCard(
+	container: HTMLElement,
+	initial: BrewRecord | undefined,
+): (record: BrewRecord | undefined) => void {
 	const cardWrapper = container.createDiv();
 
 	const updateCard = (record: BrewRecord | undefined) => {
@@ -42,15 +56,102 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 		}
 	};
 
-	updateCard(last);
+	updateCard(initial);
+	return updateCard;
+}
+
+interface EquipmentSelectRefs {
+	filterSelect: HTMLSelectElement | null;
+	dripperSelect: HTMLSelectElement | null;
+	basketSelect: HTMLSelectElement | null;
+}
+
+function renderEquipmentSelects(
+	form: HTMLElement,
+	sel: BrewFlowSelection,
+	ctx: StepRenderContext,
+	queryAndApplyDials: () => void,
+): EquipmentSelectRefs {
+	const refs: EquipmentSelectRefs = { filterSelect: null, dripperSelect: null, basketSelect: null };
+	const last = sel.lastRecord;
+
+	if (sel.method === 'filter') {
+		sel.filter = resolveEquipmentDefault(sel.filter, last, 'filter', ctx.equipment.filters, 'filter');
+		refs.filterSelect = createSelectField(form, t('equipment.filter'), ctx.equipment.filters, sel.filter!, (v) => {
+			sel.filter = v;
+			queryAndApplyDials();
+		});
+
+		sel.dripper = resolveEquipmentDefault(sel.dripper, last, 'filter', ctx.equipment.drippers, 'dripper');
+		if (ctx.equipment.drippers.length > 0) {
+			refs.dripperSelect = createSelectField(
+				form,
+				t('equipment.dripper'),
+				ctx.equipment.drippers,
+				sel.dripper!,
+				(v) => {
+					sel.dripper = v;
+					queryAndApplyDials();
+				},
+			);
+		}
+	}
+
+	if (sel.method === 'espresso') {
+		sel.basket = resolveEquipmentDefault(sel.basket, last, 'espresso', ctx.equipment.baskets, 'basket');
+		refs.basketSelect = createSelectField(form, t('equipment.basket'), ctx.equipment.baskets, sel.basket!, (v) => {
+			sel.basket = v;
+			queryAndApplyDials();
+		});
+	}
+
+	return refs;
+}
+
+function renderRecipeSelect(container: HTMLElement, ctx: StepRenderContext): void {
+	const recipes = ctx.plugin.vaultData.getAllRecipes();
+	if (recipes.length === 0) return;
+
+	const recipeGroup = container.createDiv({ cls: 'brew-flow-recipe-select' });
+	recipeGroup.createEl('label', { text: t('brew.recipe') });
+	const recipeSelect = recipeGroup.createEl('select');
+	recipeSelect.createEl('option', { text: t('brew.noRecipe'), value: '' });
+	for (const r of recipes) {
+		recipeSelect.createEl('option', { text: r.name, value: r.path });
+	}
+	recipeSelect.addEventListener('change', () => {
+		const recipe = recipes.find((r) => r.path === recipeSelect.value);
+		if (recipe) ctx.flowState.selectRecipe(recipe);
+	});
+}
+
+export function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
+	container.addClass('brew-flow-configure');
+	const sel = ctx.flowState.selection;
+	const isFilter = sel.method === 'filter';
+	const isEspresso = sel.method === 'espresso';
+	const syncSummary = () => ctx.accordion.updateSummaries();
+
+	const updateCard = renderLastRecordCard(container, sel.lastRecord);
 
 	const form = container.createDiv({ cls: 'brew-flow-form' });
 
-	let filterSelect: HTMLSelectElement | null = null;
-	let basketSelect: HTMLSelectElement | null = null;
-	let dripperSelect: HTMLSelectElement | null = null;
-	let waterTempStepper: ReturnType<typeof createStepper> | null = null;
-	const syncSummary = () => ctx.accordion.updateSummaries();
+	let grindStepperConfig = { step: 0.1, min: 0, max: 50, format: (v: number) => v.toFixed(1) };
+	let selectedGrinder: GrinderConfig | undefined;
+
+	const applyDials = (record: BrewRecord) => {
+		sel.grindSize = record.grindSize;
+		sel.dose = record.dose;
+		if (record.method === 'filter') {
+			sel.waterTemp = record.waterTemp;
+		}
+		grindStepper.setValue(record.grindSize, true);
+		doseStepper.setValue(record.dose, true);
+		if (record.method === 'filter') {
+			waterTempStepper?.setValue(record.waterTemp, true);
+		}
+		syncSummary();
+	};
 
 	const queryAndApplyDials = async () => {
 		const equip: { filter?: string; grinder?: string; dripper?: string; basket?: string; drink?: EspressoDrink } = {};
@@ -66,58 +167,15 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 		if (record) applyDials(record);
 	};
 
-	if (isFilter) {
-		const initFilter =
-			sel.filter ??
-			(last?.method === 'filter' && last.filter && ctx.equipment.filters.includes(last.filter)
-				? last.filter
-				: ctx.equipment.filters[0]);
-		sel.filter = initFilter;
-		filterSelect = createSelectField(form, t('equipment.filter'), ctx.equipment.filters, initFilter, (v) => {
-			sel.filter = v;
-			queryAndApplyDials();
-		});
-
-		const initDripper =
-			sel.dripper ??
-			(last?.method === 'filter' && last.dripper && ctx.equipment.drippers.includes(last.dripper)
-				? last.dripper
-				: ctx.equipment.drippers[0]);
-		sel.dripper = initDripper;
-		if (ctx.equipment.drippers.length > 0) {
-			dripperSelect = createSelectField(form, t('equipment.dripper'), ctx.equipment.drippers, initDripper, (v) => {
-				sel.dripper = v;
-				queryAndApplyDials();
-			});
-		}
-	}
-
-	if (isEspresso) {
-		const initBasket =
-			sel.basket ??
-			(last?.method === 'espresso' && last.basket && ctx.equipment.baskets.includes(last.basket)
-				? last.basket
-				: ctx.equipment.baskets[0]);
-		sel.basket = initBasket;
-		basketSelect = createSelectField(form, t('equipment.basket'), ctx.equipment.baskets, initBasket, (v) => {
-			sel.basket = v;
-			queryAndApplyDials();
-		});
-	}
-
-	let selectedGrinder: GrinderConfig | undefined;
-	let grindStepperConfig = { step: 0.1, min: 0, max: 50, format: (v: number) => v.toFixed(1) };
+	const equipRefs = renderEquipmentSelects(form, sel, ctx, queryAndApplyDials);
+	let waterTempStepper: ReturnType<typeof createStepper> | null = null;
 
 	if (ctx.equipment.grinders.length > 0) {
+		const last = sel.lastRecord;
 		const initGrinderName =
 			sel.grinder ??
 			(last?.grinder && ctx.equipment.grinders.find((g) => g.name === last.grinder) ? last.grinder : undefined);
-		if (initGrinderName) {
-			selectedGrinder = ctx.equipment.grinders.find((g) => g.name === initGrinderName);
-		}
-		if (!selectedGrinder) {
-			selectedGrinder = ctx.equipment.grinders[0];
-		}
+		selectedGrinder = ctx.equipment.grinders.find((g) => g.name === initGrinderName) ?? ctx.equipment.grinders[0];
 		sel.grinder = selectedGrinder.name;
 		grindStepperConfig = grinderToStepperConfig(selectedGrinder);
 
@@ -168,20 +226,6 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 
 	attachScaleAutoBtn(doseStepper, ctx.getWeightText);
 
-	const applyDials = (record: BrewRecord) => {
-		sel.grindSize = record.grindSize;
-		sel.dose = record.dose;
-		if (record.method === 'filter') {
-			sel.waterTemp = record.waterTemp;
-		}
-		grindStepper.setValue(record.grindSize, true);
-		doseStepper.setValue(record.dose, true);
-		if (record.method === 'filter') {
-			waterTempStepper?.setValue(record.waterTemp, true);
-		}
-		syncSummary();
-	};
-
 	if (isFilter) {
 		waterTempStepper = createStepper(form, {
 			label: t('form.waterTemp'),
@@ -204,20 +248,7 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 		});
 	}
 
-	const recipes = ctx.plugin.vaultData.getAllRecipes();
-	if (recipes.length > 0) {
-		const recipeGroup = container.createDiv({ cls: 'brew-flow-recipe-select' });
-		recipeGroup.createEl('label', { text: t('brew.recipe') });
-		const recipeSelect = recipeGroup.createEl('select');
-		recipeSelect.createEl('option', { text: t('brew.noRecipe'), value: '' });
-		for (const r of recipes) {
-			recipeSelect.createEl('option', { text: r.name, value: r.path });
-		}
-		recipeSelect.addEventListener('change', () => {
-			const recipe = recipes.find((r) => r.path === recipeSelect.value);
-			if (recipe) ctx.flowState.selectRecipe(recipe);
-		});
-	}
+	renderRecipeSelect(container, ctx);
 
 	const completeBtn = container.createEl('button', { text: t('brew.settingsDone'), cls: 'brew-flow-start-btn' });
 	completeBtn.addEventListener('click', () => {
@@ -228,11 +259,11 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 		};
 		if (isFilter) {
 			vars.waterTemp = waterTempStepper!.getValue();
-			vars.filter = filterSelect!.value;
-			vars.dripper = dripperSelect?.value;
+			vars.filter = equipRefs.filterSelect!.value;
+			vars.dripper = equipRefs.dripperSelect?.value;
 		}
 		if (isEspresso) {
-			vars.basket = basketSelect!.value;
+			vars.basket = equipRefs.basketSelect!.value;
 			vars.accessories = sel.accessories;
 		}
 		ctx.flowState.updateVariables(vars);
