@@ -319,7 +319,7 @@ describe('BrewFlowState', () => {
 
 	it('buildRecord throws when called without required selection fields', () => {
 		const state = new BrewFlowState();
-		expect(() => state.buildRecord()).toThrow();
+		expect(() => state.buildRecord()).toThrow('incomplete selection');
 	});
 
 	it('buildRecord creates FilterRecord', () => {
