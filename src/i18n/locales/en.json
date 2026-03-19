@@ -23,6 +23,7 @@
   "brew.saving": "Saving...",
   "brew.saved": "Saved",
   "brew.saveFailed": "Save failed",
+  "brew.weightUpdateFailed": "Saved, but bean weight update failed",
   "brew.unexpectedError": "Something went wrong",
 
   "error.beanCreate": "Failed to create bean note",

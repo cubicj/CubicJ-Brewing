@@ -114,8 +114,13 @@ export function renderSaving(container: HTMLElement, ctx: StepRenderContext): vo
 			const bean = ctx.flowState.selection.bean;
 			if (bean?.weight != null) {
 				const newWeight = Math.max(0, Math.round((bean.weight - record.dose) * 10) / 10);
-				await ctx.plugin.vaultData.setWeight(bean.path, newWeight);
-				bean.weight = newWeight;
+				try {
+					await ctx.plugin.vaultData.setWeight(bean.path, newWeight);
+					bean.weight = newWeight;
+				} catch (weightErr) {
+					ctx.plugin.pluginLogger?.log('FLOW', `weight update failed: ${weightErr}`);
+					new Notice(t('brew.weightUpdateFailed'));
+				}
 			}
 			new Notice(t('brew.saved'));
 			ctx.resetFlow();

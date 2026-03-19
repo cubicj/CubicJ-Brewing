@@ -23,6 +23,7 @@
   "brew.saving": "저장 중...",
   "brew.saved": "저장 완료",
   "brew.saveFailed": "저장 실패",
+  "brew.weightUpdateFailed": "저장 완료, 원두 잔량 업데이트 실패",
   "brew.unexpectedError": "오류가 발생했습니다",
 
   "error.beanCreate": "원두 노트 생성 실패",
