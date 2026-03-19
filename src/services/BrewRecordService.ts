@@ -67,7 +67,7 @@ export class BrewRecordService {
 			if (Array.isArray(envelope.records)) {
 				this.records = this.validateRecords(envelope.records);
 				if (Array.isArray((parsed as any)._invalid)) {
-					this.invalidRecords = (parsed as any)._invalid;
+					this.invalidRecords.push(...(parsed as any)._invalid);
 				}
 				return ok(this.records);
 			}

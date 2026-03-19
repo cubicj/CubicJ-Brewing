@@ -354,6 +354,23 @@ describe('BrewRecordService', () => {
 		expect(saved._invalid[0].id).toBe('old-bad');
 	});
 
+	it('merges new invalid records with existing _invalid from envelope', async () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		adapter.data = JSON.stringify({
+			version: 1,
+			records: [makeFilter(), { id: 'new-bad', garbage: true }],
+			_invalid: [{ id: 'old-bad', x: 1 }],
+		});
+		const svc = new BrewRecordService(adapter);
+		await svc.getAll();
+		await svc.add(makeFilter());
+		const saved = JSON.parse(adapter.data);
+		expect(saved._invalid).toHaveLength(2);
+		expect(saved._invalid.map((r: any) => r.id)).toContain('old-bad');
+		expect(saved._invalid.map((r: any) => r.id)).toContain('new-bad');
+		warnSpy.mockRestore();
+	});
+
 	it('loads future version envelope', async () => {
 		const record = makeFilter();
 		adapter.data = JSON.stringify({ version: 99, records: [record] });
