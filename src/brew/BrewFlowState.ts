@@ -115,16 +115,20 @@ export class BrewFlowState {
 
 	buildRecord(note?: string, profilePath?: string): BrewRecord {
 		const s = this.selection;
+		if (!s.bean || !s.method || !s.temp || s.grindSize == null || s.dose == null) {
+			throw new Error(`buildRecord called with incomplete selection: step=${this.step}`);
+		}
+
 		const base = {
 			id: crypto.randomUUID(),
 			timestamp: new Date().toISOString(),
-			bean: s.bean!.name,
-			roastDate: s.bean!.roastDate ?? '',
+			bean: s.bean.name,
+			roastDate: s.bean.roastDate ?? '',
 			roastDays: this.roastDays,
-			temp: s.temp!,
-			grindSize: s.grindSize!,
+			temp: s.temp,
+			grindSize: s.grindSize,
 			grinder: s.grinder,
-			dose: s.dose!,
+			dose: s.dose,
 			time: s.time,
 			yield: s.yield,
 			recipe: s.recipe?.name,
@@ -135,8 +139,14 @@ export class BrewFlowState {
 		};
 
 		if (s.method === 'espresso') {
-			return { ...base, method: 'espresso', drink: s.drink!, basket: s.basket!, accessories: s.accessories };
+			if (!s.drink || !s.basket) {
+				throw new Error(`buildRecord called with incomplete espresso selection: step=${this.step}`);
+			}
+			return { ...base, method: 'espresso', drink: s.drink, basket: s.basket, accessories: s.accessories };
 		}
-		return { ...base, method: 'filter', waterTemp: s.waterTemp!, filter: s.filter, dripper: s.dripper };
+		if (s.waterTemp == null) {
+			throw new Error(`buildRecord called with incomplete filter selection: step=${this.step}`);
+		}
+		return { ...base, method: 'filter', waterTemp: s.waterTemp, filter: s.filter, dripper: s.dripper };
 	}
 }
