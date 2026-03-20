@@ -1,9 +1,9 @@
 import { Notice, type App, type MarkdownPostProcessorContext } from 'obsidian';
 import type { VaultDataService } from '../services/VaultDataService';
 import type { BeanInfo } from '../brew/types';
-import { BEAN_NOTE_EXTRA } from '../brew/constants';
 import { t } from '../i18n/index';
 import { renderActiveBeanRow, renderFinishedBeanRow } from './BeanRowRenderer';
+import { createNewBean, getSortedBeans } from './beanHelpers';
 
 export class BeanCodeBlock {
 	private containers: WeakRef<HTMLElement>[] = [];
@@ -51,9 +51,7 @@ export class BeanCodeBlock {
 		const newBtn = header.createEl('button', { text: t('bean.new'), cls: 'cb-bean-btn cb-bean-new-btn' });
 		newBtn.addEventListener('click', () => this.createNewBean());
 
-		const beans = this.vaultData.getAllBeans();
-		const active = beans.filter((b) => b.status === 'active').sort((a, b) => a.name.localeCompare(b.name));
-		const finished = beans.filter((b) => b.status === 'finished').sort((a, b) => a.name.localeCompare(b.name));
+		const { active, finished } = getSortedBeans(this.vaultData);
 
 		const deps = {
 			vaultData: this.vaultData,
@@ -73,20 +71,13 @@ export class BeanCodeBlock {
 			for (const bean of finished) renderFinishedBeanRow(el, bean, deps);
 		}
 
-		if (beans.length === 0) {
+		if (active.length === 0 && finished.length === 0) {
 			el.createDiv({ cls: 'cb-bean-empty', text: t('bean.emptyState') });
 		}
 	}
 
-	private async createNewBean(): Promise<void> {
-		try {
-			const result = await this.vaultData.createBeanNote(BEAN_NOTE_EXTRA);
-			if (!result.ok) throw new Error(result.error.message);
-			await this.app.workspace.openLinkText(result.data, '');
-		} catch (err) {
-			console.error('[BeanCodeBlock] createNewBean failed:', err);
-			new Notice(t('error.beanCreate'));
-		}
+	private createNewBean(): Promise<boolean> {
+		return createNewBean(this.app, this.vaultData);
 	}
 }
 

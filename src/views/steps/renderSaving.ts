@@ -4,15 +4,6 @@ import { createStepper } from '../Stepper';
 import { attachScaleAutoBtn } from '../FormHelpers';
 import type { StepRenderContext } from '../StepRenderers';
 
-let activeSavingRo: ResizeObserver | null = null;
-
-export function cleanupSavingRo(): void {
-	if (activeSavingRo) {
-		activeSavingRo.disconnect();
-		activeSavingRo = null;
-	}
-}
-
 export function renderSaving(container: HTMLElement, ctx: StepRenderContext): void {
 	container.addClass('brew-flow-saving');
 	const sel = ctx.flowState.selection;
@@ -74,9 +65,8 @@ export function renderSaving(container: HTMLElement, ctx: StepRenderContext): vo
 		sel.note = noteEl.value;
 	});
 
-	cleanupSavingRo();
 	let roReady = false;
-	activeSavingRo = new ResizeObserver(() => {
+	const ro = new ResizeObserver(() => {
 		if (!roReady) {
 			roReady = true;
 			return;
@@ -89,7 +79,8 @@ export function renderSaving(container: HTMLElement, ctx: StepRenderContext): vo
 			body.style.transition = '';
 		}
 	});
-	activeSavingRo.observe(noteEl);
+	ro.observe(noteEl);
+	ctx.registerCleanup(() => ro.disconnect());
 
 	const btnRow = container.createDiv({ cls: 'brewing-controls' });
 	const doneBtn = btnRow.createEl('button', { text: t('form.save'), cls: 'brewing-ctrl-btn brew-flow-save-btn' });

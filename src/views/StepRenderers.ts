@@ -11,9 +11,7 @@ import { renderMethod } from './steps/renderMethod';
 import { renderBean } from './steps/renderBean';
 import { renderConfigure } from './steps/renderConfigure';
 import { renderBrewing } from './steps/renderBrewing';
-import { renderSaving, cleanupSavingRo } from './steps/renderSaving';
-
-export { cleanupSavingRo };
+import { renderSaving } from './steps/renderSaving';
 
 export type FlowStep = 'method' | 'bean' | 'configure' | 'brewing' | 'saving';
 
@@ -46,6 +44,7 @@ export interface StepRenderContext {
 	profileStorage: BrewProfileStorage;
 	equipment: EquipmentSettings;
 	brewingStarted: boolean;
+	registerCleanup: (fn: () => void) => void;
 }
 
 export function renderStep(step: FlowStep, container: HTMLElement, ctx: StepRenderContext): void {
