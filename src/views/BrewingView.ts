@@ -6,7 +6,7 @@ import { BrewFlowState } from '../brew/BrewFlowState';
 import { DataManageModal } from './DataManageModal';
 import { TimerController } from './TimerController';
 import { ScaleDisplayManager } from './ScaleDisplayManager';
-import { type FlowStep, renderStep, getStepSummary, cleanupSavingRo, type StepRenderContext } from './StepRenderers';
+import { type FlowStep, renderStep, getStepSummary, type StepRenderContext } from './StepRenderers';
 import { AccordionManager } from './AccordionManager';
 import { BrewProfileRecorder } from './BrewProfileRecorder';
 
@@ -15,6 +15,7 @@ export const VIEW_TYPE_BREWING = 'cubicj-brewing';
 export class BrewingView extends ItemView {
 	private plugin: CubicJBrewingPlugin;
 	private listeners: Array<{ event: string; fn: (...args: any[]) => void }> = [];
+	private cleanups: Array<() => void> = [];
 	private flowState = new BrewFlowState();
 	private brewingStarted = false;
 
@@ -80,7 +81,8 @@ export class BrewingView extends ItemView {
 	async onClose(): Promise<void> {
 		this.log('onClose');
 		this.timerController.destroy();
-		cleanupSavingRo();
+		for (const fn of this.cleanups) fn();
+		this.cleanups = [];
 		const service = this.plugin.acaiaService!;
 		for (const { event, fn } of this.listeners) {
 			service.removeListener(event, fn);
@@ -142,6 +144,9 @@ export class BrewingView extends ItemView {
 	}
 
 	private renderContent(): void {
+		for (const fn of this.cleanups) fn();
+		this.cleanups = [];
+
 		if (this.flowState.step === 'idle') {
 			this.flowState.startBrew();
 		}
@@ -191,6 +196,9 @@ export class BrewingView extends ItemView {
 			},
 			set brewingStarted(v: boolean) {
 				setBrewing(v);
+			},
+			registerCleanup: (fn: () => void) => {
+				this.cleanups.push(fn);
 			},
 		};
 	}

@@ -1,9 +1,9 @@
 import { Modal, Notice, setIcon } from 'obsidian';
 import type CubicJBrewingPlugin from '../main';
 import type { GrinderConfig, EquipmentSettings } from '../brew/types';
-import { BEAN_NOTE_EXTRA } from '../brew/constants';
 import { t } from '../i18n/index';
 import { renderActiveBeanRow, renderFinishedBeanRow } from './BeanRowRenderer';
+import { createNewBean, getSortedBeans } from './beanHelpers';
 
 type TabId = 'bean' | 'recipe' | 'equip';
 
@@ -83,11 +83,9 @@ export class DataManageModal extends Modal {
 	private renderBeanTab(container: HTMLElement): void {
 		const headerEl = container.createDiv({ cls: 'cb-bean-header' });
 		const newBtn = headerEl.createEl('button', { text: t('bean.new'), cls: 'cb-bean-btn cb-bean-new-btn' });
-		newBtn.addEventListener('click', () => this.createNewBean());
+		newBtn.addEventListener('click', () => this.handleCreateNewBean());
 
-		const beans = this.plugin.vaultData.getAllBeans();
-		const active = [...beans.filter((b) => b.status === 'active')].sort((a, b) => a.name.localeCompare(b.name));
-		const finished = [...beans.filter((b) => b.status === 'finished')].sort((a, b) => a.name.localeCompare(b.name));
+		const { active, finished } = getSortedBeans(this.plugin.vaultData);
 
 		const deps = {
 			vaultData: this.plugin.vaultData,
@@ -110,21 +108,14 @@ export class DataManageModal extends Modal {
 			for (const bean of finished) renderFinishedBeanRow(card, bean, deps);
 		}
 
-		if (beans.length === 0) {
+		if (active.length === 0 && finished.length === 0) {
 			container.createDiv({ cls: 'dm-empty', text: t('bean.emptyState') });
 		}
 	}
 
-	private async createNewBean(): Promise<void> {
-		try {
-			const result = await this.plugin.vaultData.createBeanNote(BEAN_NOTE_EXTRA);
-			if (!result.ok) throw new Error(result.error.message);
-			this.close();
-			await this.app.workspace.openLinkText(result.data, '');
-		} catch (err) {
-			console.error('[DataManageModal] createNewBean failed:', err);
-			new Notice(t('error.beanCreate'));
-		}
+	private async handleCreateNewBean(): Promise<void> {
+		const created = await createNewBean(this.app, this.plugin.vaultData);
+		if (created) this.close();
 	}
 
 	private renderRecipeTab(container: HTMLElement): void {
