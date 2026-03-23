@@ -815,6 +815,59 @@ body.is-mobile .cb-bean-weight {
 	max-width: 300px;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	cursor: pointer;
+}
+.block-language-brews .brew-record-note:hover {
+	color: var(--text-accent);
+}
+.block-language-brews .brew-record-note.is-expanded {
+	color: var(--text-accent);
+}
+.block-language-brews .brew-record-expand td {
+	padding: 8px;
+	border-bottom: 1px solid var(--background-modifier-border-hover);
+	text-align: left;
+}
+.block-language-brews .brew-note-expand,
+.block-language-brews .brew-note-edit-form {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	padding: 10px 12px;
+	background: var(--background-secondary);
+}
+.block-language-brews .brew-note-expand {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+}
+.block-language-brews .brew-note-expand-text {
+	flex: 1;
+	min-width: 0;
+	white-space: pre-wrap;
+	word-break: break-word;
+	font-size: var(--font-ui-small);
+	line-height: 1.5;
+}
+.block-language-brews .brew-note-edit-btn {
+	flex-shrink: 0;
+	margin-left: auto;
+	padding: 2px;
+}
+.block-language-brews .brew-note-edit-form {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.block-language-brews .brew-note-edit-textarea {
+	width: 100%;
+	resize: vertical;
+	font-size: var(--font-ui-small);
+	font-family: inherit;
+}
+.block-language-brews .brew-note-edit-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 6px;
 }
 .block-language-brews .brew-record-table td:last-child {
 	text-align: center;
