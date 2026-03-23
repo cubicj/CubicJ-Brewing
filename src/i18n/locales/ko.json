@@ -2,7 +2,7 @@
   "command.openView": "브루잉 뷰 열기",
   "command.tare": "영점 맞추기",
   "command.autoFill": "무게 자동 입력",
-  "command.toggleBrewing": "브루잉 시작 / 중지",
+  "command.toggleBrewing": "진행 / 시작 / 중지 / 저장",
   "command.toggleConnect": "저울 연결 / 해제",
   "command.powerOff": "저울 전원 끄기",
 

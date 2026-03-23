@@ -109,14 +109,29 @@ export class BrewingView extends ItemView {
 	}
 
 	toggleBrewing(): void {
-		const container = this.containerEl.children[1] as HTMLElement;
-		const startBtn = container.querySelector('.brew-flow-start-btn') as HTMLButtonElement | null;
-		if (startBtn) {
-			startBtn.click();
+		const step = this.flowState.step;
+		if (step === 'saving') {
+			const panel = this.accordion.getStepPanel('saving');
+			const saveBtn = panel?.querySelector('.brew-flow-save-btn') as HTMLButtonElement | null;
+			saveBtn?.click();
 			return;
 		}
-		const stopBtn = container.querySelector('.brew-flow-stop-btn') as HTMLButtonElement | null;
-		if (stopBtn) stopBtn.click();
+		if (step === 'configure') {
+			const panel = this.accordion.getStepPanel('configure');
+			const completeBtn = panel?.querySelector('.brew-flow-start-btn') as HTMLButtonElement | null;
+			completeBtn?.click();
+			return;
+		}
+		if (step !== 'brewing') return;
+		const panel = this.accordion.getStepPanel('brewing');
+		if (!panel) return;
+		if (this.brewingStarted) {
+			const stopBtn = panel.querySelector('.brew-flow-stop-btn') as HTMLButtonElement | null;
+			stopBtn?.click();
+		} else {
+			const startBtn = panel.querySelector('.brew-flow-start-btn') as HTMLButtonElement | null;
+			startBtn?.click();
+		}
 	}
 
 	private buildToolbar(container: HTMLElement): void {
