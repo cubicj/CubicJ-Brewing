@@ -206,6 +206,11 @@ export class AccordionManager {
 		return this.panels.length > 0;
 	}
 
+	getStepPanel(step: FlowStep): HTMLElement | null {
+		const idx = STEP_ORDER.indexOf(step);
+		return idx >= 0 && idx < this.panels.length ? this.panels[idx].body : null;
+	}
+
 	private renderCheckIcon(container: HTMLElement): void {
 		const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
 		svg.setAttribute('width', '14');

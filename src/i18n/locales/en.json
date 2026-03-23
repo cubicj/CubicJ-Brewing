@@ -2,7 +2,7 @@
   "command.openView": "Open Brewing View",
   "command.tare": "Tare Scale",
   "command.autoFill": "Auto-fill Weight",
-  "command.toggleBrewing": "Start / Stop Brewing",
+  "command.toggleBrewing": "Proceed / Start / Stop / Save",
   "command.toggleConnect": "Connect / Disconnect Scale",
   "command.powerOff": "Power Off Scale",
 
