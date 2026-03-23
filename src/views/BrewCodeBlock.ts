@@ -88,6 +88,16 @@ export class BrewCodeBlock {
 			headerRow.createEl('th', { text: col });
 		}
 
+		let expandState: { tr: HTMLTableRowElement; id: string } | null = null;
+
+		const collapseExpand = () => {
+			if (!expandState) return;
+			const prev = el.querySelector('.brew-record-note.is-expanded');
+			prev?.removeClass('is-expanded');
+			expandState.tr.remove();
+			expandState = null;
+		};
+
 		const tbody = table.createEl('tbody');
 		for (const record of records) {
 			const tr = tbody.createEl('tr');
@@ -98,7 +108,24 @@ export class BrewCodeBlock {
 			const method = record.method === 'espresso' ? getDrinkLabel(record.drink ?? 'shot') : getMethodLabel('filter');
 			const temp = getTempLabel(record.temp);
 			tr.createEl('td', { text: `${method}(${temp})` });
-			tr.createEl('td', { text: record.note ?? '', cls: 'brew-record-note' });
+
+			const noteTd = tr.createEl('td', { cls: 'brew-record-note' });
+			noteTd.createSpan({ text: record.note || '-' });
+			noteTd.addEventListener('click', () => {
+				if (expandState?.id === record.id) {
+					collapseExpand();
+					return;
+				}
+				collapseExpand();
+				noteTd.addClass('is-expanded');
+				const expandTr = document.createElement('tr') as HTMLTableRowElement;
+				expandTr.addClass('brew-record-expand');
+				tr.after(expandTr);
+				const expandTd = expandTr.createEl('td');
+				expandTd.colSpan = 4;
+				this.renderNoteExpand(expandTd, record);
+				expandState = { tr: expandTr, id: record.id };
+			});
 
 			const actionTd = tr.createEl('td');
 			const btn = actionTd.createEl('button', { cls: 'brew-record-chart-btn' });
@@ -114,6 +141,45 @@ export class BrewCodeBlock {
 				}).open();
 			});
 		}
+	}
+
+	private renderNoteExpand(container: HTMLElement, record: BrewRecord): void {
+		const renderView = () => {
+			container.empty();
+			const content = container.createDiv({ cls: 'brew-note-expand' });
+			if (record.note) {
+				content.createDiv({ cls: 'brew-note-expand-text', text: record.note });
+			}
+			const editBtn = content.createEl('button', { cls: 'brew-note-edit-btn clickable-icon' });
+			setIcon(editBtn, 'pencil');
+			editBtn.addEventListener('click', (e) => {
+				e.stopPropagation();
+				renderEdit();
+			});
+		};
+
+		const renderEdit = () => {
+			container.empty();
+			const form = container.createDiv({ cls: 'brew-note-edit-form' });
+			const textarea = form.createEl('textarea', { cls: 'brew-note-edit-textarea' });
+			textarea.value = record.note ?? '';
+			textarea.rows = 3;
+			const actions = form.createDiv({ cls: 'brew-note-edit-actions' });
+			const cancelBtn = actions.createEl('button', { text: t('common.cancel') });
+			cancelBtn.addEventListener('click', (e) => {
+				e.stopPropagation();
+				renderView();
+			});
+			const saveBtn = actions.createEl('button', { text: t('form.save'), cls: 'mod-cta' });
+			saveBtn.addEventListener('click', async (e) => {
+				e.stopPropagation();
+				const newNote = textarea.value.trim() || undefined;
+				await this.recordService.update(record.id, { note: newNote });
+			});
+			requestAnimationFrame(() => textarea.focus());
+		};
+
+		renderView();
 	}
 
 	private formatDate(iso: string): string {
