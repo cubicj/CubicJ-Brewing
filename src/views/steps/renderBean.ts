@@ -33,11 +33,9 @@ export async function renderBean(container: HTMLElement, ctx: StepRenderContext)
 					ctx.flowState.deselectBean();
 					ctx.accordion.update();
 				} else {
-					const lastResult = await ctx.plugin.recordService.getLastRecord(
-						bean.name,
-						ctx.flowState.selection.method!,
-						ctx.flowState.selection.temp!,
-					);
+					const sel = ctx.flowState.selection;
+					const equip = sel.drink ? { drink: sel.drink } : undefined;
+					const lastResult = await ctx.plugin.recordService.getLastRecord(bean.name, sel.method!, sel.temp!, equip);
 					const lastRecord = lastResult.ok ? lastResult.data : undefined;
 					ctx.flowState.selectBean(bean, lastRecord);
 					ctx.renderContent();
