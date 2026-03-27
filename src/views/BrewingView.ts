@@ -125,7 +125,8 @@ export class BrewingView extends ItemView {
 		if (step !== 'brewing') return;
 		const panel = this.accordion.getStepPanel('brewing');
 		if (!panel) return;
-		if (this.brewingStarted) {
+		const isEspresso = this.flowState.selection.method === 'espresso';
+		if (isEspresso || this.brewingStarted) {
 			const stopBtn = panel.querySelector('.brew-flow-stop-btn') as HTMLButtonElement | null;
 			stopBtn?.click();
 		} else {
