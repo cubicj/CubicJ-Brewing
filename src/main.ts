@@ -108,7 +108,13 @@ export default class CubicJBrewingPlugin extends Plugin {
 
 		this.profileStorage = new BrewProfileStorage(DATA_DIR, this.fileAdapter);
 
-		const brewBlock = new BrewCodeBlock(this.app, this.recordService, this.profileStorage, () => this.equipment);
+		const brewBlock = new BrewCodeBlock(
+			this.app,
+			this.recordService,
+			this.profileStorage,
+			() => this.equipment,
+			this.vaultData,
+		);
 		brewBlock.register((lang, handler) => this.registerMarkdownCodeBlockProcessor(lang, handler));
 		this.recordService.onChange = () => brewBlock.refreshAll();
 

@@ -120,6 +120,7 @@
   "form.memo": "메모",
   "form.delete": "삭제",
   "form.deleteConfirm": "선택한 브루잉 기록을 삭제합니다. 삭제된 기록은 복구할 수 없습니다.",
+  "form.restoreWeight": "{{bean}}에 {{dose}}g 복구",
   "form.save": "저장",
   "form.cancel": "취소",
   "form.addition": "가수",

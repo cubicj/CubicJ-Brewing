@@ -2,11 +2,17 @@ import { Modal, Platform, type App } from 'obsidian';
 import { BrewProfileChart } from './BrewProfileChart';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import type { BrewRecordService } from '../services/BrewRecordService';
-import type { BrewProfilePoint, BrewRecord, EquipmentSettings } from '../brew/types';
+import type { BeanInfo, BrewProfilePoint, BrewRecord, EquipmentSettings } from '../brew/types';
+import type { Result } from '../types/result';
 import { getDrinkLabel, getMethodLabel, getTempLabel } from '../brew/constants';
 import { t } from '../i18n/index';
 import { renderEditForm } from './BrewRecordForm';
 import { formatBrewDate } from '../utils/format';
+
+export interface BeanWeightService {
+	getAllBeans(): BeanInfo[];
+	setWeight(path: string, weight: number | null): Promise<Result<void>>;
+}
 
 export type ModalMode =
 	| {
@@ -15,6 +21,7 @@ export type ModalMode =
 			recordService: BrewRecordService;
 			profileStorage: BrewProfileStorage;
 			equipment: EquipmentSettings;
+			vaultData?: BeanWeightService;
 	  }
 	| { type: 'expand'; points: BrewProfilePoint[] };
 
@@ -130,15 +137,29 @@ export class BrewProfileModal extends Modal {
 	private confirmDelete(): void {
 		if (!this.record || this.mode.type !== 'detail') return;
 		const record = this.record;
-		const { recordService, profileStorage } = this.mode;
-		const modal = new ConfirmModal(this.app, t('form.deleteConfirm'), async () => {
-			const delResult = await recordService.removeWithProfile(record.id, record.profilePath, profileStorage);
-			if (delResult.ok) {
-				this.close();
-			} else {
-				console.error(`[BrewProfileModal] delete failed: [${delResult.error.code}] ${delResult.error.message}`);
-			}
-		});
+		const { recordService, profileStorage, vaultData } = this.mode;
+		const bean = vaultData?.getAllBeans().find((b) => b.name === record.bean);
+		const canRestore = bean != null && bean.weight != null && record.dose > 0;
+		const checkbox = canRestore
+			? { label: t('form.restoreWeight', { dose: record.dose, bean: record.bean }), checked: true }
+			: undefined;
+		const modal = new ConfirmModal(
+			this.app,
+			t('form.deleteConfirm'),
+			async (restoreWeight) => {
+				const delResult = await recordService.removeWithProfile(record.id, record.profilePath, profileStorage);
+				if (delResult.ok) {
+					if (restoreWeight && canRestore) {
+						const newWeight = Math.round((bean.weight! + record.dose) * 10) / 10;
+						await vaultData!.setWeight(bean.path, newWeight);
+					}
+					this.close();
+				} else {
+					console.error(`[BrewProfileModal] delete failed: [${delResult.error.code}] ${delResult.error.message}`);
+				}
+			},
+			checkbox,
+		);
 		modal.open();
 	}
 
@@ -154,6 +175,7 @@ export class BrewProfileModal extends Modal {
 			equipment: this.mode.equipment,
 			recordService: this.mode.recordService,
 			profileStorage: this.mode.profileStorage,
+			vaultData: this.mode.vaultData,
 			onSaved: (updated) => {
 				this.record = updated;
 				this.renderReadMode();
@@ -270,23 +292,41 @@ export class BrewProfileModal extends Modal {
 	}
 }
 
+export interface ConfirmCheckbox {
+	label: string;
+	checked: boolean;
+}
+
 export class ConfirmModal extends Modal {
 	private message: string;
-	private onConfirm: () => void;
+	private onConfirm: (checked: boolean) => void;
+	private checkbox?: ConfirmCheckbox;
 
-	constructor(app: App, message: string, onConfirm: () => void) {
+	constructor(app: App, message: string, onConfirm: (checked: boolean) => void, checkbox?: ConfirmCheckbox) {
 		super(app);
 		this.message = message;
 		this.onConfirm = onConfirm;
+		this.checkbox = checkbox;
 	}
 
 	onOpen(): void {
 		this.titleEl.setText(t('common.confirm'));
 		this.contentEl.createDiv({ text: this.message, cls: 'cubicj-confirm-message' });
+
+		let cb: HTMLInputElement | undefined;
+		if (this.checkbox) {
+			const row = this.contentEl.createDiv({ cls: 'cubicj-confirm-checkbox' });
+			cb = row.createEl('input', { type: 'checkbox' });
+			cb.checked = this.checkbox.checked;
+			row.createEl('label', { text: this.checkbox.label });
+			cb.id = 'confirm-restore';
+			row.querySelector('label')!.setAttribute('for', 'confirm-restore');
+		}
+
 		const footer = this.contentEl.createDiv({ cls: 'cubicj-confirm-footer' });
 		const confirmBtn = footer.createEl('button', { text: t('form.delete'), cls: 'mod-warning' });
 		confirmBtn.addEventListener('click', () => {
-			this.onConfirm();
+			this.onConfirm(cb?.checked ?? false);
 			this.close();
 		});
 		const cancelBtn = footer.createEl('button', { text: t('common.cancel') });

@@ -4,7 +4,7 @@ import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import type { BrewRecord, EquipmentSettings } from '../brew/types';
 import { getDrinkLabel, getMethodLabel, getTempLabel } from '../brew/constants';
 import { t } from '../i18n/index';
-import { BrewProfileModal } from './BrewProfileModal';
+import { type BeanWeightService, BrewProfileModal } from './BrewProfileModal';
 import { formatBrewDate } from '../utils/format';
 
 export class BrewCodeBlock {
@@ -15,6 +15,7 @@ export class BrewCodeBlock {
 		private recordService: BrewRecordService,
 		private profileStorage: BrewProfileStorage,
 		private getEquipment: () => EquipmentSettings,
+		private vaultData?: BeanWeightService,
 	) {}
 
 	register(
@@ -138,6 +139,7 @@ export class BrewCodeBlock {
 					recordService: this.recordService,
 					profileStorage: this.profileStorage,
 					equipment: this.getEquipment(),
+					vaultData: this.vaultData,
 				}).open();
 			});
 		}
