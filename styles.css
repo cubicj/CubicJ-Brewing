@@ -1117,6 +1117,15 @@ body.is-mobile .brew-profile-chart-mode .brew-profile-footer {
 .cubicj-confirm-message {
 	margin-bottom: 16px;
 }
+.cubicj-confirm-checkbox {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 12px;
+}
+.cubicj-confirm-checkbox label {
+	cursor: pointer;
+}
 .cubicj-confirm-footer {
 	display: flex;
 	justify-content: flex-end;

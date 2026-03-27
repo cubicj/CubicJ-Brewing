@@ -18,6 +18,7 @@ export class BrewingView extends ItemView {
 	private cleanups: Array<() => void> = [];
 	private flowState = new BrewFlowState();
 	private brewingStarted = false;
+	private lastStepChangeTime = 0;
 
 	private scaleConnectBtn!: HTMLButtonElement;
 	private scalePowerOffBtn!: HTMLButtonElement;
@@ -111,6 +112,7 @@ export class BrewingView extends ItemView {
 	toggleBrewing(): void {
 		const step = this.flowState.step;
 		if (step === 'saving') {
+			if (Date.now() - this.lastStepChangeTime < 500) return;
 			const panel = this.accordion.getStepPanel('saving');
 			const saveBtn = panel?.querySelector('.brew-flow-save-btn') as HTMLButtonElement | null;
 			saveBtn?.click();
@@ -127,6 +129,7 @@ export class BrewingView extends ItemView {
 		if (!panel) return;
 		const isEspresso = this.flowState.selection.method === 'espresso';
 		if (isEspresso || this.brewingStarted) {
+			this.lastStepChangeTime = Date.now();
 			const stopBtn = panel.querySelector('.brew-flow-stop-btn') as HTMLButtonElement | null;
 			stopBtn?.click();
 		} else {

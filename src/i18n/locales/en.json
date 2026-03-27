@@ -120,6 +120,7 @@
   "form.memo": "Memo",
   "form.delete": "Delete",
   "form.deleteConfirm": "Delete this brew record? This cannot be undone.",
+  "form.restoreWeight": "Restore {{dose}}g to {{bean}}",
   "form.save": "Save",
   "form.cancel": "Cancel",
   "form.addition": "Addition",
