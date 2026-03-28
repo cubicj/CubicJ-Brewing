@@ -380,6 +380,56 @@
 	white-space: pre-wrap;
 }
 
+.brew-flow-last-record-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+.brew-flow-record-nav {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+.brew-flow-record-nav-btn {
+	background: none;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	color: var(--text-muted);
+	width: 22px;
+	height: 22px;
+	cursor: pointer;
+	font-size: 9px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+}
+.brew-flow-record-nav-btn:disabled {
+	opacity: 0.3;
+	cursor: default;
+}
+.brew-flow-record-nav-btn:not(:disabled):hover {
+	color: var(--text-normal);
+	border-color: var(--text-muted);
+}
+.brew-flow-record-nav-latest {
+	color: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+	font-size: 8px;
+	letter-spacing: -3px;
+	padding-left: 2px;
+}
+.brew-flow-record-nav-latest:not(:disabled):hover {
+	color: var(--interactive-accent-hover);
+	border-color: var(--interactive-accent-hover);
+}
+.brew-flow-record-nav-counter {
+	font-size: 11px;
+	color: var(--text-muted);
+	min-width: 30px;
+	text-align: center;
+}
+
 .cubicj-brewing-view .brew-flow-method h4,
 .cubicj-brewing-view .brew-flow-bean h4 {
 	margin: 8px 0 4px;
