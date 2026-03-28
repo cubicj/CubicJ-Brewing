@@ -380,6 +380,41 @@ describe('BrewRecordService', () => {
 		if (result.ok) expect(result.data).toHaveLength(1);
 	});
 
+	it('getMatchingRecords returns all matching records sorted newest first', async () => {
+		await service.add(makeFilter({ timestamp: '2026-02-24T10:00:00Z', grindSize: 2.4 }));
+		await service.add(makeFilter({ timestamp: '2026-02-25T10:00:00Z', grindSize: 2.5 }));
+		await service.add(makeFilter({ timestamp: '2026-02-26T10:00:00Z', grindSize: 2.6 }));
+		await service.add(makeFilter({ bean: '룰 디카페인', timestamp: '2026-02-27T10:00:00Z' }));
+		const result = await service.getMatchingRecords('첼로 블렌드', 'filter', 'hot');
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.data).toHaveLength(3);
+			expect(result.data[0].grindSize).toBe(2.6);
+			expect(result.data[1].grindSize).toBe(2.5);
+			expect(result.data[2].grindSize).toBe(2.4);
+		}
+	});
+
+	it('getMatchingRecords respects equipment filters', async () => {
+		await service.add(makeFilter({ timestamp: '2026-02-25T10:00:00Z', grinder: 'C40', grindSize: 24 }));
+		await service.add(makeFilter({ timestamp: '2026-02-26T10:00:00Z', grinder: 'C40', grindSize: 25 }));
+		await service.add(makeFilter({ timestamp: '2026-02-27T10:00:00Z', grinder: 'J-Ultra', grindSize: 2.5 }));
+		const result = await service.getMatchingRecords('첼로 블렌드', 'filter', 'hot', { grinder: 'C40' });
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.data).toHaveLength(2);
+			expect(result.data[0].grindSize).toBe(25);
+			expect(result.data[1].grindSize).toBe(24);
+		}
+	});
+
+	it('getMatchingRecords returns empty array when no match', async () => {
+		await service.add(makeFilter());
+		const result = await service.getMatchingRecords('없는원두', 'espresso', 'hot');
+		expect(result.ok).toBe(true);
+		if (result.ok) expect(result.data).toEqual([]);
+	});
+
 	it('update returns RECORD_NOT_FOUND for missing id', async () => {
 		const result = await service.update('nonexistent', { grindSize: 3.0 });
 		expect(result.ok).toBe(false);

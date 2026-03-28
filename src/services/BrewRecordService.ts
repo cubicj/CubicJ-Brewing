@@ -138,6 +138,37 @@ export class BrewRecordService {
 		return ok(undefined);
 	}
 
+	private filterRecords(
+		records: BrewRecord[],
+		bean: string,
+		method: BrewMethod,
+		temp: BrewTemp,
+		equip?: { filter?: string; grinder?: string; dripper?: string; basket?: string; drink?: EspressoDrink },
+	): BrewRecord[] {
+		return records
+			.filter((r) => {
+				if (r.bean !== bean || r.method !== method || r.temp !== temp) return false;
+				if (equip?.drink && !(r.method === 'espresso' && r.drink === equip.drink)) return false;
+				if (equip?.filter && !(r.method === 'filter' && r.filter === equip.filter)) return false;
+				if (equip?.grinder && r.grinder !== equip.grinder) return false;
+				if (equip?.dripper && !(r.method === 'filter' && r.dripper === equip.dripper)) return false;
+				if (equip?.basket && !(r.method === 'espresso' && r.basket === equip.basket)) return false;
+				return true;
+			})
+			.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+	}
+
+	async getMatchingRecords(
+		bean: string,
+		method: BrewMethod,
+		temp: BrewTemp,
+		equip?: { filter?: string; grinder?: string; dripper?: string; basket?: string; drink?: EspressoDrink },
+	): Promise<Result<BrewRecord[]>> {
+		const result = await this.load();
+		if (!result.ok) return result;
+		return ok(this.filterRecords(result.data, bean, method, temp, equip));
+	}
+
 	async getLastRecord(
 		bean: string,
 		method: BrewMethod,
@@ -146,19 +177,7 @@ export class BrewRecordService {
 	): Promise<Result<BrewRecord | undefined>> {
 		const result = await this.load();
 		if (!result.ok) return result;
-		return ok(
-			result.data
-				.filter((r) => {
-					if (r.bean !== bean || r.method !== method || r.temp !== temp) return false;
-					if (equip?.drink && !(r.method === 'espresso' && r.drink === equip.drink)) return false;
-					if (equip?.filter && !(r.method === 'filter' && r.filter === equip.filter)) return false;
-					if (equip?.grinder && r.grinder !== equip.grinder) return false;
-					if (equip?.dripper && !(r.method === 'filter' && r.dripper === equip.dripper)) return false;
-					if (equip?.basket && !(r.method === 'espresso' && r.basket === equip.basket)) return false;
-					return true;
-				})
-				.sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0],
-		);
+		return ok(this.filterRecords(result.data, bean, method, temp, equip)[0]);
 	}
 
 	async migrateYields(profileStorage: { load(path: string): Promise<Result<BrewProfilePoint[]>> }): Promise<void> {
