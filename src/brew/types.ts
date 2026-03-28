@@ -97,6 +97,8 @@ export interface BrewFlowSelection {
 	drink?: EspressoDrink;
 	bean?: BeanInfo;
 	lastRecord?: BrewRecord;
+	records?: BrewRecord[];
+	recordIndex?: number;
 	grindSize?: number;
 	dose?: number;
 	waterTemp?: number;

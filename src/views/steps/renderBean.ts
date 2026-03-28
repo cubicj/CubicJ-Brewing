@@ -35,9 +35,14 @@ export async function renderBean(container: HTMLElement, ctx: StepRenderContext)
 				} else {
 					const sel = ctx.flowState.selection;
 					const equip = sel.drink ? { drink: sel.drink } : undefined;
-					const lastResult = await ctx.plugin.recordService.getLastRecord(bean.name, sel.method!, sel.temp!, equip);
-					const lastRecord = lastResult.ok ? lastResult.data : undefined;
-					ctx.flowState.selectBean(bean, lastRecord);
+					const recordsResult = await ctx.plugin.recordService.getMatchingRecords(
+						bean.name,
+						sel.method!,
+						sel.temp!,
+						equip,
+					);
+					const records = recordsResult.ok ? recordsResult.data : [];
+					ctx.flowState.selectBean(bean, records);
 					ctx.renderContent();
 				}
 			} catch (err) {

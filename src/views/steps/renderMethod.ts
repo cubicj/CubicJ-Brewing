@@ -79,14 +79,14 @@ export function renderMethod(container: HTMLElement, ctx: StepRenderContext): vo
 				const bean = ctx.flowState.selection.bean;
 				if (bean) {
 					const equip = selectedDrink ? { drink: selectedDrink } : undefined;
-					const lastResult = await ctx.plugin.recordService.getLastRecord(
+					const recordsResult = await ctx.plugin.recordService.getMatchingRecords(
 						bean.name,
 						selectedMethod!,
 						selectedTemp!,
 						equip,
 					);
-					const lastRecord = lastResult.ok ? lastResult.data : undefined;
-					ctx.flowState.selectBean(bean, lastRecord);
+					const records = recordsResult.ok ? recordsResult.data : [];
+					ctx.flowState.selectBean(bean, records);
 				}
 				ctx.renderContent();
 			} else if (ctx.flowState.step !== 'method') {
