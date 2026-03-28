@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Desktop%20%2B%20Mobile-brightgreen)
-![Version](https://img.shields.io/badge/version-0.2.12-orange)
+![Version](https://img.shields.io/badge/version-0.2.13-orange)
 
 [English](README.md)
 
