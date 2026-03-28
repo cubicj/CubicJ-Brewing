@@ -31,6 +31,8 @@ export class BrewFlowState {
 
 	private clearEquipment(): void {
 		this.selection.lastRecord = undefined;
+		this.selection.records = undefined;
+		this.selection.recordIndex = undefined;
 		this.selection.grindSize = undefined;
 		this.selection.dose = undefined;
 		this.selection.waterTemp = undefined;
@@ -41,10 +43,13 @@ export class BrewFlowState {
 		this.selection.accessories = undefined;
 	}
 
-	selectBean(bean: BeanInfo, lastRecord?: BrewRecord): void {
+	selectBean(bean: BeanInfo, records?: BrewRecord[]): void {
 		if (this.step !== 'bean' && this.step !== 'configure') return;
 		this.selection.bean = bean;
 		this.clearEquipment();
+		this.selection.records = records;
+		this.selection.recordIndex = 0;
+		const lastRecord = records?.[0];
 		this.selection.lastRecord = lastRecord;
 		if (lastRecord) {
 			this.selection.grindSize = lastRecord.grindSize;
