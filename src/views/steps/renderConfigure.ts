@@ -46,7 +46,6 @@ function renderLastRecordCard(
 	let navContainer: HTMLElement | null = null;
 	let prevBtn: HTMLButtonElement;
 	let nextBtn: HTMLButtonElement;
-	let latestBtn: HTMLButtonElement;
 	let counterEl: HTMLElement;
 
 	const updateCard = (record: BrewRecord | undefined) => {
@@ -60,21 +59,17 @@ function renderLastRecordCard(
 		prevBtn = navContainer.createEl('button', { cls: 'brew-flow-record-nav-btn', text: '\u25C0' });
 		counterEl = navContainer.createSpan({ cls: 'brew-flow-record-nav-counter' });
 		nextBtn = navContainer.createEl('button', { cls: 'brew-flow-record-nav-btn', text: '\u25B6' });
-		latestBtn = navContainer.createEl('button', {
-			cls: 'brew-flow-record-nav-btn brew-flow-record-nav-latest',
-			text: '\u25B6\u25B6',
-		});
 
-		prevBtn.addEventListener('click', () => {
-			const idx = sel.recordIndex ?? 0;
-			if (idx < (sel.records?.length ?? 1) - 1) onNavigate(idx + 1);
+		counterEl.addEventListener('click', () => {
+			if ((sel.recordIndex ?? 0) !== 0) onNavigate(0);
 		});
-		nextBtn.addEventListener('click', () => {
+		prevBtn.addEventListener('click', () => {
 			const idx = sel.recordIndex ?? 0;
 			if (idx > 0) onNavigate(idx - 1);
 		});
-		latestBtn.addEventListener('click', () => {
-			if ((sel.recordIndex ?? 0) !== 0) onNavigate(0);
+		nextBtn.addEventListener('click', () => {
+			const idx = sel.recordIndex ?? 0;
+			if (idx < (sel.records?.length ?? 1) - 1) onNavigate(idx + 1);
 		});
 
 		if (!record) {
@@ -88,9 +83,7 @@ function renderLastRecordCard(
 		if (record.method === 'filter') parts.push(`${t('summary.waterTemp')} ${record.waterTemp}\u00B0C`);
 		if (record.method === 'espresso') parts.push(`${t('summary.basket')} ${record.basket}`);
 		card.createDiv({ cls: 'brew-flow-last-record-meta', text: parts.join(' \u00B7 ') });
-		if (record.note) {
-			card.createDiv({ cls: 'brew-flow-last-record-note', text: record.note });
-		}
+		card.createDiv({ cls: 'brew-flow-last-record-note', text: record.note || '-' });
 	};
 
 	const updateNav = (index: number, total: number) => {
@@ -101,9 +94,8 @@ function renderLastRecordCard(
 		}
 		navContainer.style.display = '';
 		counterEl.textContent = `${index + 1} / ${total}`;
-		prevBtn.disabled = index >= total - 1;
-		nextBtn.disabled = index <= 0;
-		latestBtn.disabled = index <= 0;
+		prevBtn.disabled = index <= 0;
+		nextBtn.disabled = index >= total - 1;
 	};
 
 	const records = sel.records ?? [];
@@ -217,7 +209,7 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 		syncSummary();
 	};
 
-	const queryAndApplyDials = async () => {
+	const fetchFilteredRecords = async (apply: boolean) => {
 		const equip: { filter?: string; grinder?: string; dripper?: string; basket?: string; drink?: EspressoDrink } = {};
 		if (sel.drink) equip.drink = sel.drink;
 		if (sel.filter) equip.filter = sel.filter;
@@ -232,8 +224,9 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 		sel.lastRecord = record;
 		cardControls.updateCard(record);
 		cardControls.updateNav(0, records.length);
-		if (record) applyDials(record);
+		if (apply && record) applyDials(record);
 	};
+	const queryAndApplyDials = () => fetchFilteredRecords(true);
 
 	const equipRefs = renderEquipmentSelects(form, sel, ctx, queryAndApplyDials);
 	let waterTempStepper: ReturnType<typeof createStepper> | null = null;
@@ -315,6 +308,8 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 			sel.accessories = list.length > 0 ? list : undefined;
 		});
 	}
+
+	fetchFilteredRecords(false);
 
 	renderRecipeSelect(container, ctx);
 

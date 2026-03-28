@@ -412,22 +412,18 @@
 	color: var(--text-normal);
 	border-color: var(--text-muted);
 }
-.brew-flow-record-nav-latest {
-	color: var(--interactive-accent);
-	border-color: var(--interactive-accent);
-	font-size: 8px;
-	letter-spacing: -3px;
-	padding-left: 2px;
-}
-.brew-flow-record-nav-latest:not(:disabled):hover {
-	color: var(--interactive-accent-hover);
-	border-color: var(--interactive-accent-hover);
-}
 .brew-flow-record-nav-counter {
 	font-size: 11px;
 	color: var(--text-muted);
 	min-width: 30px;
 	text-align: center;
+	cursor: pointer;
+	border-radius: 4px;
+	padding: 2px 4px;
+}
+.brew-flow-record-nav-counter:hover {
+	color: var(--text-normal);
+	background: var(--background-modifier-hover);
 }
 
 .cubicj-brewing-view .brew-flow-method h4,
