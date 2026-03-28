@@ -31,33 +31,87 @@ function resolveEquipmentDefault(
 	return items[0];
 }
 
+interface RecordCardControls {
+	updateCard: (record: BrewRecord | undefined) => void;
+	updateNav: (index: number, total: number) => void;
+}
+
 function renderLastRecordCard(
 	container: HTMLElement,
-	initial: BrewRecord | undefined,
-): (record: BrewRecord | undefined) => void {
+	sel: BrewFlowSelection,
+	onNavigate: (index: number) => void,
+): RecordCardControls {
 	const cardWrapper = container.createDiv();
+
+	let navContainer: HTMLElement | null = null;
+	let prevBtn: HTMLButtonElement;
+	let nextBtn: HTMLButtonElement;
+	let latestBtn: HTMLButtonElement;
+	let counterEl: HTMLElement;
 
 	const updateCard = (record: BrewRecord | undefined) => {
 		cardWrapper.empty();
 		const card = cardWrapper.createDiv({ cls: 'brew-flow-last-record' });
-		card.createDiv({ cls: 'brew-flow-last-record-title', text: t('brew.lastRecord') });
+
+		const titleRow = card.createDiv({ cls: 'brew-flow-last-record-header' });
+		titleRow.createDiv({ cls: 'brew-flow-last-record-title', text: t('brew.lastRecord') });
+
+		navContainer = titleRow.createDiv({ cls: 'brew-flow-record-nav' });
+		prevBtn = navContainer.createEl('button', { cls: 'brew-flow-record-nav-btn', text: '\u25C0' });
+		counterEl = navContainer.createSpan({ cls: 'brew-flow-record-nav-counter' });
+		nextBtn = navContainer.createEl('button', { cls: 'brew-flow-record-nav-btn', text: '\u25B6' });
+		latestBtn = navContainer.createEl('button', {
+			cls: 'brew-flow-record-nav-btn brew-flow-record-nav-latest',
+			text: '\u25B6\u25B6',
+		});
+
+		prevBtn.addEventListener('click', () => {
+			const idx = sel.recordIndex ?? 0;
+			if (idx < (sel.records?.length ?? 1) - 1) onNavigate(idx + 1);
+		});
+		nextBtn.addEventListener('click', () => {
+			const idx = sel.recordIndex ?? 0;
+			if (idx > 0) onNavigate(idx - 1);
+		});
+		latestBtn.addEventListener('click', () => {
+			if ((sel.recordIndex ?? 0) !== 0) onNavigate(0);
+		});
+
 		if (!record) {
 			card.createDiv({ cls: 'brew-flow-last-record-meta', text: '-' });
+			navContainer.style.display = 'none';
 			return;
 		}
 		const parts: string[] = [];
 		if (record.roastDays != null) parts.push(`${t('modal.roasting')} ${t('bean.roastDays', { n: record.roastDays })}`);
 		parts.push(`${t('summary.grindSize')} ${record.grindSize}`, `${t('summary.dose')} ${record.dose}g`);
-		if (record.method === 'filter') parts.push(`${t('summary.waterTemp')} ${record.waterTemp}°C`);
+		if (record.method === 'filter') parts.push(`${t('summary.waterTemp')} ${record.waterTemp}\u00B0C`);
 		if (record.method === 'espresso') parts.push(`${t('summary.basket')} ${record.basket}`);
-		card.createDiv({ cls: 'brew-flow-last-record-meta', text: parts.join(' · ') });
+		card.createDiv({ cls: 'brew-flow-last-record-meta', text: parts.join(' \u00B7 ') });
 		if (record.note) {
 			card.createDiv({ cls: 'brew-flow-last-record-note', text: record.note });
 		}
 	};
 
-	updateCard(initial);
-	return updateCard;
+	const updateNav = (index: number, total: number) => {
+		if (!navContainer) return;
+		if (total <= 1) {
+			navContainer.style.display = 'none';
+			return;
+		}
+		navContainer.style.display = '';
+		counterEl.textContent = `${index + 1} / ${total}`;
+		prevBtn.disabled = index >= total - 1;
+		nextBtn.disabled = index <= 0;
+		latestBtn.disabled = index <= 0;
+	};
+
+	const records = sel.records ?? [];
+	const index = sel.recordIndex ?? 0;
+	updateCard(records[index]);
+	updateNav(index, records.length);
+
+	return { updateCard, updateNav };
 }
 
 interface EquipmentSelectRefs {
@@ -132,7 +186,17 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 	const isEspresso = sel.method === 'espresso';
 	const syncSummary = () => ctx.accordion.updateSummaries();
 
-	const updateCard = renderLastRecordCard(container, sel.lastRecord);
+	const onNavigate = (newIndex: number) => {
+		const records = sel.records ?? [];
+		if (newIndex < 0 || newIndex >= records.length) return;
+		sel.recordIndex = newIndex;
+		const record = records[newIndex];
+		sel.lastRecord = record;
+		cardControls.updateCard(record);
+		cardControls.updateNav(newIndex, records.length);
+		if (record) applyDials(record);
+	};
+	const cardControls = renderLastRecordCard(container, sel, onNavigate);
 
 	const form = container.createDiv({ cls: 'brew-flow-form' });
 
@@ -160,10 +224,14 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 		if (sel.grinder) equip.grinder = sel.grinder;
 		if (sel.dripper) equip.dripper = sel.dripper;
 		if (sel.basket) equip.basket = sel.basket;
-		const lastResult = await ctx.plugin.recordService.getLastRecord(sel.bean!.name, sel.method!, sel.temp!, equip);
-		const record = lastResult.ok ? lastResult.data : undefined;
+		const result = await ctx.plugin.recordService.getMatchingRecords(sel.bean!.name, sel.method!, sel.temp!, equip);
+		const records = result.ok ? result.data : [];
+		sel.records = records;
+		sel.recordIndex = 0;
+		const record = records[0];
 		sel.lastRecord = record;
-		updateCard(record);
+		cardControls.updateCard(record);
+		cardControls.updateNav(0, records.length);
 		if (record) applyDials(record);
 	};
 
