@@ -1,8 +1,7 @@
-import { Notice } from 'obsidian';
 import { t } from '../../i18n/index';
 import type { StepRenderContext } from '../StepRenderers';
 
-export async function renderBean(container: HTMLElement, ctx: StepRenderContext): Promise<void> {
+export function renderBean(container: HTMLElement, ctx: StepRenderContext): void {
 	container.addClass('brew-flow-bean');
 
 	const beans = [...ctx.plugin.vaultData.getActiveBeans()].sort((a, b) => a.name.localeCompare(b.name));
@@ -27,22 +26,13 @@ export async function renderBean(container: HTMLElement, ctx: StepRenderContext)
 			item.createDiv({ cls: 'brew-flow-bean-meta', text: parts.join(' · ') });
 		}
 
-		item.addEventListener('click', async () => {
-			try {
-				if (isSelected) {
-					ctx.flowState.deselectBean();
-					ctx.accordion.update();
-				} else {
-					const sel = ctx.flowState.selection;
-					const equip = sel.drink ? { drink: sel.drink } : undefined;
-					const lastResult = await ctx.plugin.recordService.getLastRecord(bean.name, sel.method!, sel.temp!, equip);
-					const lastRecord = lastResult.ok ? lastResult.data : undefined;
-					ctx.flowState.selectBean(bean, lastRecord ? [lastRecord] : []);
-					ctx.renderContent();
-				}
-			} catch (err) {
-				console.error('[StepRenderers] bean select failed:', err);
-				new Notice(t('brew.unexpectedError'));
+		item.addEventListener('click', () => {
+			if (isSelected) {
+				ctx.flowState.deselectBean();
+				ctx.accordion.update();
+			} else {
+				ctx.flowState.selectBean(bean);
+				ctx.renderContent();
 			}
 		});
 	}

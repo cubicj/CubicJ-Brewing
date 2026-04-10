@@ -168,23 +168,8 @@ describe('BrewFlowState', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
 		state.selectMethod('filter', 'hot');
-		state.selectBean({ path: 'a.md', name: 'A', roaster: '', status: 'active', roastDate: null, weight: null }, [
-			{
-				id: '1',
-				timestamp: '',
-				bean: 'A',
-				roastDate: '',
-				roastDays: null,
-				method: 'filter',
-				temp: 'hot',
-				grindSize: 15,
-				dose: 18,
-				waterTemp: 93,
-				filter: 'HF',
-				dripper: 'V60',
-				grinder: 'C40',
-			} as any,
-		]);
+		state.selectBean({ path: 'a.md', name: 'A', roaster: '', status: 'active', roastDate: null, weight: null });
+		state.updateVariables({ filter: 'HF', grinder: 'C40', grindSize: 15, dose: 18, waterTemp: 93 });
 		expect(state.selection.filter).toBe('HF');
 		expect(state.selection.grinder).toBe('C40');
 
@@ -198,22 +183,8 @@ describe('BrewFlowState', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
 		state.selectMethod('filter', 'hot');
-		state.selectBean({ path: 'a.md', name: 'A', roaster: '', status: 'active', roastDate: null, weight: null }, [
-			{
-				id: '1',
-				timestamp: '',
-				bean: 'A',
-				roastDate: '',
-				roastDays: null,
-				method: 'filter',
-				temp: 'hot',
-				grindSize: 15,
-				dose: 18,
-				waterTemp: 93,
-				filter: 'HF',
-				grinder: 'C40',
-			} as any,
-		]);
+		state.selectBean({ path: 'a.md', name: 'A', roaster: '', status: 'active', roastDate: null, weight: null });
+		state.updateVariables({ filter: 'HF', grinder: 'C40', grindSize: 15, dose: 18, waterTemp: 93 });
 		state.deselectBean();
 		expect(state.selection.filter).toBeUndefined();
 		expect(state.selection.grinder).toBeUndefined();
@@ -225,22 +196,8 @@ describe('BrewFlowState', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
 		state.selectMethod('filter', 'hot');
-		state.selectBean({ path: 'a.md', name: 'A', roaster: '', status: 'active', roastDate: null, weight: null }, [
-			{
-				id: '1',
-				timestamp: '',
-				bean: 'A',
-				roastDate: '',
-				roastDays: null,
-				method: 'filter',
-				temp: 'hot',
-				grindSize: 15,
-				dose: 18,
-				waterTemp: 93,
-				filter: 'HF',
-				dripper: 'V60',
-			} as any,
-		]);
+		state.selectBean({ path: 'a.md', name: 'A', roaster: '', status: 'active', roastDate: null, weight: null });
+		state.updateVariables({ filter: 'HF', dripper: 'V60', grindSize: 15, dose: 18, waterTemp: 93 });
 		expect(state.selection.filter).toBe('HF');
 
 		state.selectMethod('espresso', 'hot', 'shot');

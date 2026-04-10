@@ -30,9 +30,6 @@ export class BrewFlowState {
 	}
 
 	private clearEquipment(): void {
-		this.selection.lastRecord = undefined;
-		this.selection.records = undefined;
-		this.selection.recordIndex = undefined;
 		this.selection.grindSize = undefined;
 		this.selection.dose = undefined;
 		this.selection.waterTemp = undefined;
@@ -43,30 +40,10 @@ export class BrewFlowState {
 		this.selection.accessories = undefined;
 	}
 
-	selectBean(bean: BeanInfo, records?: BrewRecord[]): void {
+	selectBean(bean: BeanInfo): void {
 		if (this.step !== 'bean' && this.step !== 'configure') return;
 		this.selection.bean = bean;
 		this.clearEquipment();
-		this.selection.records = records;
-		this.selection.recordIndex = 0;
-		const lastRecord = records?.[0];
-		this.selection.lastRecord = lastRecord;
-		if (lastRecord) {
-			this.selection.grindSize = lastRecord.grindSize;
-			this.selection.dose = lastRecord.dose;
-			if (lastRecord.method === 'filter') {
-				this.selection.waterTemp = lastRecord.waterTemp;
-				this.selection.filter = lastRecord.filter;
-			}
-			if (lastRecord.method === 'espresso') {
-				this.selection.basket = lastRecord.basket;
-				if (lastRecord.accessories) this.selection.accessories = lastRecord.accessories;
-			}
-			if (lastRecord.grinder) this.selection.grinder = lastRecord.grinder;
-			if (lastRecord.method === 'filter' && lastRecord.dripper) {
-				this.selection.dripper = lastRecord.dripper;
-			}
-		}
 		this.step = 'configure';
 	}
 

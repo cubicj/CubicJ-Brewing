@@ -1,6 +1,5 @@
 import type { BrewMethod, BrewTemp, EspressoDrink } from '../../brew/types';
 import { getDrinkLabel, getMethodLabel, getTempLabel } from '../../brew/constants';
-import { Notice } from 'obsidian';
 import { t } from '../../i18n/index';
 import { createToggleGroup } from '../FormHelpers';
 import type { StepRenderContext } from '../StepRenderers';
@@ -71,31 +70,18 @@ export function renderMethod(container: HTMLElement, ctx: StepRenderContext): vo
 		},
 	);
 
-	const tryAdvance = async () => {
-		try {
-			const complete = !!selectedMethod && !!selectedTemp && (selectedMethod !== 'espresso' || !!selectedDrink);
-			if (complete) {
-				ctx.flowState.selectMethod(selectedMethod!, selectedTemp!, selectedDrink ?? undefined);
-				const bean = ctx.flowState.selection.bean;
-				if (bean) {
-					const equip = selectedDrink ? { drink: selectedDrink } : undefined;
-					const recordsResult = await ctx.plugin.recordService.getMatchingRecords(
-						bean.name,
-						selectedMethod!,
-						selectedTemp!,
-						equip,
-					);
-					const records = recordsResult.ok ? recordsResult.data : [];
-					ctx.flowState.selectBean(bean, records);
-				}
-				ctx.renderContent();
-			} else if (ctx.flowState.step !== 'method') {
-				ctx.flowState.goToStep('method');
-				ctx.accordion.update();
+	const tryAdvance = () => {
+		const complete = !!selectedMethod && !!selectedTemp && (selectedMethod !== 'espresso' || !!selectedDrink);
+		if (complete) {
+			ctx.flowState.selectMethod(selectedMethod!, selectedTemp!, selectedDrink ?? undefined);
+			const bean = ctx.flowState.selection.bean;
+			if (bean) {
+				ctx.flowState.selectBean(bean);
 			}
-		} catch (e) {
-			console.error('[CubicJ Brewing] tryAdvance failed:', e);
-			new Notice(t('brew.unexpectedError'));
+			ctx.renderContent();
+		} else if (ctx.flowState.step !== 'method') {
+			ctx.flowState.goToStep('method');
+			ctx.accordion.update();
 		}
 	};
 }
