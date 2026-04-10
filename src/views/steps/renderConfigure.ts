@@ -3,6 +3,7 @@ import { t } from '../../i18n/index';
 import { createStepper } from '../Stepper';
 import { createSelectField, attachScaleAutoBtn, createAccessoryChecklist } from '../FormHelpers';
 import type { StepRenderContext } from '../StepRenderers';
+import { formatTimer } from '../TimerController';
 
 function grinderToStepperConfig(g: GrinderConfig) {
 	const decimals = Math.max(0, -Math.floor(Math.log10(g.step)));
@@ -66,6 +67,18 @@ function renderLastRecordCard(
 		if (record.method === 'filter') parts.push(`${t('summary.waterTemp')} ${record.waterTemp}\u00B0C`);
 		if (record.method === 'espresso') parts.push(`${t('summary.basket')} ${record.basket}`);
 		card.createDiv({ cls: 'brew-flow-last-record-meta', text: parts.join(' \u00B7 ') });
+
+		const extra: string[] = [];
+		if (record.method === 'filter') {
+			if (record.waterWeight) extra.push(`${t('form.addition')} ${record.waterWeight}g`);
+		}
+		if (record.method === 'espresso') {
+			if (record.time) extra.push(`${t('modal.extractionTime')} ${formatTimer(record.time)}`);
+			if (record.yield) extra.push(`${t('modal.extractionYield')} ${record.yield}g`);
+			if (record.waterWeight) extra.push(`${t('form.addition')} ${record.waterWeight}g`);
+			if (record.milkWeight) extra.push(`${t('form.milk')} ${record.milkWeight}g`);
+		}
+		if (extra.length > 0) card.createDiv({ cls: 'brew-flow-last-record-meta', text: extra.join(' \u00B7 ') });
 		card.createDiv({ cls: 'brew-flow-last-record-note', text: record.note || '-' });
 	};
 
