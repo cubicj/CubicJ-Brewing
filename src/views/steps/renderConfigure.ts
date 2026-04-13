@@ -219,6 +219,10 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 		if (record.method === 'filter') {
 			waterTempStepper?.setValue(record.waterTemp, true);
 		}
+		if (record.method === 'espresso') {
+			sel.accessories = record.accessories;
+			renderAccessories();
+		}
 		syncSummary();
 	};
 
@@ -313,11 +317,19 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 		});
 	}
 
-	if (isEspresso && ctx.equipment.accessories.length > 0) {
-		createAccessoryChecklist(form, ctx.equipment.accessories, sel.accessories ?? [], (list) => {
+	let accessoryContainer: HTMLElement | null = null;
+	const renderAccessories = () => {
+		if (!isEspresso || ctx.equipment.accessories.length === 0) return;
+		if (!accessoryContainer) {
+			accessoryContainer = form.createDiv();
+		} else {
+			accessoryContainer.empty();
+		}
+		createAccessoryChecklist(accessoryContainer, ctx.equipment.accessories, sel.accessories ?? [], (list) => {
 			sel.accessories = list.length > 0 ? list : undefined;
 		});
-	}
+	};
+	renderAccessories();
 
 	renderRecipeSelect(container, ctx);
 
@@ -361,6 +373,7 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 			}
 			if (lastRecord.method === 'espresso' && lastRecord.accessories) {
 				sel.accessories = lastRecord.accessories;
+				renderAccessories();
 			}
 			applyDials(lastRecord);
 			cardControls.updateCard(lastRecord);
