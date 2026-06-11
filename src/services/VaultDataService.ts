@@ -40,7 +40,7 @@ export class VaultDataService {
 		try {
 			await this.app.fileManager.processFrontMatter(file, (fm) => {
 				fm['roast_date'] = date;
-				fm['roast_days'] = calcRoastDays(date || null);
+				delete fm['roast_days'];
 			});
 			return ok(undefined);
 		} catch {
@@ -135,17 +135,7 @@ export class VaultDataService {
 				const folderExists = this.app.vault.getAbstractFileByPath(folder);
 				if (!folderExists) await this.app.vault.createFolder(folder);
 			}
-			const parts = [
-				'---',
-				'type: bean',
-				'roaster:',
-				'status: active',
-				'roast_date:',
-				'roast_days:',
-				'weight:',
-				'---',
-				'',
-			];
+			const parts = ['---', 'type: bean', 'roaster:', 'status: active', 'roast_date:', 'weight:', '---', ''];
 			if (extraContent) parts.push(extraContent, '');
 			await this.app.vault.create(path, parts.join('\n'));
 			return ok(path);
@@ -158,38 +148,9 @@ export class VaultDataService {
 		return calcRoastDays(bean.roastDate);
 	}
 
-	async refreshRoastDays(): Promise<void> {
-		const beans = this.getAllBeans();
-		await Promise.all(
-			beans.map(async (bean) => {
-				const days = this.getDaysSinceRoast(bean);
-				const file = this.getTFile(bean.path);
-				if (!file) return;
-				const cache = this.app.metadataCache.getFileCache(file);
-				if (cache?.frontmatter?.['roast_days'] === days) return;
-				try {
-					await this.app.fileManager.processFrontMatter(file, (fm) => {
-						fm['roast_days'] = days;
-					});
-				} catch (e) {
-					console.error(`[VaultDataService] refreshRoastDays failed for ${bean.path}:`, e);
-				}
-			}),
-		);
-	}
+	async refreshRoastDays(): Promise<void> {}
 
-	onMetadataChanged(file: TFile, _data: string, cache: CachedMetadata): void {
-		const fm = cache.frontmatter;
-		if (fm?.type !== 'bean') return;
-		const rawDate = fm['roast_date'];
-		const raw = Array.isArray(rawDate) ? rawDate[rawDate.length - 1] : rawDate;
-		const roastDate = raw ? String(raw) : null;
-		const expected = calcRoastDays(roastDate);
-		if (fm['roast_days'] === expected) return;
-		this.app.fileManager.processFrontMatter(file, (fmEdit) => {
-			fmEdit['roast_days'] = expected;
-		});
-	}
+	onMetadataChanged(_file: TFile, _data: string, _cache: CachedMetadata): void {}
 
 	async migrateFrontmatterKeys(): Promise<string[]> {
 		const files = this.app.vault.getMarkdownFiles();
