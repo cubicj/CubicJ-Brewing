@@ -52,9 +52,13 @@ export function groupRecordsByBeanForDay(records: BrewRecord[], yyyyMmDd: string
 	return Array.from(groups.entries())
 		.map(([bean, groupRecords]) => ({
 			bean,
-			records: groupRecords.sort((a, b) => b.timestamp.localeCompare(a.timestamp)),
+			records: groupRecords.sort(compareRecordsByTimestampDesc),
 		}))
-		.sort((a, b) => b.records[0].timestamp.localeCompare(a.records[0].timestamp));
+		.sort((a, b) => compareRecordsByTimestampDesc(a.records[0], b.records[0]));
+}
+
+function compareRecordsByTimestampDesc(a: BrewRecord, b: BrewRecord): number {
+	return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
 }
 
 function localDateBoundary(yyyyMmDd: string): Date | null {

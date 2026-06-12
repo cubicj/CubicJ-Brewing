@@ -73,4 +73,17 @@ describe('groupRecordsByBeanForDay', () => {
 		expect(groups[1].bean).toBe('A Bean');
 		expect(groups[1].records.map((r) => r.id)).toEqual(['a-new', 'a-old']);
 	});
+
+	it('sorts mixed timestamp formats by actual time', () => {
+		const records = [
+			makeFilter({ id: 'local-20', bean: 'A Bean', timestamp: '2026-06-12T20:00:00+09:00' }),
+			makeFilter({ id: 'utc-2130', bean: 'A Bean', timestamp: '2026-06-12T12:30:00.000Z' }),
+			makeFilter({ id: 'b-utc-22', bean: 'B Bean', timestamp: '2026-06-12T13:00:00.000Z' }),
+		];
+
+		const groups = groupRecordsByBeanForDay(records, '2026-06-12');
+
+		expect(groups.map((group) => group.bean)).toEqual(['B Bean', 'A Bean']);
+		expect(groups[1].records.map((record) => record.id)).toEqual(['utc-2130', 'local-20']);
+	});
 });
