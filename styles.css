@@ -817,29 +817,48 @@ body.is-mobile .cb-bean-weight {
 }
 
 /* Brew Records Code Block */
-.cm-embed-block:has(.block-language-brews) {
+.cm-embed-block:has(.block-language-brews),
+.cm-embed-block:has(.block-language-brew-day) {
 	--embed-block-shadow-hover: none;
 }
 .block-language-brews > button,
+.block-language-brew-day > button,
 .block-language-brews .copy-code-button,
+.block-language-brew-day .copy-code-button,
 .block-language-brews .code-block-flair,
+.block-language-brew-day .code-block-flair,
 .cm-embed-block:has(.block-language-brews) > .edit-block-button,
-.cm-embed-block:has(.block-language-brews):hover > .edit-block-button {
+.cm-embed-block:has(.block-language-brew-day) > .edit-block-button,
+.cm-embed-block:has(.block-language-brews):hover > .edit-block-button,
+.cm-embed-block:has(.block-language-brew-day):hover > .edit-block-button {
 	display: none !important;
 }
 
-.block-language-brews .brew-records-empty {
+.block-language-brews .brew-records-empty,
+.block-language-brew-day .brew-records-empty {
 	color: var(--text-muted);
 	padding: 12px 0;
 	font-size: var(--font-ui-small);
 }
 
-.block-language-brews .brew-record-table {
+.block-language-brew-day .brew-day-records {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.block-language-brew-day .brew-day-record-group + .brew-day-record-group {
+	margin-top: 4px;
+}
+
+.block-language-brews .brew-record-table,
+.block-language-brew-day .brew-record-table {
 	width: 100%;
 	border-collapse: collapse;
 	font-size: var(--font-ui-small);
 }
-.block-language-brews .brew-record-table th {
+.block-language-brews .brew-record-table th,
+.block-language-brew-day .brew-record-table th {
 	text-align: left;
 	color: var(--text-muted);
 	font-weight: 500;
@@ -847,46 +866,56 @@ body.is-mobile .cb-bean-weight {
 	border-bottom: 1px solid var(--background-modifier-border);
 	white-space: nowrap;
 }
-.block-language-brews .brew-record-table td {
+.block-language-brews .brew-record-table td,
+.block-language-brew-day .brew-record-table td {
 	padding: 4px 8px;
 	border-bottom: 1px solid var(--background-modifier-border-hover);
 	white-space: nowrap;
 	vertical-align: middle;
 }
-.block-language-brews .brew-record-date div:last-child {
+.block-language-brews .brew-record-date div:last-child,
+.block-language-brew-day .brew-record-date div:last-child {
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
 }
-.block-language-brews .brew-record-note {
+.block-language-brews .brew-record-note,
+.block-language-brew-day .brew-record-note {
 	max-width: 300px;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	cursor: pointer;
 }
-.block-language-brews .brew-record-note:hover {
+.block-language-brews .brew-record-note:hover,
+.block-language-brew-day .brew-record-note:hover {
 	color: var(--text-accent);
 }
-.block-language-brews .brew-record-note.is-expanded {
+.block-language-brews .brew-record-note.is-expanded,
+.block-language-brew-day .brew-record-note.is-expanded {
 	color: var(--text-accent);
 }
-.block-language-brews .brew-record-expand td {
+.block-language-brews .brew-record-expand td,
+.block-language-brew-day .brew-record-expand td {
 	padding: 8px;
 	border-bottom: 1px solid var(--background-modifier-border-hover);
 	text-align: left;
 }
 .block-language-brews .brew-note-expand,
-.block-language-brews .brew-note-edit-form {
+.block-language-brew-day .brew-note-expand,
+.block-language-brews .brew-note-edit-form,
+.block-language-brew-day .brew-note-edit-form {
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 6px;
 	padding: 10px 12px;
 	background: var(--background-secondary);
 }
-.block-language-brews .brew-note-expand {
+.block-language-brews .brew-note-expand,
+.block-language-brew-day .brew-note-expand {
 	display: flex;
 	align-items: flex-start;
 	gap: 8px;
 }
-.block-language-brews .brew-note-expand-text {
+.block-language-brews .brew-note-expand-text,
+.block-language-brew-day .brew-note-expand-text {
 	flex: 1;
 	min-width: 0;
 	white-space: pre-wrap;
@@ -894,31 +923,37 @@ body.is-mobile .cb-bean-weight {
 	font-size: var(--font-ui-small);
 	line-height: 1.5;
 }
-.block-language-brews .brew-note-edit-btn {
+.block-language-brews .brew-note-edit-btn,
+.block-language-brew-day .brew-note-edit-btn {
 	flex-shrink: 0;
 	margin-left: auto;
 	padding: 2px;
 }
-.block-language-brews .brew-note-edit-form {
+.block-language-brews .brew-note-edit-form,
+.block-language-brew-day .brew-note-edit-form {
 	display: flex;
 	flex-direction: column;
 	gap: 6px;
 }
-.block-language-brews .brew-note-edit-textarea {
+.block-language-brews .brew-note-edit-textarea,
+.block-language-brew-day .brew-note-edit-textarea {
 	width: 100%;
 	resize: vertical;
 	font-size: var(--font-ui-small);
 	font-family: inherit;
 }
-.block-language-brews .brew-note-edit-actions {
+.block-language-brews .brew-note-edit-actions,
+.block-language-brew-day .brew-note-edit-actions {
 	display: flex;
 	justify-content: flex-end;
 	gap: 6px;
 }
-.block-language-brews .brew-record-table td:last-child {
+.block-language-brews .brew-record-table td:last-child,
+.block-language-brew-day .brew-record-table td:last-child {
 	text-align: center;
 }
-.block-language-brews .brew-record-chart-btn {
+.block-language-brews .brew-record-chart-btn,
+.block-language-brew-day .brew-record-chart-btn {
 	background: none;
 	border: 1px solid var(--background-modifier-border-hover);
 	border-radius: 4px;
@@ -930,15 +965,19 @@ body.is-mobile .cb-bean-weight {
 	align-items: center;
 	justify-content: center;
 }
-.block-language-brews .brew-record-chart-btn:hover {
+.block-language-brews .brew-record-chart-btn:hover,
+.block-language-brew-day .brew-record-chart-btn:hover {
 	opacity: 1;
 	background: var(--background-modifier-hover);
 }
-.block-language-brews .brew-records-header {
+.block-language-brews .brew-records-header,
+.block-language-brew-day .brew-records-header {
 	margin: 0 0 8px;
 	font-size: var(--font-ui-medium);
 }
 body.is-mobile .block-language-brews .brew-record-note,
+body.is-mobile .block-language-brew-day .brew-record-note,
+body.is-mobile .block-language-brew-day th:nth-child(3),
 body.is-mobile .block-language-brews th:nth-child(3) {
 	display: none;
 }
