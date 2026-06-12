@@ -45,6 +45,7 @@ describe('isRecordOnLocalDate', () => {
 
 	it('rejects invalid timestamps and invalid dates', () => {
 		expect(isRecordOnLocalDate('not-a-date', '2026-06-12')).toBe(false);
+		expect(isRecordOnLocalDate('2026-02-30T09:00:00', '2026-03-02')).toBe(false);
 		expect(isRecordOnLocalDate('2026-06-12T09:00:00', '2026-99-99')).toBe(false);
 	});
 });

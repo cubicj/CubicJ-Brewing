@@ -14,6 +14,7 @@ export function parseDailyNoteDateFromPath(sourcePath: string): string | null {
 export function isRecordOnLocalDate(timestamp: string, yyyyMmDd: string): boolean {
 	const start = localDateBoundary(yyyyMmDd);
 	if (!start) return false;
+	if (!hasValidTimestampDate(timestamp)) return false;
 
 	const end = new Date(start);
 	end.setDate(end.getDate() + 1);
@@ -22,6 +23,11 @@ export function isRecordOnLocalDate(timestamp: string, yyyyMmDd: string): boolea
 	if (Number.isNaN(recordDate.getTime())) return false;
 
 	return recordDate >= start && recordDate < end;
+}
+
+function hasValidTimestampDate(timestamp: string): boolean {
+	const match = /^(\d{4}-\d{2}-\d{2})T/.exec(timestamp);
+	return Boolean(match && localDateBoundary(match[1]));
 }
 
 export function groupRecordsByBeanForDay(records: BrewRecord[], yyyyMmDd: string): BrewDayGroup[] {
