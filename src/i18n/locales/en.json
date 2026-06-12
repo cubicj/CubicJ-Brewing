@@ -49,6 +49,8 @@
   "record.header": "Brew Records",
   "record.empty": "No brew records yet",
   "record.beanOnly": "Only available in type: bean notes",
+  "record.dayEmpty": "No brew records for this day",
+  "record.dayInvalidFileName": "Only available in daily notes named YYYY-MM-DD.md",
   "record.date": "Date",
   "record.method": "Method",
   "record.memo": "Memo",
@@ -83,7 +85,7 @@
   "settings.beansCodeBlock": "Beans Widget",
   "settings.beansCodeBlockDesc": "Add a ```beans``` code block to any note to display the bean management widget. In a note with type: bean frontmatter, it shows that bean's brew records.",
   "settings.brewsCodeBlock": "Brew Records Widget",
-  "settings.brewsCodeBlockDesc": "Add a ```brews``` code block to a bean note (with type: bean frontmatter) to display a brew history table for that bean.",
+  "settings.brewsCodeBlockDesc": "Add a ```brews``` code block to a bean note (with type: bean frontmatter) to display a brew history table for that bean. Add a ```brew-day``` code block to a daily note named YYYY-MM-DD.md to display that day's brew records grouped by bean.",
 
   "equip.shared": "Shared",
   "equip.filterBrewing": "Filter Brewing",

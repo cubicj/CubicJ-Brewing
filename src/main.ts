@@ -8,6 +8,7 @@ import type { FileAdapter } from './services/FileAdapter';
 import { VaultDataService } from './services/VaultDataService';
 import { BeanCodeBlock } from './views/BeanCodeBlock';
 import { BrewCodeBlock } from './views/BrewCodeBlock';
+import { BrewDayCodeBlock } from './views/BrewDayCodeBlock';
 import type { EquipmentSettings, LogConfig } from './brew/types';
 import { BrewingSettingTab } from './views/SettingTab';
 import { initI18n, t } from './i18n/index';
@@ -116,7 +117,20 @@ export default class CubicJBrewingPlugin extends Plugin {
 			this.vaultData,
 		);
 		brewBlock.register((lang, handler) => this.registerMarkdownCodeBlockProcessor(lang, handler));
-		this.recordService.onChange = () => brewBlock.refreshAll();
+
+		const brewDayBlock = new BrewDayCodeBlock(
+			this.app,
+			this.recordService,
+			this.profileStorage,
+			() => this.equipment,
+			this.vaultData,
+		);
+		brewDayBlock.register((lang, handler) => this.registerMarkdownCodeBlockProcessor(lang, handler));
+
+		this.recordService.onChange = () => {
+			brewBlock.refreshAll();
+			brewDayBlock.refreshAll();
+		};
 
 		this.app.workspace.onLayoutReady(async () => {
 			if (this.savedDataVersion < 2) {
