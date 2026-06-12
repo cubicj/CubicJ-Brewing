@@ -8,7 +8,8 @@ export interface BrewDayGroup {
 export function parseDailyNoteDateFromPath(sourcePath: string): string | null {
 	const basename = sourcePath.split('/').pop() ?? sourcePath;
 	const match = /^(\d{4}-\d{2}-\d{2})\.md$/.exec(basename);
-	return match?.[1] ?? null;
+	if (!match) return null;
+	return localDateBoundary(match[1]) ? match[1] : null;
 }
 
 export function isRecordOnLocalDate(timestamp: string, yyyyMmDd: string): boolean {
@@ -26,8 +27,16 @@ export function isRecordOnLocalDate(timestamp: string, yyyyMmDd: string): boolea
 }
 
 function hasValidTimestampDate(timestamp: string): boolean {
-	const match = /^(\d{4}-\d{2}-\d{2})T/.exec(timestamp);
-	return Boolean(match && localDateBoundary(match[1]));
+	const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{3})?(?:Z|([+-])(\d{2}):(\d{2}))?$/.exec(timestamp);
+	if (!match || !localDateBoundary(match[1])) return false;
+
+	const hour = Number(match[2]);
+	const minute = Number(match[3]);
+	const second = Number(match[4]);
+	const offsetHour = match[6] === undefined ? 0 : Number(match[6]);
+	const offsetMinute = match[7] === undefined ? 0 : Number(match[7]);
+
+	return hour < 24 && minute < 60 && second < 60 && offsetHour < 24 && offsetMinute < 60;
 }
 
 export function groupRecordsByBeanForDay(records: BrewRecord[], yyyyMmDd: string): BrewDayGroup[] {

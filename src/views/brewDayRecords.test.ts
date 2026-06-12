@@ -26,6 +26,7 @@ describe('parseDailyNoteDateFromPath', () => {
 	});
 
 	it('rejects non-daily-note names', () => {
+		expect(parseDailyNoteDateFromPath('Daily/2026-02-30.md')).toBeNull();
 		expect(parseDailyNoteDateFromPath('Daily/2026-6-12.md')).toBeNull();
 		expect(parseDailyNoteDateFromPath('Daily/2026-06-12 coffee.md')).toBeNull();
 		expect(parseDailyNoteDateFromPath('Daily/2026-06-12.canvas')).toBeNull();
@@ -46,7 +47,12 @@ describe('isRecordOnLocalDate', () => {
 	it('rejects invalid timestamps and invalid dates', () => {
 		expect(isRecordOnLocalDate('not-a-date', '2026-06-12')).toBe(false);
 		expect(isRecordOnLocalDate('2026-02-30T09:00:00', '2026-03-02')).toBe(false);
+		expect(isRecordOnLocalDate('2026-06-12T24:00:00', '2026-06-13')).toBe(false);
 		expect(isRecordOnLocalDate('2026-06-12T09:00:00', '2026-99-99')).toBe(false);
+	});
+
+	it('supports app-format UTC ISO timestamps', () => {
+		expect(isRecordOnLocalDate('2026-06-12T09:00:00.000Z', '2026-06-12')).toBe(true);
 	});
 });
 
