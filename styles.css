@@ -841,7 +841,7 @@ body.is-mobile .cb-bean-weight {
 	font-size: var(--font-ui-small);
 }
 
-.block-language-brew-day .brew-day-records {
+.block-language-brew-day.brew-day-records {
 	display: flex;
 	flex-direction: column;
 	gap: 16px;
