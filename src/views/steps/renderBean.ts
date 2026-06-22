@@ -11,6 +11,7 @@ export function renderBean(container: HTMLElement, ctx: StepRenderContext): void
 		return;
 	}
 
+	const isLocked = ctx.flowState.step === 'brewing' || ctx.flowState.step === 'saving';
 	const selectedBean = ctx.flowState.selection.bean;
 
 	for (const bean of beans) {
@@ -27,6 +28,7 @@ export function renderBean(container: HTMLElement, ctx: StepRenderContext): void
 		}
 
 		item.addEventListener('click', () => {
+			if (isLocked) return;
 			if (isSelected) {
 				ctx.flowState.deselectBean();
 				ctx.accordion.update();
