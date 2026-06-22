@@ -15,10 +15,14 @@ const FLOW_ORDER: BrewFlowStep[] = ['idle', 'method', 'bean', 'configure', 'brew
 export class BrewFlowState {
 	step: BrewFlowStep = 'idle';
 	selection: BrewFlowSelection = {};
+	private initializedConfigureSetupKey: string | undefined;
+	private configureInitToken = 0;
 
 	startBrew(): void {
 		this.step = 'method';
 		this.selection = {};
+		this.initializedConfigureSetupKey = undefined;
+		this.configureInitToken += 1;
 	}
 
 	selectMethod(method: BrewMethod, temp: BrewTemp, drink?: EspressoDrink): void {
@@ -58,6 +62,23 @@ export class BrewFlowState {
 		Object.assign(this.selection, vars);
 	}
 
+	getInitializedConfigureSetupKey(): string | undefined {
+		return this.initializedConfigureSetupKey;
+	}
+
+	markConfigureInitialized(setupKey: string): void {
+		this.initializedConfigureSetupKey = setupKey;
+	}
+
+	nextConfigureInitToken(): number {
+		this.configureInitToken += 1;
+		return this.configureInitToken;
+	}
+
+	getConfigureInitToken(): number {
+		return this.configureInitToken;
+	}
+
 	selectRecipe(recipe: RecipeInfo): void {
 		this.selection.recipe = recipe;
 	}
@@ -89,6 +110,8 @@ export class BrewFlowState {
 	cancel(): void {
 		this.step = 'idle';
 		this.selection = {};
+		this.initializedConfigureSetupKey = undefined;
+		this.configureInitToken += 1;
 	}
 
 	get roastDays(): number | null {

@@ -64,6 +64,57 @@ describe('BrewFlowState', () => {
 		expect(state.step).toBe('brewing');
 	});
 
+	it('tracks the initialized configure setup key', () => {
+		const state = new BrewFlowState();
+		expect(state.getInitializedConfigureSetupKey()).toBeUndefined();
+		state.markConfigureInitialized('filter|hot||A');
+		expect(state.getInitializedConfigureSetupKey()).toBe('filter|hot||A');
+	});
+
+	it('increments configure init token', () => {
+		const state = new BrewFlowState();
+		const first = state.nextConfigureInitToken();
+		const second = state.nextConfigureInitToken();
+		expect(second).toBe(first + 1);
+	});
+
+	it('clears configure setup key and invalidates init token on startBrew and cancel', () => {
+		const state = new BrewFlowState();
+		state.markConfigureInitialized('filter|hot||A');
+		const startToken = state.nextConfigureInitToken();
+		expect(startToken === state.getConfigureInitToken()).toBe(true);
+		state.startBrew();
+		expect(state.getInitializedConfigureSetupKey()).toBeUndefined();
+		expect(startToken === state.getConfigureInitToken()).toBe(false);
+
+		state.markConfigureInitialized('filter|hot||B');
+		const cancelToken = state.nextConfigureInitToken();
+		expect(cancelToken === state.getConfigureInitToken()).toBe(true);
+		state.cancel();
+		expect(state.getInitializedConfigureSetupKey()).toBeUndefined();
+		expect(cancelToken === state.getConfigureInitToken()).toBe(false);
+	});
+
+	it('blocks method changes after brewing starts', () => {
+		const state = new BrewFlowState();
+		state.startBrew();
+		state.selectMethod('filter', 'hot');
+		state.selectBean({ path: 'a.md', name: 'A', roaster: '', status: 'active', roastDate: null, weight: null });
+		state.startBrewing();
+		state.selectMethod('espresso', 'hot', 'shot');
+		expect(state.selection.method).toBe('filter');
+	});
+
+	it('blocks bean changes after brewing starts', () => {
+		const state = new BrewFlowState();
+		state.startBrew();
+		state.selectMethod('filter', 'hot');
+		state.selectBean({ path: 'a.md', name: 'A', roaster: '', status: 'active', roastDate: null, weight: null });
+		state.startBrewing();
+		state.selectBean({ path: 'b.md', name: 'B', roaster: '', status: 'active', roastDate: null, weight: null });
+		expect(state.selection.bean?.name).toBe('A');
+	});
+
 	it('brewing -> saving on finishBrewing', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
