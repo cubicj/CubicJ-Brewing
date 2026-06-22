@@ -1,7 +1,14 @@
 import type { BrewFlowSelection, BrewRecord, GrinderConfig } from '../../brew/types';
 import { t } from '../../i18n/index';
 import type { StepRenderContext } from '../StepRenderers';
-import { getLooseLastRecord, getStrictMatchingRecords } from './configure/ConfigureRecords';
+import {
+	buildConfigureSetupKey,
+	findNewestApplicableRecord,
+	getDefaultConfigureSelection,
+	getDefaultDialValues,
+	shouldInitializeConfigure,
+} from './configure/ConfigureInitialization';
+import { getLooseMatchingRecords, getStrictMatchingRecords } from './configure/ConfigureRecords';
 import { renderConfigureDials } from './configure/ConfigureDials';
 import { applyRecordToEquipment, renderEquipmentFields } from './configure/EquipmentFields';
 import { renderLastRecordCard } from './configure/LastRecordCard';
@@ -16,14 +23,22 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 
 	let records: BrewRecord[] = [];
 	let recordIndex = 0;
+	let equipmentQueryToken = 0;
+	let isRenderAlive = true;
+	ctx.registerCleanup(() => {
+		isRenderAlive = false;
+		equipmentQueryToken += 1;
+	});
 
 	const onNavigate = (newIndex: number) => {
+		if (!isRenderAlive) return;
 		if (newIndex < 0 || newIndex >= records.length) return;
-		recordIndex = newIndex;
 		const record = records[newIndex];
+		if (!record) return;
+		recordIndex = newIndex;
 		cardControls.updateCard(record);
 		cardControls.updateNav(newIndex, records.length);
-		if (record) dialControls.applyRecord(record);
+		applyRecordSelection(record);
 	};
 	const cardControls = renderLastRecordCard(container, onNavigate, () => ({
 		index: recordIndex,
@@ -34,16 +49,27 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 
 	const form = container.createDiv({ cls: 'brew-flow-form' });
 
-	const fetchFilteredRecords = async () => {
-		records = await getStrictMatchingRecords(ctx.plugin.recordService, sel);
+	const getSelectedEquipmentKey = () =>
+		[sel.grinder ?? '', sel.filter ?? '', sel.dripper ?? '', sel.basket ?? ''].join('|');
+	const refreshFilteredRecords = (nextRecords: BrewRecord[]) => {
+		if (!isRenderAlive) return;
+		records = nextRecords.filter((record) => findNewestApplicableRecord([record], ctx.equipment));
 		recordIndex = 0;
-		const record = records[0];
+		const record = findNewestApplicableRecord(records, ctx.equipment);
+		if (record) recordIndex = records.indexOf(record);
 		cardControls.updateCard(record);
-		cardControls.updateNav(0, records.length);
+		cardControls.updateNav(record ? recordIndex : 0, record ? records.length : 0);
 	};
-	const queryAndApplyDials = async () => {
-		await fetchFilteredRecords();
-		if (records[0]) dialControls.applyRecord(records[0]);
+	const fetchFreshStrictRecords = async () => {
+		if (!isRenderAlive) return undefined;
+		const capturedEquipmentKey = getSelectedEquipmentKey();
+		const token = ++equipmentQueryToken;
+		const nextRecords = await getStrictMatchingRecords(ctx.plugin.recordService, sel);
+		if (!isRenderAlive || token !== equipmentQueryToken || capturedEquipmentKey !== getSelectedEquipmentKey()) {
+			return undefined;
+		}
+		refreshFilteredRecords(nextRecords);
+		return records;
 	};
 
 	const handleEquipmentChange = () => queryAndApplyDials();
@@ -61,6 +87,63 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 		ctx.getWeightText,
 		syncSummary,
 	);
+
+	const getSelectedGrinder = () => ctx.equipment.grinders.find((grinder) => grinder.name === sel.grinder);
+	const applyDefaultDials = () => {
+		dialControls.applyDefaults(getDefaultDialValues(sel.method!, getSelectedGrinder()));
+	};
+	const applyDefaultsToEquipment = () => {
+		if (!isRenderAlive) return;
+		const defaults = getDefaultConfigureSelection(sel.method!, ctx.equipment);
+		ctx.flowState.updateVariables(defaults);
+		if (defaults.filter && equipRefs.filterSelect) equipRefs.filterSelect.value = defaults.filter;
+		if (defaults.dripper && equipRefs.dripperSelect) equipRefs.dripperSelect.value = defaults.dripper;
+		if (defaults.basket && equipRefs.basketSelect) equipRefs.basketSelect.value = defaults.basket;
+		if (defaults.grinder) {
+			const grinder = ctx.equipment.grinders.find((item) => item.name === defaults.grinder);
+			if (grinder) {
+				if (equipRefs.grinderSelect) equipRefs.grinderSelect.value = grinder.name;
+				dialControls.rebuildGrindStepper(grinder);
+			}
+		}
+		applyDefaultDials();
+	};
+	const applyRecordSelection = (record: BrewRecord) => {
+		if (!isRenderAlive) return;
+		applyRecordToEquipment(record, sel, equipRefs);
+		if (record.grinder) {
+			const grinder = ctx.equipment.grinders.find((item) => item.name === record.grinder);
+			if (grinder) {
+				sel.grinder = grinder.name;
+				if (equipRefs.grinderSelect) equipRefs.grinderSelect.value = grinder.name;
+				dialControls.rebuildGrindStepper(grinder);
+			}
+		}
+		if (record.method === 'espresso') sel.accessories = record.accessories;
+		dialControls.applyRecord(record);
+	};
+	const queryAndApplyDials = async () => {
+		if (!isRenderAlive) return;
+		ctx.flowState.nextConfigureInitToken();
+		records = [];
+		recordIndex = 0;
+		cardControls.updateCard(undefined);
+		cardControls.updateNav(0, 0);
+		const nextRecords = await fetchFreshStrictRecords();
+		if (!isRenderAlive || !nextRecords) return;
+		const record = findNewestApplicableRecord(nextRecords, ctx.equipment);
+		if (record) {
+			recordIndex = nextRecords.indexOf(record);
+			applyRecordSelection(record);
+			cardControls.updateCard(record);
+			cardControls.updateNav(recordIndex, nextRecords.length);
+			return;
+		}
+		if (!isRenderAlive) return;
+		applyDefaultDials();
+		cardControls.updateCard(undefined);
+		cardControls.updateNav(0, 0);
+	};
 
 	renderRecipeSelect(container, ctx.plugin, ctx.flowState);
 
@@ -87,23 +170,40 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 	});
 
 	const initFromRecords = async () => {
-		const lastRecord = await getLooseLastRecord(ctx.plugin.recordService, sel);
-
-		if (lastRecord) {
-			applyRecordToEquipment(lastRecord, sel, equipRefs);
-			if (lastRecord.grinder) {
-				const g = ctx.equipment.grinders.find((gr) => gr.name === lastRecord.grinder);
-				if (g) sel.grinder = g.name;
-			}
-			if (lastRecord.method === 'espresso' && lastRecord.accessories) {
-				sel.accessories = lastRecord.accessories;
-			}
-			dialControls.applyRecord(lastRecord);
-			cardControls.updateCard(lastRecord);
-			cardControls.updateNav(0, 1);
+		const capturedSetupKey = buildConfigureSetupKey(sel);
+		const token = ctx.flowState.nextConfigureInitToken();
+		const isCurrentConfigureInit = () =>
+			isRenderAlive &&
+			capturedSetupKey === buildConfigureSetupKey(sel) &&
+			token === ctx.flowState.getConfigureInitToken() &&
+			shouldInitializeConfigure(capturedSetupKey, ctx.flowState.getInitializedConfigureSetupKey(), ctx.flowState.step);
+		if (
+			!shouldInitializeConfigure(capturedSetupKey, ctx.flowState.getInitializedConfigureSetupKey(), ctx.flowState.step)
+		) {
+			await fetchFreshStrictRecords();
+			return;
 		}
 
-		await fetchFilteredRecords();
+		const looseRecords = await getLooseMatchingRecords(ctx.plugin.recordService, sel);
+		if (!isCurrentConfigureInit()) return;
+
+		const applicableLooseRecords = looseRecords.filter((item) => findNewestApplicableRecord([item], ctx.equipment));
+		const record = findNewestApplicableRecord(applicableLooseRecords, ctx.equipment);
+		if (record) {
+			records = applicableLooseRecords;
+			recordIndex = applicableLooseRecords.indexOf(record);
+			applyRecordSelection(record);
+			cardControls.updateCard(record);
+			cardControls.updateNav(recordIndex, applicableLooseRecords.length);
+		} else {
+			applyDefaultsToEquipment();
+			cardControls.updateCard(undefined);
+			cardControls.updateNav(0, 0);
+		}
+
+		if (!isCurrentConfigureInit()) return;
+		if (capturedSetupKey) ctx.flowState.markConfigureInitialized(capturedSetupKey);
+		await fetchFreshStrictRecords();
 	};
 	initFromRecords().catch(() => {});
 }
