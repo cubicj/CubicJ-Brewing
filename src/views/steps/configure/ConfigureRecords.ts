@@ -33,6 +33,19 @@ export async function getLooseLastRecord(
 	return result.ok ? result.data : undefined;
 }
 
+export async function getLooseMatchingRecords(
+	recordService: BrewRecordService,
+	sel: BrewFlowSelection,
+): Promise<BrewRecord[]> {
+	const result = await recordService.getMatchingRecords(
+		sel.bean!.name,
+		sel.method!,
+		sel.temp!,
+		buildLooseRecordQuery(sel),
+	);
+	return result.ok ? result.data : [];
+}
+
 export async function getStrictMatchingRecords(
 	recordService: BrewRecordService,
 	sel: BrewFlowSelection,

@@ -12,6 +12,7 @@ export interface ConfigureDialValues {
 
 export interface ConfigureDialControls {
 	applyRecord: (record: BrewRecord) => void;
+	applyDefaults: (values: ConfigureDialValues) => void;
 	readValues: () => ConfigureDialValues;
 	rebuildGrindStepper: (grinder: GrinderConfig) => void;
 }
@@ -131,6 +132,23 @@ export function renderConfigureDials(
 		syncSummary();
 	};
 
+	const applyDefaults = (values: ConfigureDialValues) => {
+		sel.grindSize = values.grindSize;
+		sel.dose = values.dose;
+		if (isFilter) {
+			const waterTemp = values.waterTemp ?? 93;
+			sel.waterTemp = waterTemp;
+			waterTempStepper?.setValue(waterTemp, true);
+		}
+		if (isEspresso) {
+			sel.accessories = values.accessories;
+			renderAccessories();
+		}
+		grindStepper.setValue(values.grindSize, true);
+		doseStepper.setValue(values.dose, true);
+		syncSummary();
+	};
+
 	const readValues = (): ConfigureDialValues => ({
 		grindSize: grindStepper.getValue(),
 		dose: doseStepper.getValue(),
@@ -138,5 +156,5 @@ export function renderConfigureDials(
 		...(isEspresso && { accessories: sel.accessories }),
 	});
 
-	return { applyRecord, readValues, rebuildGrindStepper };
+	return { applyRecord, applyDefaults, readValues, rebuildGrindStepper };
 }
