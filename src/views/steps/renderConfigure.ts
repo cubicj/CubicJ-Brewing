@@ -1,9 +1,10 @@
-import type { BrewFlowSelection, BrewRecord, GrinderConfig, EspressoDrink } from '../../brew/types';
+import type { BrewFlowSelection, BrewRecord, GrinderConfig } from '../../brew/types';
 import { t } from '../../i18n/index';
 import { createStepper } from '../Stepper';
 import { createSelectField, attachScaleAutoBtn, createAccessoryChecklist } from '../FormHelpers';
 import type { StepRenderContext } from '../StepRenderers';
 import { formatTimer } from '../TimerController';
+import { getLooseLastRecord, getStrictMatchingRecords } from './configure/ConfigureRecords';
 
 function grinderToStepperConfig(g: GrinderConfig) {
 	const decimals = Math.max(0, -Math.floor(Math.log10(g.step)));
@@ -227,14 +228,7 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 	};
 
 	const fetchFilteredRecords = async () => {
-		const equip: { filter?: string; grinder?: string; dripper?: string; basket?: string; drink?: EspressoDrink } = {};
-		if (sel.drink) equip.drink = sel.drink;
-		if (sel.filter) equip.filter = sel.filter;
-		if (sel.grinder) equip.grinder = sel.grinder;
-		if (sel.dripper) equip.dripper = sel.dripper;
-		if (sel.basket) equip.basket = sel.basket;
-		const result = await ctx.plugin.recordService.getMatchingRecords(sel.bean!.name, sel.method!, sel.temp!, equip);
-		records = result.ok ? result.data : [];
+		records = await getStrictMatchingRecords(ctx.plugin.recordService, sel);
 		recordIndex = 0;
 		const record = records[0];
 		cardControls.updateCard(record);
@@ -355,15 +349,7 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 	});
 
 	const initFromRecords = async () => {
-		const looseEquip: { drink?: EspressoDrink } = {};
-		if (sel.drink) looseEquip.drink = sel.drink;
-		const looseResult = await ctx.plugin.recordService.getLastRecord(
-			sel.bean!.name,
-			sel.method!,
-			sel.temp!,
-			looseEquip,
-		);
-		const lastRecord = looseResult.ok ? looseResult.data : undefined;
+		const lastRecord = await getLooseLastRecord(ctx.plugin.recordService, sel);
 
 		if (lastRecord) {
 			applyRecordToEquipment(lastRecord, sel, equipRefs);
