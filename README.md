@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Desktop%20%2B%20Mobile-brightgreen)
-![Version](https://img.shields.io/badge/version-0.2.13-orange)
+![Version](https://img.shields.io/badge/version-0.3.0-orange)
 
 [한국어](README.ko.md)
 
@@ -23,7 +23,7 @@ An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE s
 - **Filter & espresso modes** with method-specific parameter sets
 - **Live brew profile chart** — weight-over-time curve recorded during brewing
 - **Bean inventory** — roast days, remaining weight, status tracking
-- **Brew history** — per-bean records with profile charts, equipment used, and inline memo editing
+- **Brew history** — per-bean and daily records with profile charts, equipment used, and inline memo editing
 - **Equipment registry** — grinders, drippers, filters, baskets, accessories
 - **Vault-native storage** — all data as plain files, Obsidian Sync compatible
 - **Multi-language** — English and Korean, community-extensible
@@ -36,6 +36,7 @@ An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE s
 |---|---------|--------|
 | Bean inventory (`beans` block) | Full | Full |
 | Brew history (`brews` block) | Full | Full |
+| Daily brew records (`brew-day` block) | Full | Full |
 | Brew detail modal | Inline chart | "View Chart" button |
 | Data Manager | Full | Full |
 | **BLE scale connection** | Acaia Pearl S | Not available |
@@ -78,7 +79,7 @@ Place a `beans` code block in any note to create a bean inventory hub:
 </p>
 
 - **Active / Finished** sections — beans grouped by status
-- **Roast days** — automatically calculated from roast date, refreshed daily
+- **Roast days** — automatically calculated from roast date
 - **Remaining weight** — click to set, add, or subtract (with optional scale auto-read)
 - **Status toggle** — mark as finished or repurchase with new roast date
 - **New bean button** — creates a bean note with frontmatter template and a `brews` block
@@ -121,6 +122,17 @@ Each bean note includes a `brews` code block (auto-inserted on creation) that sh
   <br>
   <em>Brew detail — extraction parameters and weight-over-time profile chart</em>
 </p>
+
+### Daily Brew Records (`brew-day` code block)
+
+Place a `brew-day` code block in a daily note named `YYYY-MM-DD.md` to show that day's brew records grouped by bean:
+
+````markdown
+```brew-day
+```
+````
+
+Records are sorted newest first and use the note's date as the local day boundary.
 
 ---
 
