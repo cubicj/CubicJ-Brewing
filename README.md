@@ -153,12 +153,15 @@ TypeScript · vitest · esbuild CommonJS bundle
 ## Development
 
 ```bash
-npm run dev          # watch mode + auto-copy to vault
+npm run dev          # watch mode, repo-local only
+npm run watch        # same repo-local watch mode
 npm run build        # test → typecheck → production build
 npm run test         # vitest (single run)
 npm run test:watch   # vitest (watch mode)
 npm run check        # typecheck only
 npm run lint         # eslint
+npm run dev:windows  # watch + copy to the Windows Obsidian plugin target
+npm run deploy:windows # build + copy to the Windows Obsidian plugin target
 ```
 
 ### Build from Source

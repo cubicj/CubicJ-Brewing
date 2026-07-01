@@ -3,7 +3,7 @@
   "version": "0.3.0",
   "private": true,
   "scripts": {
-    "dev": "npm run dev:windows",
+    "dev": "node esbuild.config.mjs watch",
     "build": "npm run test && npm run check && node esbuild.config.mjs production",
     "check": "tsc --noEmit",
     "test": "vitest run",
