@@ -89,6 +89,12 @@ export class BrewRecordService {
 		return this.load();
 	}
 
+	async reload(): Promise<Result<BrewRecord[]>> {
+		this.records = null;
+		this.invalidRecords = [];
+		return this.load();
+	}
+
 	async getByBean(bean: string): Promise<Result<BrewRecord[]>> {
 		const result = await this.load();
 		if (!result.ok) return result;

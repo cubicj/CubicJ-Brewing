@@ -131,6 +131,19 @@ export default class CubicJBrewingPlugin extends Plugin {
 			brewBlock.refreshAll();
 			brewDayBlock.refreshAll();
 		};
+		const refreshRecordBlocksFromVault = async () => {
+			const result = await this.recordService.reload();
+			if (!result.ok) {
+				console.warn(`[CubicJ-Brewing] failed to reload brew records: [${result.error.code}] ${result.error.message}`);
+			}
+			brewBlock.refreshAll();
+			brewDayBlock.refreshAll();
+		};
+		const handleRecordFileChange = (file: { path: string }) => {
+			if (file.path === recordsPath) void refreshRecordBlocksFromVault();
+		};
+		this.registerEvent(this.app.vault.on('modify', handleRecordFileChange));
+		this.registerEvent(this.app.vault.on('create', handleRecordFileChange));
 
 		this.app.workspace.onLayoutReady(async () => {
 			if (this.savedDataVersion < 2) {

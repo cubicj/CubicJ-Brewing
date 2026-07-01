@@ -80,6 +80,21 @@ describe('BrewRecordService', () => {
 		if (result.ok) expect(result.data).toHaveLength(1);
 	});
 
+	it('reloads records after the storage file changes externally', async () => {
+		const initial = makeFilter({ id: 'initial' });
+		adapter.data = JSON.stringify({ version: 1, records: [initial] });
+		const first = await service.getAll();
+		expect(first.ok).toBe(true);
+		if (first.ok) expect(first.data.map((record) => record.id)).toEqual(['initial']);
+
+		const synced = makeFilter({ id: 'synced' });
+		adapter.data = JSON.stringify({ version: 1, records: [synced] });
+		const reloaded = await service.reload();
+
+		expect(reloaded.ok).toBe(true);
+		if (reloaded.ok) expect(reloaded.data.map((record) => record.id)).toEqual(['synced']);
+	});
+
 	it('getLastRecord returns most recent by bean x method x temp', async () => {
 		await service.add(makeFilter({ timestamp: '2026-02-25T10:00:00Z', grindSize: 2.5 }));
 		await service.add(makeFilter({ timestamp: '2026-02-26T10:00:00Z', grindSize: 2.6 }));
