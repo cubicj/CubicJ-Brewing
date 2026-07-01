@@ -9,6 +9,8 @@ import { renderBrewRecordTable } from './BrewRecordTable';
 
 export class BrewDayCodeBlock {
 	private containers: WeakRef<HTMLElement>[] = [];
+	private renderTokens = new WeakMap<HTMLElement, number>();
+	private nextRenderToken = 0;
 
 	constructor(
 		private app: App,
@@ -41,6 +43,8 @@ export class BrewDayCodeBlock {
 	}
 
 	private async renderAsync(el: HTMLElement, sourcePath: string): Promise<void> {
+		const renderToken = ++this.nextRenderToken;
+		this.renderTokens.set(el, renderToken);
 		el.dataset.sourcePath = sourcePath;
 		el.empty();
 		el.addClass('brew-day-records');
@@ -52,6 +56,7 @@ export class BrewDayCodeBlock {
 		}
 
 		const result = await this.recordService.getAll();
+		if (this.renderTokens.get(el) !== renderToken) return;
 		const records = result.ok ? result.data : [];
 		const groups = groupRecordsByBeanForDay(records, date);
 
