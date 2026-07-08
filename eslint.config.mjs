@@ -20,6 +20,15 @@ export default tseslint.config(
 		},
 	},
 	{
+		files: ['build/**/*.mjs'],
+		languageOptions: {
+			globals: {
+				console: 'readonly',
+				process: 'readonly',
+			},
+		},
+	},
+	{
 		ignores: ['main.js', 'node_modules/', 'Temp/', 'scripts/', 'esbuild.config.mjs'],
 	},
 );
