@@ -9,7 +9,7 @@ import { VaultDataService } from './services/VaultDataService';
 import { BeanCodeBlock } from './views/BeanCodeBlock';
 import { BrewCodeBlock } from './views/BrewCodeBlock';
 import { BrewDayCodeBlock } from './views/BrewDayCodeBlock';
-import type { EquipmentSettings, LogConfig } from './brew/types';
+import type { EquipmentSettings, GrinderConfig, LogConfig } from './brew/types';
 import { BrewingSettingTab } from './views/SettingTab';
 import { initI18n, t } from './i18n/index';
 
@@ -315,7 +315,21 @@ export default class CubicJBrewingPlugin extends Plugin {
 			const keys: (keyof EquipmentSettings)[] = ['grinders', 'drippers', 'filters', 'baskets', 'accessories'];
 			const valid = keys.every((k) => Array.isArray(eq[k]));
 			if (valid) {
-				this.equipment = eq as EquipmentSettings;
+				const isGrinder = (g: unknown): g is GrinderConfig =>
+					g != null &&
+					typeof g === 'object' &&
+					typeof (g as GrinderConfig).name === 'string' &&
+					typeof (g as GrinderConfig).step === 'number' &&
+					typeof (g as GrinderConfig).min === 'number' &&
+					typeof (g as GrinderConfig).max === 'number';
+				const isString = (s: unknown): s is string => typeof s === 'string';
+				this.equipment = {
+					grinders: (eq.grinders as unknown[]).filter(isGrinder),
+					drippers: (eq.drippers as unknown[]).filter(isString),
+					filters: (eq.filters as unknown[]).filter(isString),
+					baskets: (eq.baskets as unknown[]).filter(isString),
+					accessories: (eq.accessories as unknown[]).filter(isString),
+				};
 			}
 		}
 		const lc = data.logConfig;
