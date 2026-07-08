@@ -154,6 +154,124 @@ describe('AcaiaService reconnect', () => {
 
 		service.destroy();
 	});
+
+	it('schedules the next attempt after a failed reconnect scan', async () => {
+		vi.useFakeTimers();
+		const peripheral = createMockPeripheral();
+		const noble = createMockNoble(peripheral);
+		const service = new AcaiaService({ nobleFactory: () => noble });
+		try {
+			const connectPromise = service.connect();
+			await vi.advanceTimersByTimeAsync(200);
+			await connectPromise;
+			expect(service.state).toBe('connected');
+
+			(noble as unknown as { startScanning: () => void }).startScanning = vi.fn();
+			triggerDisconnect(peripheral);
+			expect(service.currentReconnectAttempt).toBe(1);
+
+			await vi.advanceTimersByTimeAsync(1000);
+			await vi.advanceTimersByTimeAsync(10000);
+
+			expect(service.currentReconnectAttempt).toBe(2);
+			expect(service.state).toBe('reconnecting');
+		} finally {
+			service.destroy();
+			vi.useRealTimers();
+		}
+	});
+
+	it('gives up with an error after three failed reconnect attempts', async () => {
+		vi.useFakeTimers();
+		const peripheral = createMockPeripheral();
+		const noble = createMockNoble(peripheral);
+		const service = new AcaiaService({ nobleFactory: () => noble });
+		try {
+			const connectPromise = service.connect();
+			await vi.advanceTimersByTimeAsync(200);
+			await connectPromise;
+
+			const errors: string[] = [];
+			service.on('error', (err: Error) => errors.push(err.message));
+
+			(noble as unknown as { startScanning: () => void }).startScanning = vi.fn();
+			triggerDisconnect(peripheral);
+
+			await vi.advanceTimersByTimeAsync(1000);
+			await vi.advanceTimersByTimeAsync(10000);
+			await vi.advanceTimersByTimeAsync(2000);
+			await vi.advanceTimersByTimeAsync(10000);
+			await vi.advanceTimersByTimeAsync(4000);
+			await vi.advanceTimersByTimeAsync(10000);
+
+			expect(errors).toContain('Reconnect failed after 3 attempts');
+			expect(service.state).toBe('idle');
+		} finally {
+			service.destroy();
+			vi.useRealTimers();
+		}
+	});
+
+	it('does not auto-retry a failed manual connect', async () => {
+		vi.useFakeTimers();
+		const peripheral = createMockPeripheral();
+		const noble = createMockNoble(peripheral);
+		(noble as unknown as { startScanning: () => void }).startScanning = vi.fn();
+		const service = new AcaiaService({ nobleFactory: () => noble });
+		try {
+			const connectPromise = service.connect();
+			await vi.advanceTimersByTimeAsync(10000);
+			await connectPromise;
+
+			expect(service.state).toBe('idle');
+			expect(service.currentReconnectAttempt).toBe(0);
+			await vi.advanceTimersByTimeAsync(20000);
+			expect(service.state).toBe('idle');
+		} finally {
+			service.destroy();
+			vi.useRealTimers();
+		}
+	});
+});
+
+describe('AcaiaService heartbeat silence', () => {
+	it('does not declare the connection dead right after connect before any packet', async () => {
+		vi.useFakeTimers();
+		const peripheral = createMockPeripheral();
+		const noble = createMockNoble(peripheral);
+		const service = new AcaiaService({ nobleFactory: () => noble });
+		try {
+			const connectPromise = service.connect();
+			await vi.advanceTimersByTimeAsync(200);
+			await connectPromise;
+			expect(service.state).toBe('connected');
+
+			await vi.advanceTimersByTimeAsync(1500);
+			expect(service.state).toBe('connected');
+		} finally {
+			service.destroy();
+			vi.useRealTimers();
+		}
+	});
+
+	it('declares the connection dead after sustained silence', async () => {
+		vi.useFakeTimers();
+		const peripheral = createMockPeripheral();
+		const noble = createMockNoble(peripheral);
+		const service = new AcaiaService({ nobleFactory: () => noble });
+		try {
+			const connectPromise = service.connect();
+			await vi.advanceTimersByTimeAsync(200);
+			await connectPromise;
+			expect(service.state).toBe('connected');
+
+			await vi.advanceTimersByTimeAsync(9500);
+			expect(service.state).toBe('reconnecting');
+		} finally {
+			service.destroy();
+			vi.useRealTimers();
+		}
+	});
 });
 
 describe('AcaiaService handlePacket routing', () => {

@@ -173,15 +173,18 @@ export class AcaiaService extends EventEmitter {
 			this.setState('connected');
 			this.log('connection complete');
 		} catch (err: unknown) {
-			if (err instanceof StaleConnectionError) {
+			if (err instanceof StaleConnectionError && this.connectId !== myId) {
 				this.log(`stale connect (id=${myId}, current=${this.connectId})`);
 				return;
 			}
-			const msg = err instanceof Error ? err.message : String(err);
-			this.log(`connect() caught: ${msg}`);
-			this.emitError(msg || 'Connection failed');
-			this.cleanupConnection();
-			this.setState('idle');
+			if (!(err instanceof StaleConnectionError)) {
+				const msg = err instanceof Error ? err.message : String(err);
+				this.log(`connect() caught: ${msg}`);
+				this.emitError(msg || 'Connection failed');
+				this.cleanupConnection();
+				this.setState('idle');
+			}
+			this.maybeRetryReconnect();
 		} finally {
 			if (this.connectId === myId) this.connecting = false;
 			this.log(`connect() finally — id=${myId}, current=${this.connectId}, state=${this._state}`);
@@ -550,6 +553,7 @@ export class AcaiaService extends EventEmitter {
 
 	private startHeartbeat(): void {
 		this.log('startHeartbeat()');
+		this.lastPacketTime = Date.now();
 		this.heartbeatTimer = setInterval(async () => {
 			if (this._state !== 'connected') return;
 
@@ -594,6 +598,12 @@ export class AcaiaService extends EventEmitter {
 		this.maybeReconnect();
 	}
 
+	private maybeRetryReconnect(): void {
+		if (this.reconnectAttempt === 0) return;
+		if (this.userDisconnected || this.connectAborted) return;
+		this.maybeReconnect();
+	}
+
 	private maybeReconnect(): void {
 		if (this.userDisconnected) {
 			this.log('maybeReconnect() skipped — user disconnected');
@@ -605,6 +615,7 @@ export class AcaiaService extends EventEmitter {
 		}
 		if (this.reconnectAttempt >= AcaiaService.MAX_RECONNECT_ATTEMPTS) {
 			this.log(`maybeReconnect() giving up — ${this.reconnectAttempt} attempts exhausted`);
+			this.reconnectAttempt = 0;
 			this.emitError('Reconnect failed after 3 attempts');
 			return;
 		}
