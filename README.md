@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Desktop%20%2B%20Mobile-brightgreen)
-![Version](https://img.shields.io/badge/version-0.3.0-orange)
+![Version](https://img.shields.io/badge/version-0.4.0-orange)
 
 [한국어](README.ko.md)
 
@@ -21,7 +21,7 @@ An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE s
 - **Real-time scale connection** — Acaia Pearl S via Bluetooth, no companion app required
 - **Guided brew flow** — 5-step accordion UI (method → bean → parameters → brew → save)
 - **Filter & espresso modes** with method-specific parameter sets
-- **Live brew profile chart** — weight-over-time curve recorded during brewing
+- **Live brew profile chart** — weight-over-time curve recorded during brewing, with hover readout of weight, flow rate, and time
 - **Bean inventory** — roast days, remaining weight, status tracking
 - **Brew history** — per-bean and daily records with profile charts, equipment used, and inline memo editing
 - **Equipment registry** — grinders, drippers, filters, baskets, accessories
@@ -146,7 +146,7 @@ TypeScript · vitest · esbuild CommonJS bundle
 |-------|----------------|
 | **BLE** | Binary protocol codec, packet buffer (fragmentation handling), typed EventEmitter service |
 | **Brew State** | 6-step finite state machine with step guards and discriminated union records |
-| **Signal** | Median spike filter, Savitzky-Golay smoothing (order 2), EMA trend line |
+| **Signal** | Median spike filter, time-aware EMA trend line |
 | **Storage** | File-adapter abstraction, JSON CRUD with schema validation, corrupt-file backup |
 | **Views** | Accordion manager, stepper component, Canvas 2D chart, code block processors |
 

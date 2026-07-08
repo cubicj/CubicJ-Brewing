@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Desktop%20%2B%20Mobile-brightgreen)
-![Version](https://img.shields.io/badge/version-0.3.0-orange)
+![Version](https://img.shields.io/badge/version-0.4.0-orange)
 
 [English](README.md)
 
@@ -21,7 +21,7 @@
 - **실시간 저울 연결** — Acaia Pearl S 블루투스 연동
 - **가이드 브루 플로우** — 5단계 아코디언 UI (방식 → 원두 → 파라미터 → 추출 → 저장)
 - **필터 & 에스프레소 모드** — 추출 방식별 파라미터
-- **라이브 브루 프로파일 차트** — 추출 중 실시간 무게-시간 그래프 기록
+- **라이브 브루 프로파일 차트** — 추출 중 실시간 무게-시간 그래프 기록, 호버 시 무게·유량·시간 표시
 - **원두 인벤토리** — 로스팅 일수, 남은 원두 무게, 상태 추적
 - **브루 히스토리** — 원두별/일자별 기록, 추출 그래프, 사용 장비, 인라인 메모 편집
 - **장비 관리** — 그라인더, 드리퍼, 필터, 바스켓, 액세서리
@@ -133,7 +133,7 @@ TypeScript · vitest · esbuild CommonJS 번들
 | ------------- | ------------------------------------------------------------------------------- |
 | **BLE**       | 바이너리 프로토콜 코덱, 패킷 버퍼 (프래그먼트 처리), 타입드 EventEmitter 서비스 |
 | **브루 상태** | 6단계 유한 상태 머신, 스텝 가드, 판별 유니온 레코드                             |
-| **신호 처리** | 중앙값 스파이크 필터, Savitzky-Golay 스무딩 (2차), EMA 트렌드 라인              |
+| **신호 처리** | 중앙값 스파이크 필터, 시간 가중 EMA 트렌드 라인                                 |
 | **저장**      | 파일 어댑터 추상화, JSON CRUD + 스키마 검증, 손상 파일 백업                     |
 | **뷰**        | 아코디언 매니저, 스테퍼 컴포넌트, Canvas 2D 차트, 코드블록 프로세서             |
 
