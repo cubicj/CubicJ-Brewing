@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { niceStep, filterVisible, interpolateWeight } from './chartMath';
+import { niceStep, filterVisible, interpolateWeight, flowRateAt } from './chartMath';
 import type { BrewProfilePoint } from '../brew/types';
 
 const pt = (t: number, w: number): BrewProfilePoint => ({ t, w });
@@ -94,5 +94,35 @@ describe('interpolateWeight', () => {
 
 	it('returns 0 for empty array', () => {
 		expect(interpolateWeight([], 5)).toBe(0);
+	});
+});
+
+describe('flowRateAt', () => {
+	const trend = [pt(0, 0), pt(10, 100), pt(20, 200)];
+
+	it('returns slope on linear data', () => {
+		expect(flowRateAt(trend, 5)).toBeCloseTo(10);
+	});
+
+	it('clamps window at the start edge', () => {
+		expect(flowRateAt(trend, 0)).toBeCloseTo(10);
+	});
+
+	it('clamps window at the end edge', () => {
+		expect(flowRateAt(trend, 20)).toBeCloseTo(10);
+	});
+
+	it('returns negative slope on decreasing data', () => {
+		const falling = [pt(0, 100), pt(10, 0)];
+		expect(flowRateAt(falling, 5)).toBeCloseTo(-10);
+	});
+
+	it('returns undefined for fewer than 2 points', () => {
+		expect(flowRateAt([], 5)).toBeUndefined();
+		expect(flowRateAt([pt(5, 10)], 5)).toBeUndefined();
+	});
+
+	it('returns undefined when window falls outside data', () => {
+		expect(flowRateAt(trend, 30)).toBeUndefined();
 	});
 });

@@ -39,3 +39,11 @@ export function interpolateWeight(trend: BrewProfilePoint[], t: number): number 
 	}
 	return trend[trend.length - 1].w;
 }
+
+export function flowRateAt(trend: BrewProfilePoint[], t: number, halfWindow = 1): number | undefined {
+	if (trend.length < 2) return undefined;
+	const t0 = Math.max(trend[0].t, t - halfWindow);
+	const t1 = Math.min(trend[trend.length - 1].t, t + halfWindow);
+	if (t1 <= t0) return undefined;
+	return (interpolateWeight(trend, t1) - interpolateWeight(trend, t0)) / (t1 - t0);
+}
