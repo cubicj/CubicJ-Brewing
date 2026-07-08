@@ -19,6 +19,7 @@ export interface StorageAdapter {
 export class BrewRecordService {
 	private records: BrewRecord[] | null = null;
 	private invalidRecords: unknown[] = [];
+	private loadFailure: Result<BrewRecord[]> | null = null;
 	onChange: (() => void) | null = null;
 
 	constructor(private adapter: StorageAdapter) {}
@@ -45,6 +46,7 @@ export class BrewRecordService {
 
 	private async load(): Promise<Result<BrewRecord[]>> {
 		if (this.records) return ok(this.records);
+		if (this.loadFailure) return this.loadFailure;
 		const raw = await this.adapter.read();
 		if (!raw) {
 			this.records = [];
@@ -55,8 +57,8 @@ export class BrewRecordService {
 			parsed = JSON.parse(raw);
 		} catch {
 			if (this.adapter.writeBackup) await this.adapter.writeBackup(raw);
-			this.records = [];
-			return fail('RECORD_PARSE_FAILED', 'brew-records.json corrupt — backed up raw data');
+			this.loadFailure = fail('RECORD_PARSE_FAILED', 'brew-records.json corrupt — backed up raw data');
+			return this.loadFailure;
 		}
 		if (Array.isArray(parsed)) {
 			this.records = this.validateRecords(parsed);
@@ -72,8 +74,8 @@ export class BrewRecordService {
 				return ok(this.records);
 			}
 		}
-		this.records = [];
-		return fail('RECORD_SCHEMA_INVALID', 'brew-records.json unrecognized format');
+		this.loadFailure = fail('RECORD_SCHEMA_INVALID', 'brew-records.json unrecognized format');
+		return this.loadFailure;
 	}
 
 	private async save(): Promise<void> {
@@ -92,6 +94,7 @@ export class BrewRecordService {
 	async reload(): Promise<Result<BrewRecord[]>> {
 		this.records = null;
 		this.invalidRecords = [];
+		this.loadFailure = null;
 		return this.load();
 	}
 

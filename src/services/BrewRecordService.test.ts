@@ -5,6 +5,7 @@ import type { FilterRecord, EspressoRecord } from '../brew/types';
 class InMemoryAdapter implements StorageAdapter {
 	data = '';
 	backup: string | null = null;
+	backupCount = 0;
 	async read(): Promise<string | null> {
 		return this.data || null;
 	}
@@ -13,6 +14,7 @@ class InMemoryAdapter implements StorageAdapter {
 	}
 	async writeBackup(content: string): Promise<void> {
 		this.backup = content;
+		this.backupCount++;
 	}
 }
 
@@ -250,6 +252,55 @@ describe('BrewRecordService', () => {
 		expect(result.ok).toBe(false);
 		if (!result.ok) expect(result.error.code).toBe('RECORD_PARSE_FAILED');
 		expect(adapter.backup).toBe('{broken json');
+	});
+
+	it('keeps failing after corrupt JSON instead of returning empty records', async () => {
+		adapter.data = '{broken json';
+		const first = await service.getAll();
+		expect(first.ok).toBe(false);
+		const second = await service.getAll();
+		expect(second.ok).toBe(false);
+		if (!second.ok) expect(second.error.code).toBe('RECORD_PARSE_FAILED');
+	});
+
+	it('blocks add after corrupt JSON so history is not clobbered', async () => {
+		adapter.data = '{broken json';
+		await service.getAll();
+		const addResult = await service.add(makeFilter());
+		expect(addResult.ok).toBe(false);
+		expect(adapter.data).toBe('{broken json');
+	});
+
+	it('blocks add after schema-invalid JSON so history is not clobbered', async () => {
+		adapter.data = '{"not": "array"}';
+		await service.getAll();
+		const addResult = await service.add(makeFilter());
+		expect(addResult.ok).toBe(false);
+		expect(adapter.data).toBe('{"not": "array"}');
+	});
+
+	it('writes backup only once for repeated loads of corrupt JSON', async () => {
+		adapter.data = '{broken json';
+		await service.getAll();
+		await service.getAll();
+		await service.add(makeFilter());
+		expect(adapter.backupCount).toBe(1);
+	});
+
+	it('recovers via reload after the file is repaired', async () => {
+		adapter.data = '{broken json';
+		const failed = await service.getAll();
+		expect(failed.ok).toBe(false);
+
+		const record = makeFilter();
+		adapter.data = JSON.stringify({ version: 1, records: [record] });
+		const reloaded = await service.reload();
+		expect(reloaded.ok).toBe(true);
+		if (reloaded.ok) expect(reloaded.data.map((r) => r.id)).toEqual([record.id]);
+
+		const addResult = await service.add(makeFilter());
+		expect(addResult.ok).toBe(true);
+		expect(JSON.parse(adapter.data).records).toHaveLength(2);
 	});
 
 	it('removeWithProfile deletes associated profile file', async () => {
