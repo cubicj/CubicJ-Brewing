@@ -9,21 +9,22 @@ export function niceStep(max: number, targetLines: number): number {
 }
 
 export function filterVisible(points: BrewProfilePoint[], start: number, end: number): BrewProfilePoint[] {
-	let lo = 0;
-	let hi = points.length;
+	if (points.length === 0) return points;
+	let lo = points.length;
 	for (let i = 0; i < points.length; i++) {
 		if (points[i].t >= start) {
-			lo = Math.max(0, i - 1);
+			lo = i;
 			break;
 		}
 	}
+	let hi = 0;
 	for (let i = points.length - 1; i >= 0; i--) {
 		if (points[i].t <= end) {
-			hi = Math.min(points.length, i + 2);
+			hi = i + 1;
 			break;
 		}
 	}
-	return points.slice(lo, hi);
+	return points.slice(Math.max(0, lo - 1), Math.min(points.length, hi + 1));
 }
 
 export function interpolateWeight(trend: BrewProfilePoint[], t: number): number {

@@ -56,6 +56,14 @@ describe('filterVisible', () => {
 		expect(filterVisible([], 0, 10)).toEqual([]);
 	});
 
+	it('returns only the nearest point when window is after all points', () => {
+		expect(filterVisible(points, 30, 40)).toEqual([pt(20, 40)]);
+	});
+
+	it('returns only the nearest point when window is before all points', () => {
+		expect(filterVisible(points, -20, -10)).toEqual([pt(0, 0)]);
+	});
+
 	it('handles single point', () => {
 		expect(filterVisible([pt(5, 10)], 0, 10)).toEqual([pt(5, 10)]);
 	});

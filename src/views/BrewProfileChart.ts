@@ -44,6 +44,28 @@ export class BrewProfileChart {
 	private crosshairRaf = 0;
 	private labelY: number | null = null;
 
+	private colors = {
+		bg: BG_COLOR,
+		grid: GRID_COLOR,
+		label: LABEL_COLOR,
+		crosshair: CROSSHAIR_COLOR,
+		labelBg: 'rgba(0, 0, 0, 0.8)',
+		labelText: '#e8e8e8',
+	};
+
+	private resolveColors(): void {
+		const style = getComputedStyle(this.canvas);
+		const cssVar = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback;
+		this.colors = {
+			bg: cssVar('--background-primary', BG_COLOR),
+			grid: cssVar('--background-modifier-border', GRID_COLOR),
+			label: cssVar('--text-muted', LABEL_COLOR),
+			crosshair: cssVar('--text-faint', CROSSHAIR_COLOR),
+			labelBg: cssVar('--background-secondary', 'rgba(0, 0, 0, 0.8)'),
+			labelText: cssVar('--text-normal', '#e8e8e8'),
+		};
+	}
+
 	constructor(container: HTMLElement, height = CHART_HEIGHT, timeScale = TIME_SCALE, scrollable = false) {
 		this.chartHeight = height;
 		this.timeScale = timeScale;
@@ -122,6 +144,14 @@ export class BrewProfileChart {
 		this.dragHandlers = { down, move, up };
 	}
 
+	private scheduleCrosshairRender(): void {
+		if (this.crosshairRaf) return;
+		this.crosshairRaf = requestAnimationFrame(() => {
+			this.crosshairRaf = 0;
+			if (this.staticPoints) this.render(this.staticPoints);
+		});
+	}
+
 	private attachCrosshairEvents(_container: HTMLElement): void {
 		this.crosshairMoveHandler = (e: MouseEvent) => {
 			const rect = this.canvas.getBoundingClientRect();
@@ -133,12 +163,7 @@ export class BrewProfileChart {
 			const dur = this.viewDuration();
 			const t = this.viewStart + ((mouseX - pl) / plotW) * dur;
 			this.crosshairT = t;
-			if (!this.crosshairRaf) {
-				this.crosshairRaf = requestAnimationFrame(() => {
-					this.crosshairRaf = 0;
-					if (this.staticPoints) this.render(this.staticPoints);
-				});
-			}
+			this.scheduleCrosshairRender();
 		};
 		this.canvas.addEventListener('mousemove', this.crosshairMoveHandler);
 
@@ -192,7 +217,11 @@ export class BrewProfileChart {
 			if (this.staticPoints) {
 				this.fitTimeScale(this.staticPoints);
 				this.render(this.staticPoints);
-			} else if (!this.recorder) this.render([]);
+			} else if (this.recorder) {
+				this.render(this.recorder.getPoints());
+			} else {
+				this.render([]);
+			}
 		}
 	}
 
@@ -216,8 +245,13 @@ export class BrewProfileChart {
 		this.recorder = recorder;
 		this.viewStart = 0;
 		this.detachWheel();
+		let lastLen = -1;
 		const tick = () => {
-			this.render(this.recorder!.getPoints());
+			const points = this.recorder!.getPoints();
+			if (points.length !== lastLen) {
+				lastLen = points.length;
+				this.render(points);
+			}
 			this.rafId = requestAnimationFrame(tick);
 		};
 		this.rafId = requestAnimationFrame(tick);
@@ -307,17 +341,11 @@ export class BrewProfileChart {
 		return { dpr, cw, ch, pl, pr, pt, pb, plotW, plotH };
 	}
 
-	private computeScale(points: BrewProfilePoint[], m: ReturnType<BrewProfileChart['getMetrics']>) {
-		const maxT = points[points.length - 1].t;
+	private computeScale(m: ReturnType<BrewProfileChart['getMetrics']>) {
 		const dur = this.viewDuration();
-
-		if (this.recorder) {
-			this.viewStart = Math.max(0, maxT - dur);
-		}
-
 		const viewEnd = this.viewStart + dur;
 		let maxW = 10;
-		for (const p of this.cachedTrend) if (p.w > maxW) maxW = p.w;
+		for (const p of this.cachedDetail) if (p.w > maxW) maxW = p.w;
 		maxW *= 1.1;
 
 		const toX = (t: number) => m.pl + ((t - this.viewStart) / dur) * m.plotW;
@@ -326,8 +354,7 @@ export class BrewProfileChart {
 		return { viewEnd, maxW, dur, toX, toY };
 	}
 
-	private getProcessedData(points: BrewProfilePoint[], viewEnd: number) {
-		this.updateCache(points);
+	private getProcessedData(viewEnd: number) {
 		const visibleDetail = filterVisible(this.cachedDetail, this.viewStart, viewEnd);
 		const visibleTrend = filterVisible(this.cachedTrend, this.viewStart, viewEnd);
 		return { visibleDetail, visibleTrend };
@@ -371,13 +398,14 @@ export class BrewProfileChart {
 	private render(points: BrewProfilePoint[]): void {
 		const ctx = this.ctx;
 		const m = this.getMetrics();
+		this.resolveColors();
 
 		ctx.clearRect(0, 0, m.cw, m.ch);
-		ctx.fillStyle = BG_COLOR;
+		ctx.fillStyle = this.colors.bg;
 		ctx.fillRect(0, 0, m.cw, m.ch);
 
 		if (points.length === 0) {
-			ctx.fillStyle = LABEL_COLOR;
+			ctx.fillStyle = this.colors.label;
 			ctx.font = `${12 * m.dpr}px -apple-system, BlinkMacSystemFont, sans-serif`;
 			ctx.textAlign = 'center';
 			ctx.fillText('⏳', m.cw / 2, m.ch / 2);
@@ -385,8 +413,11 @@ export class BrewProfileChart {
 		}
 
 		this.updateCache(points);
-		const scale = this.computeScale(points, m);
-		const { visibleDetail, visibleTrend } = this.getProcessedData(points, scale.viewEnd);
+		if (this.recorder) {
+			this.viewStart = Math.max(0, points[points.length - 1].t - this.viewDuration());
+		}
+		const scale = this.computeScale(m);
+		const { visibleDetail, visibleTrend } = this.getProcessedData(scale.viewEnd);
 
 		this.renderPlot(ctx, m, scale, visibleDetail, visibleTrend);
 
@@ -415,7 +446,7 @@ export class BrewProfileChart {
 		ctx.beginPath();
 		ctx.moveTo(x, pt);
 		ctx.lineTo(x, pt + plotH);
-		ctx.strokeStyle = CROSSHAIR_COLOR;
+		ctx.strokeStyle = this.colors.crosshair;
 		ctx.lineWidth = dpr;
 		ctx.setLineDash([4 * dpr, 4 * dpr]);
 		ctx.stroke();
@@ -454,12 +485,18 @@ export class BrewProfileChart {
 		if (lx + tw > pl + plotW) lx = x - tw - 4 * dpr;
 		let targetY = dotY - th - 6 * dpr;
 		if (targetY < pt) targetY = dotY + 6 * dpr;
-		const ly = this.labelY === null ? targetY : this.labelY + (targetY - this.labelY) * 0.12;
+		let ly: number;
+		if (this.labelY === null || Math.abs(targetY - this.labelY) < 0.5) {
+			ly = targetY;
+		} else {
+			ly = this.labelY + (targetY - this.labelY) * 0.12;
+			this.scheduleCrosshairRender();
+		}
 		this.labelY = ly;
 
-		ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+		ctx.fillStyle = this.colors.labelBg;
 		ctx.fillRect(lx, ly, tw, th);
-		ctx.fillStyle = '#e8e8e8';
+		ctx.fillStyle = this.colors.labelText;
 		ctx.textAlign = 'left';
 		ctx.fillText(line1, lx + 4 * dpr, ly + 13 * dpr);
 		ctx.fillText(line2, lx + 4 * dpr, ly + 13 * dpr + lineH);
@@ -478,7 +515,7 @@ export class BrewProfileChart {
 		toX: (t: number) => number,
 		toY: (w: number) => number,
 	): void {
-		ctx.strokeStyle = GRID_COLOR;
+		ctx.strokeStyle = this.colors.grid;
 		ctx.lineWidth = dpr;
 
 		const firstT = Math.ceil(viewStart / TIME_GRID_STEP) * TIME_GRID_STEP;
@@ -511,7 +548,7 @@ export class BrewProfileChart {
 		viewEnd: number,
 		toX: (t: number) => number,
 	): void {
-		ctx.fillStyle = LABEL_COLOR;
+		ctx.fillStyle = this.colors.label;
 		ctx.font = `${10 * dpr}px -apple-system, BlinkMacSystemFont, sans-serif`;
 		ctx.textAlign = 'center';
 
@@ -534,7 +571,7 @@ export class BrewProfileChart {
 		maxW: number,
 		toY: (w: number) => number,
 	): void {
-		ctx.fillStyle = LABEL_COLOR;
+		ctx.fillStyle = this.colors.label;
 		ctx.font = `${10 * dpr}px -apple-system, BlinkMacSystemFont, sans-serif`;
 		ctx.textAlign = 'right';
 
