@@ -38,6 +38,7 @@ export interface RecipeInfo {
 export interface BrewProfilePoint {
 	t: number;
 	w: number;
+	s?: boolean;
 }
 
 export interface GrinderConfig {

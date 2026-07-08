@@ -15,10 +15,11 @@ export class BrewProfileRecorder {
 		this.recording = true;
 	}
 
-	record(grams: number): void {
+	record(grams: number, stable = false): void {
 		if (!this.recording) return;
 		const t = (Date.now() - this.startTime) / 1000;
-		this.points.push({ t: Math.round(t * 10) / 10, w: grams });
+		const rounded = Math.round(t * 10) / 10;
+		this.points.push(stable ? { t: rounded, w: grams, s: true } : { t: rounded, w: grams });
 	}
 
 	stop(): void {

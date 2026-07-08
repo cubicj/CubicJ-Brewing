@@ -53,4 +53,21 @@ describe('BrewProfileRecorder', () => {
 		expect(rec.isRecording).toBe(false);
 		expect(rec.getPoints()).toEqual([]);
 	});
+
+	it('records s: true for stable samples', () => {
+		const rec = new BrewProfileRecorder();
+		rec.start();
+		rec.record(100, true);
+		expect(rec.getPoints()[0]).toEqual({ t: 0, w: 100, s: true });
+	});
+
+	it('omits s for unstable samples', () => {
+		const rec = new BrewProfileRecorder();
+		rec.start();
+		rec.record(100, false);
+		rec.record(101);
+		const points = rec.getPoints();
+		expect('s' in points[0]).toBe(false);
+		expect('s' in points[1]).toBe(false);
+	});
 });
