@@ -44,7 +44,12 @@ export class BrewCodeBlock {
 		let beanName = this.resolveBeanName(sourcePath);
 		if (!beanName) {
 			await new Promise<void>((resolve) => {
+				const timer = setTimeout(() => {
+					this.app.metadataCache.offref(ref);
+					resolve();
+				}, 3000);
 				const ref = this.app.metadataCache.on('resolved', () => {
+					clearTimeout(timer);
 					this.app.metadataCache.offref(ref);
 					resolve();
 				});
