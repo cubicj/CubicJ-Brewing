@@ -4,6 +4,16 @@ const TAIL_SECONDS = 30;
 const STABLE_SECONDS = 2;
 const TOLERANCE_G = 1;
 const MIN_YIELD_G = 10;
+const END_WINDOW_SECONDS = 1;
+
+function stableEndMedian(tail: BrewProfilePoint[]): number | undefined {
+	const lastT = tail[tail.length - 1].t;
+	const weights = tail.filter((p) => p.t >= lastT - END_WINDOW_SECONDS).map((p) => p.w);
+	if (weights.length < 2) return undefined;
+	weights.sort((a, b) => a - b);
+	if (weights[weights.length - 1] - weights[0] > TOLERANCE_G * 2) return undefined;
+	return Math.round(weights[Math.floor(weights.length / 2)] * 10) / 10;
+}
 
 export function estimateYield(points: BrewProfilePoint[]): number | undefined {
 	if (points.length < 2) return undefined;
@@ -40,6 +50,8 @@ export function estimateYield(points: BrewProfilePoint[]): number | undefined {
 		}
 	}
 
-	if (bestMean !== undefined && bestMean < MIN_YIELD_G) return undefined;
-	return bestMean;
+	const endMedian = stableEndMedian(tail);
+	const best = endMedian !== undefined && (bestMean === undefined || endMedian > bestMean) ? endMedian : bestMean;
+	if (best === undefined || best < MIN_YIELD_G) return undefined;
+	return best;
 }

@@ -113,6 +113,52 @@ describe('estimateYield', () => {
 		expect(result).toBeLessThanOrEqual(101);
 	});
 
+	it('recovers final pour when brew stops before a 2s stable window', () => {
+		const points = pts([
+			[0, 0],
+			[5, 80],
+			[10, 150],
+			[11, 150.2],
+			[12, 150.1],
+			[13, 150.3],
+			[14, 150.0],
+			[14.5, 158],
+			[15, 166],
+			[15.5, 174],
+			[16, 182],
+			[16.3, 188],
+			[16.6, 194],
+			[16.9, 198],
+			[17.2, 200],
+			[17.5, 200.2],
+			[17.8, 200.1],
+			[18, 200.3],
+		]);
+		const result = estimateYield(points)!;
+		expect(result).toBeGreaterThanOrEqual(199);
+		expect(result).toBeLessThanOrEqual(201);
+	});
+
+	it('ignores an unstable bump at the end of recording', () => {
+		const points = pts([
+			[0, 0],
+			[5, 100],
+			[10, 200],
+			[25, 200.1],
+			[26, 200.3],
+			[27, 200.2],
+			[28, 200.0],
+			[28.5, 200.1],
+			[29, 200.2],
+			[29.4, 352],
+			[29.7, 351],
+			[30, 200.4],
+		]);
+		const result = estimateYield(points)!;
+		expect(result).toBeGreaterThanOrEqual(199);
+		expect(result).toBeLessThanOrEqual(201);
+	});
+
 	it('returns undefined when no stable window found', () => {
 		const points = pts([
 			[0, 50],
