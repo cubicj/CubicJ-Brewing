@@ -118,7 +118,13 @@ export class BrewRecordService {
 		if (!result.ok) return result;
 		const idx = result.data.findIndex((r) => r.id === id);
 		if (idx === -1) return fail('RECORD_NOT_FOUND', `Record ${id} not found`);
-		result.data[idx] = { ...result.data[idx], ...changes } as BrewRecord;
+		const merged = { ...result.data[idx], ...changes } as BrewRecord;
+		const staleKeys =
+			merged.method === 'filter' ? ['drink', 'basket', 'accessories'] : ['waterTemp', 'filter', 'dripper'];
+		for (const key of staleKeys) {
+			delete (merged as unknown as Record<string, unknown>)[key];
+		}
+		result.data[idx] = merged;
 		await this.save();
 		this.onChange?.();
 		return ok(undefined);

@@ -183,6 +183,34 @@ describe('BrewRecordService', () => {
 		}
 	});
 
+	it('drops filter-only fields when a record is switched to espresso', async () => {
+		const record = makeFilter();
+		await service.add(record);
+		await service.update(record.id, makeEspresso({ id: record.id, timestamp: record.timestamp }));
+		const result = await service.getAll();
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.data[0].method).toBe('espresso');
+			expect('waterTemp' in result.data[0]).toBe(false);
+			expect('filter' in result.data[0]).toBe(false);
+			expect('dripper' in result.data[0]).toBe(false);
+		}
+	});
+
+	it('drops espresso-only fields when a record is switched to filter', async () => {
+		const record = makeEspresso({ accessories: ['WDT'] });
+		await service.add(record);
+		await service.update(record.id, makeFilter({ id: record.id, timestamp: record.timestamp }));
+		const result = await service.getAll();
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.data[0].method).toBe('filter');
+			expect('drink' in result.data[0]).toBe(false);
+			expect('basket' in result.data[0]).toBe(false);
+			expect('accessories' in result.data[0]).toBe(false);
+		}
+	});
+
 	it('calls onChange after update', async () => {
 		const record = makeFilter();
 		await service.add(record);
