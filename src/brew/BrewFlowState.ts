@@ -83,6 +83,10 @@ export class BrewFlowState {
 		this.selection.recipe = recipe;
 	}
 
+	clearRecipe(): void {
+		this.selection.recipe = undefined;
+	}
+
 	startBrewing(): void {
 		if (this.step !== 'configure') return;
 		this.step = 'brewing';

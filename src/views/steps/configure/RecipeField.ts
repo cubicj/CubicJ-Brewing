@@ -20,5 +20,6 @@ export function renderRecipeSelect(
 	recipeSelect.addEventListener('change', () => {
 		const recipe = recipes.find((r) => r.path === recipeSelect.value);
 		if (recipe) flowState.selectRecipe(recipe);
+		else flowState.clearRecipe();
 	});
 }
