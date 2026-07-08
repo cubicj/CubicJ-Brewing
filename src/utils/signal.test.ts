@@ -80,8 +80,9 @@ describe('emaSmooth', () => {
 			{ t: 0, w: 100 },
 			{ t: 0.1, w: 200 },
 		];
-		const result = emaSmooth(points, 0.1);
-		expect(result[1].w).toBeCloseTo(110);
+		const result = emaSmooth(points, 0.6);
+		expect(result[1].w).toBeGreaterThan(110);
+		expect(result[1].w).toBeLessThan(120);
 	});
 
 	it('preserves timestamps', () => {
@@ -100,8 +101,42 @@ describe('emaSmooth', () => {
 			w: 200,
 		}));
 		points[0] = { t: 0, w: 0 };
-		const result = emaSmooth(points, 0.15);
+		const result = emaSmooth(points);
 		expect(result[result.length - 1].w).toBeGreaterThan(195);
+	});
+
+	it('smoothing depends on elapsed time, not sample count', () => {
+		const at10Hz: BrewProfilePoint[] = [
+			{ t: 0, w: 0 },
+			...Array.from({ length: 20 }, (_, i) => ({ t: (i + 1) * 0.1, w: 100 })),
+		];
+		const at5Hz: BrewProfilePoint[] = [
+			{ t: 0, w: 0 },
+			...Array.from({ length: 10 }, (_, i) => ({ t: (i + 1) * 0.2, w: 100 })),
+		];
+		const dense = emaSmooth(at10Hz);
+		const sparse = emaSmooth(at5Hz);
+		expect(Math.abs(dense[dense.length - 1].w - sparse[sparse.length - 1].w)).toBeLessThan(1);
+	});
+
+	it('catches up after a sample gap', () => {
+		const points: BrewProfilePoint[] = [
+			{ t: 0, w: 0 },
+			{ t: 5, w: 100 },
+		];
+		const result = emaSmooth(points);
+		expect(result[1].w).toBeGreaterThan(95);
+	});
+
+	it('handles duplicate timestamps without NaN', () => {
+		const points: BrewProfilePoint[] = [
+			{ t: 1, w: 100 },
+			{ t: 1, w: 200 },
+		];
+		const result = emaSmooth(points);
+		expect(Number.isFinite(result[1].w)).toBe(true);
+		expect(result[1].w).toBeGreaterThanOrEqual(100);
+		expect(result[1].w).toBeLessThanOrEqual(200);
 	});
 });
 

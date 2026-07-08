@@ -2,7 +2,7 @@ import type { BrewProfilePoint } from '../brew/types';
 
 const SPIKE_WINDOW = 5;
 const SPIKE_THRESHOLD = 50;
-const EMA_ALPHA = 0.15;
+const EMA_TAU = 0.6;
 
 const SG11_COEFFS = [-36, 9, 44, 69, 84, 89, 84, 69, 44, 9, -36];
 const SG11_NORM = 429;
@@ -30,11 +30,13 @@ export function spikeFilter(
 	});
 }
 
-export function emaSmooth(points: BrewProfilePoint[], alpha = EMA_ALPHA): BrewProfilePoint[] {
+export function emaSmooth(points: BrewProfilePoint[], tau = EMA_TAU): BrewProfilePoint[] {
 	if (points.length === 0) return [];
 	const result: BrewProfilePoint[] = [points[0]];
 	for (let i = 1; i < points.length; i++) {
 		const prev = result[i - 1].w;
+		const dt = Math.max(0, points[i].t - points[i - 1].t);
+		const alpha = 1 - Math.exp(-dt / tau);
 		result.push({ t: points[i].t, w: alpha * points[i].w + (1 - alpha) * prev });
 	}
 	return result;
