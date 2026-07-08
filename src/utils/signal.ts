@@ -4,9 +4,6 @@ const SPIKE_WINDOW = 5;
 const SPIKE_THRESHOLD = 50;
 const EMA_TAU = 0.6;
 
-const SG11_COEFFS = [-36, 9, 44, 69, 84, 89, 84, 69, 44, 9, -36];
-const SG11_NORM = 429;
-
 export function spikeFilter(
 	points: BrewProfilePoint[],
 	window = SPIKE_WINDOW,
@@ -38,26 +35,6 @@ export function emaSmooth(points: BrewProfilePoint[], tau = EMA_TAU): BrewProfil
 		const dt = Math.max(0, points[i].t - points[i - 1].t);
 		const alpha = 1 - Math.exp(-dt / tau);
 		result.push({ t: points[i].t, w: alpha * points[i].w + (1 - alpha) * prev });
-	}
-	return result;
-}
-
-export function savitzkyGolay(points: BrewProfilePoint[], coeffs = SG11_COEFFS, norm = SG11_NORM): BrewProfilePoint[] {
-	if (points.length < coeffs.length) return points;
-	const half = Math.floor(coeffs.length / 2);
-	const result: BrewProfilePoint[] = [];
-	for (let i = 0; i < half; i++) {
-		result.push(points[i]);
-	}
-	for (let i = half; i < points.length - half; i++) {
-		let sum = 0;
-		for (let j = 0; j < coeffs.length; j++) {
-			sum += coeffs[j] * points[i - half + j].w;
-		}
-		result.push({ t: points[i].t, w: sum / norm });
-	}
-	for (let i = points.length - half; i < points.length; i++) {
-		result.push(points[i]);
 	}
 	return result;
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { spikeFilter, emaSmooth, savitzkyGolay, processDetail, processTrend } from './signal';
+import { spikeFilter, emaSmooth, processDetail, processTrend } from './signal';
 import type { BrewProfilePoint } from '../brew/types';
 
 describe('spikeFilter', () => {
@@ -137,48 +137,6 @@ describe('emaSmooth', () => {
 		expect(Number.isFinite(result[1].w)).toBe(true);
 		expect(result[1].w).toBeGreaterThanOrEqual(100);
 		expect(result[1].w).toBeLessThanOrEqual(200);
-	});
-});
-
-describe('savitzkyGolay', () => {
-	it('returns short arrays unchanged', () => {
-		const points: BrewProfilePoint[] = Array.from({ length: 5 }, (_, i) => ({
-			t: i * 0.1,
-			w: 100 + i,
-		}));
-		expect(savitzkyGolay(points)).toEqual(points);
-	});
-
-	it('smooths noisy data while preserving trend', () => {
-		const points: BrewProfilePoint[] = Array.from({ length: 20 }, (_, i) => ({
-			t: i * 0.1,
-			w: 100 + i * 2 + (i % 2 === 0 ? 3 : -3),
-		}));
-		const result = savitzkyGolay(points);
-		const midIdx = 10;
-		const rawNoise = Math.abs(points[midIdx].w - points[midIdx - 1].w);
-		const sgNoise = Math.abs(result[midIdx].w - result[midIdx - 1].w);
-		expect(sgNoise).toBeLessThan(rawNoise);
-	});
-
-	it('preserves linear data exactly', () => {
-		const points: BrewProfilePoint[] = Array.from({ length: 20 }, (_, i) => ({
-			t: i * 0.1,
-			w: 50 + i * 5,
-		}));
-		const result = savitzkyGolay(points);
-		for (let i = 5; i < 15; i++) {
-			expect(result[i].w).toBeCloseTo(points[i].w, 5);
-		}
-	});
-
-	it('preserves timestamps', () => {
-		const points: BrewProfilePoint[] = Array.from({ length: 20 }, (_, i) => ({
-			t: i * 0.1,
-			w: 100,
-		}));
-		const result = savitzkyGolay(points);
-		expect(result.map((p) => p.t)).toEqual(points.map((p) => p.t));
 	});
 });
 
