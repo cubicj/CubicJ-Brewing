@@ -2,7 +2,7 @@ import type { BrewProfilePoint } from '../brew/types';
 import type { BrewProfileRecorder } from './BrewProfileRecorder';
 import { processDetail, processTrend } from '../utils/signal';
 import { t as i18t } from '../i18n/index';
-import { niceStep, filterVisible, interpolateWeight } from './chartMath';
+import { niceStep, filterVisible, interpolateWeight, flowRateAt } from './chartMath';
 
 const CHART_HEIGHT = 220;
 const PADDING = { top: 12, right: 12, bottom: 28, left: 40 };
@@ -458,7 +458,8 @@ export class BrewProfileChart {
 		ctx.fillStyle = LINE_COLOR;
 		ctx.fill();
 
-		this.renderCrosshairLabel(ctx, dpr, x, dotY, w, t, pl, plotW, pt);
+		const flow = flowRateAt(trend, t);
+		this.renderCrosshairLabel(ctx, dpr, x, dotY, w, flow, t, pl, plotW, pt);
 	}
 
 	private renderCrosshairLabel(
@@ -467,6 +468,7 @@ export class BrewProfileChart {
 		x: number,
 		dotY: number,
 		w: number,
+		flow: number | undefined,
 		t: number,
 		pl: number,
 		plotW: number,
@@ -474,12 +476,13 @@ export class BrewProfileChart {
 	): void {
 		const tSec = Math.round(t);
 		const tLabel = tSec >= 60 ? `${Math.floor(tSec / 60)}m ${tSec % 60}s` : `${tSec}s`;
-		const line1 = `${i18t('chart.weight')}: ${w.toFixed(1)}g`;
-		const line2 = `${i18t('chart.time')}: ${tLabel}`;
+		const lines = [`${i18t('chart.weight')}: ${w.toFixed(1)}g`];
+		if (flow !== undefined) lines.push(`${i18t('chart.flow')}: ${flow.toFixed(1)}g/s`);
+		lines.push(`${i18t('chart.time')}: ${tLabel}`);
 		ctx.font = `${11 * dpr}px -apple-system, BlinkMacSystemFont, sans-serif`;
-		const tw = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width) + 8 * dpr;
+		const tw = Math.max(...lines.map((line) => ctx.measureText(line).width)) + 8 * dpr;
 		const lineH = 16 * dpr;
-		const th = lineH * 2 + 4 * dpr;
+		const th = lineH * lines.length + 4 * dpr;
 
 		let lx = x + 8 * dpr;
 		if (lx + tw > pl + plotW) lx = x - tw - 4 * dpr;
@@ -498,8 +501,9 @@ export class BrewProfileChart {
 		ctx.fillRect(lx, ly, tw, th);
 		ctx.fillStyle = this.colors.labelText;
 		ctx.textAlign = 'left';
-		ctx.fillText(line1, lx + 4 * dpr, ly + 13 * dpr);
-		ctx.fillText(line2, lx + 4 * dpr, ly + 13 * dpr + lineH);
+		lines.forEach((line, i) => {
+			ctx.fillText(line, lx + 4 * dpr, ly + 13 * dpr + i * lineH);
+		});
 	}
 
 	private drawGrid(

@@ -158,6 +158,7 @@
 
 	"chart.weight": "Weight",
 	"chart.time": "Time",
+	"chart.flow": "Flow",
 
 	"common.confirm": "Confirm",
 	"common.cancel": "Cancel",
