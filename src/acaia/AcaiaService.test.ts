@@ -234,6 +234,42 @@ describe('AcaiaService reconnect', () => {
 	});
 });
 
+describe('AcaiaService destroy during connect', () => {
+	it('does not throw when destroyed while waiting for poweredOn', async () => {
+		vi.useFakeTimers();
+		const peripheral = createMockPeripheral();
+		const noble = createMockNoble(peripheral);
+		(noble as unknown as { state: string }).state = 'unknown';
+		const service = new AcaiaService({ nobleFactory: () => noble });
+		try {
+			const connectPromise = service.connect();
+			service.destroy();
+			await vi.advanceTimersByTimeAsync(11000);
+			await connectPromise;
+			expect(service.state).toBe('idle');
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('does not throw when destroyed during scanning', async () => {
+		vi.useFakeTimers();
+		const peripheral = createMockPeripheral();
+		const noble = createMockNoble(peripheral);
+		(noble as unknown as { startScanning: () => void }).startScanning = vi.fn();
+		const service = new AcaiaService({ nobleFactory: () => noble });
+		try {
+			const connectPromise = service.connect();
+			service.destroy();
+			await vi.advanceTimersByTimeAsync(11000);
+			await connectPromise;
+			expect(service.state).toBe('idle');
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+});
+
 describe('AcaiaService heartbeat silence', () => {
 	it('does not declare the connection dead right after connect before any packet', async () => {
 		vi.useFakeTimers();

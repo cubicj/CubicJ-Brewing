@@ -219,7 +219,7 @@ export class AcaiaService extends EventEmitter {
 			return;
 		}
 		this.log('waiting for poweredOn...');
-		const ready = await this.waitForPoweredOn();
+		const ready = await this.waitForPoweredOn(noble);
 		this.assertNotStale(myId);
 		if (!ready) {
 			this.emitError('BLE adapter not ready');
@@ -231,7 +231,7 @@ export class AcaiaService extends EventEmitter {
 
 	private async scanForScaleOrThrow(noble: Noble, myId: number): Promise<NoblePeripheral> {
 		this.log('scanning for scale...');
-		const peripheral = await this.scanForScale();
+		const peripheral = await this.scanForScale(noble);
 		this.assertNotStale(myId);
 		if (!peripheral) {
 			this.log('scan done — no scale found');
@@ -419,30 +419,32 @@ export class AcaiaService extends EventEmitter {
 		this._state = 'idle';
 	}
 
-	private waitForPoweredOn(timeoutMs = 10000): Promise<boolean> {
+	private waitForPoweredOn(noble: Noble, timeoutMs = 10000): Promise<boolean> {
 		return new Promise((resolve) => {
 			const onState = (state: string) => {
 				if (state === 'poweredOn') {
 					clearTimeout(timer);
-					this.noble!.removeListener('stateChange', onState);
+					noble.removeListener('stateChange', onState);
 					resolve(true);
 				}
 			};
 			const timer = setTimeout(() => {
-				this.noble!.removeListener('stateChange', onState);
+				noble.removeListener('stateChange', onState);
 				resolve(false);
 			}, timeoutMs);
-			this.noble!.on('stateChange', onState);
+			noble.on('stateChange', onState);
 		});
 	}
 
-	private scanForScale(timeoutMs = 10000): Promise<NoblePeripheral | null> {
+	private scanForScale(noble: Noble, timeoutMs = 10000): Promise<NoblePeripheral | null> {
 		return new Promise((resolve) => {
 			let discoverCount = 0;
 
 			const cleanup = () => {
-				this.noble!.removeListener('discover', onDiscover);
-				this.noble!.stopScanning();
+				noble.removeListener('discover', onDiscover);
+				try {
+					noble.stopScanning();
+				} catch {}
 			};
 
 			const timer = setTimeout(() => {
@@ -466,9 +468,9 @@ export class AcaiaService extends EventEmitter {
 				}
 			};
 
-			this.noble!.on('discover', onDiscover);
+			noble.on('discover', onDiscover);
 			try {
-				this.noble!.startScanning([], false);
+				noble.startScanning([], false);
 			} catch (scanErr: unknown) {
 				const msg = scanErr instanceof Error ? scanErr.message : String(scanErr);
 				this.log(`startScanning error: ${msg}`);
