@@ -37,7 +37,7 @@ if (mode === 'watch:windows') {
 const context = await esbuild.context({
 	entryPoints: ['src/main.ts'],
 	bundle: true,
-	external: ['obsidian', 'electron', '@codemirror/*', '@lezer/*', ...builtins.builtinModules],
+	external: ['obsidian', 'electron', '@codemirror/*', '@lezer/*', '@stoprocent/noble', ...builtins.builtinModules],
 	format: 'cjs',
 	target: 'es2022',
 	logLevel: 'info',
