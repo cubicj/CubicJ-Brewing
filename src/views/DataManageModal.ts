@@ -384,7 +384,8 @@ export class DataManageModal extends Modal {
 								return;
 							}
 							const saved = await submitGrinder(() => {
-								grinders[idx] = updated;
+								Object.assign(g, updated);
+								if (!updated.rpm) delete g.rpm;
 							});
 							if (!saved) return;
 							formEl.remove();
