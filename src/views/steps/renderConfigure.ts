@@ -80,6 +80,13 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 			void ctx.plugin.saveEquipment();
 		}, 500);
 	};
+	ctx.registerCleanup(() => {
+		if (persistTimer != null) {
+			window.clearTimeout(persistTimer);
+			persistTimer = null;
+			void ctx.plugin.saveEquipment();
+		}
+	});
 
 	const handleEquipmentChange = () => queryAndApplyDials();
 	const handleGrinderChange = (grinder: GrinderConfig) => {
