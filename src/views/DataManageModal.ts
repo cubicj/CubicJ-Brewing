@@ -353,6 +353,11 @@ export class DataManageModal extends Modal {
 			}
 		};
 
+		const openGrinderForm = (options: Parameters<typeof renderGrinderForm>[1]) => {
+			section.querySelector('.dm-equip-grinder-form')?.remove();
+			return renderGrinderForm(section, options);
+		};
+
 		const renderItems = () => {
 			listEl.empty();
 			if (grinders.length === 0) {
@@ -368,12 +373,18 @@ export class DataManageModal extends Modal {
 				row.createSpan({ cls: 'dm-equip-grinder-meta', text: metaParts.join(', ') });
 				const editBtn = row.createEl('button', { text: '✎', cls: 'dm-btn dm-equip-edit-btn' });
 				editBtn.addEventListener('click', () => {
-					const formEl = renderGrinderForm(section, {
-						initial: grinders[i],
+					const formEl = openGrinderForm({
+						initial: g,
 						submitLabel: t('form.save'),
 						onSubmit: async (updated) => {
+							const idx = grinders.indexOf(g);
+							if (idx === -1) {
+								formEl.remove();
+								renderItems();
+								return;
+							}
 							const saved = await submitGrinder(() => {
-								grinders[i] = updated;
+								grinders[idx] = updated;
 							});
 							if (!saved) return;
 							formEl.remove();
@@ -394,7 +405,7 @@ export class DataManageModal extends Modal {
 		if (grinders.length > 1) this.makeDraggable(listEl, grinders, renderItems);
 
 		addBtn.addEventListener('click', () => {
-			const formEl = renderGrinderForm(section, {
+			const formEl = openGrinderForm({
 				submitLabel: t('bean.add'),
 				onSubmit: async (grinder) => {
 					const saved = await submitGrinder(() => {
