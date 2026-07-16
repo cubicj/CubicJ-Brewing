@@ -4,6 +4,7 @@ import type { GrinderConfig, EquipmentSettings } from '../brew/types';
 import { t } from '../i18n/index';
 import { renderActiveBeanRow, renderFinishedBeanRow } from './BeanRowRenderer';
 import { createNewBean, getSortedBeans } from './beanHelpers';
+import { renderGrinderForm } from './GrinderForm';
 
 type TabId = 'bean' | 'recipe' | 'equip';
 
@@ -161,7 +162,7 @@ export class DataManageModal extends Modal {
 		listEl.addEventListener('pointerdown', (e) => {
 			if (active) return;
 			const row = (e.target as HTMLElement).closest<HTMLElement>('.dm-equip-row');
-			if (!row || (e.target as HTMLElement).closest('.dm-equip-del-btn')) return;
+			if (!row || (e.target as HTMLElement).closest('.dm-equip-del-btn, .dm-equip-edit-btn')) return;
 
 			const rows = Array.from(listEl.querySelectorAll<HTMLElement>('.dm-equip-row'));
 			const dragIdx = rows.indexOf(row);
@@ -340,6 +341,18 @@ export class DataManageModal extends Modal {
 		const listEl = section.createDiv({ cls: 'dm-equip-items' });
 		const grinders = this.plugin.equipment.grinders;
 
+		const submitGrinder = async (apply: () => void): Promise<boolean> => {
+			try {
+				apply();
+				await this.plugin.saveEquipment();
+				return true;
+			} catch (err) {
+				console.error('[DataManageModal] grinder save failed:', err);
+				new Notice(t('error.equipSave'));
+				return false;
+			}
+		};
+
 		const renderItems = () => {
 			listEl.empty();
 			if (grinders.length === 0) {
@@ -350,20 +363,30 @@ export class DataManageModal extends Modal {
 				const g = grinders[i];
 				const row = listEl.createDiv({ cls: 'dm-equip-row' });
 				row.createSpan({ cls: 'dm-equip-grinder-name', text: g.name });
-				row.createSpan({
-					cls: 'dm-equip-grinder-meta',
-					text: `${t('equip.grindRange')}: ${g.min}~${g.max}, ${t('equip.stepSize')}: ${g.step}`,
+				const metaParts = [`${t('equip.grindRange')}: ${g.min}~${g.max}`, `${t('equip.stepSize')}: ${g.step}`];
+				if (g.rpm) metaParts.push(`RPM: ${g.rpm.current} (${g.rpm.min}~${g.rpm.max})`);
+				row.createSpan({ cls: 'dm-equip-grinder-meta', text: metaParts.join(', ') });
+				const editBtn = row.createEl('button', { text: '✎', cls: 'dm-btn dm-equip-edit-btn' });
+				editBtn.addEventListener('click', () => {
+					const formEl = renderGrinderForm(section, {
+						initial: grinders[i],
+						submitLabel: t('form.save'),
+						onSubmit: async (updated) => {
+							const saved = await submitGrinder(() => {
+								grinders[i] = updated;
+							});
+							if (!saved) return;
+							formEl.remove();
+							renderItems();
+						},
+					});
 				});
-				const delBtn = row.createEl('button', { text: '\u2715', cls: 'dm-btn dm-equip-del-btn' });
+				const delBtn = row.createEl('button', { text: '✕', cls: 'dm-btn dm-equip-del-btn' });
 				delBtn.addEventListener('click', async () => {
-					try {
+					const saved = await submitGrinder(() => {
 						grinders.splice(i, 1);
-						await this.plugin.saveEquipment();
-						renderItems();
-					} catch (err) {
-						console.error('[DataManageModal] grinder delete failed:', err);
-						new Notice(t('error.equipSave'));
-					}
+					});
+					if (saved) renderItems();
 				});
 			}
 		};
@@ -371,66 +394,16 @@ export class DataManageModal extends Modal {
 		if (grinders.length > 1) this.makeDraggable(listEl, grinders, renderItems);
 
 		addBtn.addEventListener('click', () => {
-			const formEl = section.createDiv({ cls: 'dm-equip-grinder-form' });
-			const nameInput = formEl.createEl('input', {
-				type: 'text',
-				cls: 'dm-equip-input',
-				placeholder: t('equip.name'),
-				attr: { spellcheck: 'false' },
-			});
-
-			const rangeRow = formEl.createDiv({ cls: 'dm-equip-grinder-row' });
-			rangeRow.createSpan({ text: t('equip.grindRange') });
-			const minInput = rangeRow.createEl('input', {
-				type: 'number',
-				cls: 'dm-equip-input dm-equip-num',
-				placeholder: 'min',
-			});
-			rangeRow.createSpan({ text: '~' });
-			const maxInput = rangeRow.createEl('input', {
-				type: 'number',
-				cls: 'dm-equip-input dm-equip-num',
-				placeholder: 'max',
-			});
-
-			const stepRow = formEl.createDiv({ cls: 'dm-equip-grinder-row' });
-			stepRow.createSpan({ text: t('equip.stepSize') });
-			const stepSelect = stepRow.createEl('select', { cls: 'dm-equip-select' });
-			for (const s of [0.01, 0.1, 1]) {
-				stepSelect.createEl('option', { text: String(s), value: String(s) });
-			}
-			stepSelect.value = '0.1';
-			minInput.value = '0';
-			maxInput.value = '50';
-
-			const btnRow = formEl.createDiv({ cls: 'dm-equip-grinder-actions' });
-			const saveBtn = btnRow.createEl('button', { text: t('bean.add'), cls: 'dm-btn dm-btn-accent' });
-			const cancelBtn = btnRow.createEl('button', { text: t('common.cancel'), cls: 'dm-btn dm-btn-muted' });
-
-			nameInput.focus();
-
-			saveBtn.addEventListener('click', async () => {
-				const name = nameInput.value.trim();
-				if (!name) return;
-				try {
-					grinders.push({
-						name,
-						step: parseFloat(stepSelect.value),
-						min: parseFloat(minInput.value) || 0,
-						max: parseFloat(maxInput.value) || 50,
+			const formEl = renderGrinderForm(section, {
+				submitLabel: t('bean.add'),
+				onSubmit: async (grinder) => {
+					const saved = await submitGrinder(() => {
+						grinders.push(grinder);
 					});
-					await this.plugin.saveEquipment();
+					if (!saved) return;
 					formEl.remove();
 					renderItems();
-				} catch (err) {
-					console.error('[DataManageModal] grinder add failed:', err);
-					new Notice(t('error.equipSave'));
-				}
-			});
-			cancelBtn.addEventListener('click', () => formEl.remove());
-			nameInput.addEventListener('keydown', (e) => {
-				if (e.key === 'Enter') saveBtn.click();
-				if (e.key === 'Escape') formEl.remove();
+				},
 			});
 		});
 	}
