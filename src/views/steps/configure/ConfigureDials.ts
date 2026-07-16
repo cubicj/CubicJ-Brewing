@@ -8,13 +8,14 @@ export interface ConfigureDialValues {
 	dose: number;
 	waterTemp?: number;
 	accessories?: string[];
+	rpm?: number;
 }
 
 export interface ConfigureDialControls {
 	applyRecord: (record: BrewRecord) => void;
 	applyDefaults: (values: ConfigureDialValues) => void;
 	readValues: () => ConfigureDialValues;
-	rebuildGrindStepper: (grinder: GrinderConfig) => void;
+	rebuildGrinderSteppers: (grinder: GrinderConfig) => void;
 }
 
 function grinderToStepperConfig(grinder: GrinderConfig) {
@@ -34,6 +35,7 @@ export function renderConfigureDials(
 	selectedGrinder: GrinderConfig | undefined,
 	getWeightText: () => string,
 	syncSummary: () => void,
+	persistEquipment: () => void,
 ): ConfigureDialControls {
 	const isFilter = sel.method === 'filter';
 	const isEspresso = sel.method === 'espresso';
@@ -70,6 +72,41 @@ export function renderConfigureDials(
 
 	attachScaleAutoBtn(doseStepper, getWeightText);
 
+	let currentGrinder = selectedGrinder;
+	let rpmStepper: ReturnType<typeof createStepper> | null = null;
+
+	const applyRpmChange = (v: number) => {
+		sel.rpm = v;
+		if (currentGrinder?.rpm) {
+			currentGrinder.rpm.current = v;
+			persistEquipment();
+		}
+		syncSummary();
+	};
+
+	const buildRpmStepper = () => {
+		rpmStepper?.destroy();
+		rpmStepper = null;
+		const rpm = currentGrinder?.rpm;
+		if (!rpm) {
+			sel.rpm = undefined;
+			return;
+		}
+		rpmStepper = createStepper(form, {
+			label: t('form.rpm'),
+			initial: sel.rpm ?? rpm.current,
+			min: rpm.min,
+			max: rpm.max,
+			step: rpm.step,
+			format: (v) => String(Math.round(v)),
+			pxPerStep: 4,
+			onChange: applyRpmChange,
+		});
+		form.insertBefore(rpmStepper.el, doseStepper.el);
+		sel.rpm = rpmStepper.getValue();
+	};
+	buildRpmStepper();
+
 	let waterTempStepper: ReturnType<typeof createStepper> | null = null;
 	if (isFilter) {
 		waterTempStepper = createStepper(form, {
@@ -101,7 +138,8 @@ export function renderConfigureDials(
 	};
 	renderAccessories();
 
-	const rebuildGrindStepper = (grinder: GrinderConfig) => {
+	const rebuildGrinderSteppers = (grinder: GrinderConfig) => {
+		currentGrinder = grinder;
 		grindStepperConfig = grinderToStepperConfig(grinder);
 		grindStepper.destroy();
 		grindStepper = createStepper(form, {
@@ -112,6 +150,8 @@ export function renderConfigureDials(
 			onChange: grindOnChange,
 		});
 		form.insertBefore(grindStepper.el, doseStepper.el);
+		sel.rpm = undefined;
+		buildRpmStepper();
 	};
 
 	const applyRecord = (record: BrewRecord) => {
@@ -128,6 +168,9 @@ export function renderConfigureDials(
 		if (record.method === 'espresso') {
 			sel.accessories = record.accessories;
 			renderAccessories();
+		}
+		if (record.rpm != null && rpmStepper) {
+			rpmStepper.setValue(record.rpm);
 		}
 		syncSummary();
 	};
@@ -146,6 +189,10 @@ export function renderConfigureDials(
 		}
 		grindStepper.setValue(values.grindSize, true);
 		doseStepper.setValue(values.dose, true);
+		if (rpmStepper && values.rpm != null) {
+			rpmStepper.setValue(values.rpm, true);
+			sel.rpm = values.rpm;
+		}
 		syncSummary();
 	};
 
@@ -154,7 +201,8 @@ export function renderConfigureDials(
 		dose: doseStepper.getValue(),
 		...(isFilter && { waterTemp: waterTempStepper!.getValue() }),
 		...(isEspresso && { accessories: sel.accessories }),
+		...(rpmStepper && { rpm: rpmStepper.getValue() }),
 	});
 
-	return { applyRecord, applyDefaults, readValues, rebuildGrindStepper };
+	return { applyRecord, applyDefaults, readValues, rebuildGrinderSteppers };
 }

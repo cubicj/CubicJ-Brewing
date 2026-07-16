@@ -72,9 +72,18 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 		return records;
 	};
 
+	let persistTimer: number | null = null;
+	const persistEquipment = () => {
+		if (persistTimer != null) window.clearTimeout(persistTimer);
+		persistTimer = window.setTimeout(() => {
+			persistTimer = null;
+			void ctx.plugin.saveEquipment();
+		}, 500);
+	};
+
 	const handleEquipmentChange = () => queryAndApplyDials();
 	const handleGrinderChange = (grinder: GrinderConfig) => {
-		dialControls.rebuildGrindStepper(grinder);
+		dialControls.rebuildGrinderSteppers(grinder);
 	};
 
 	const equipmentControls = renderEquipmentFields(form, sel, ctx.equipment, handleEquipmentChange, handleGrinderChange);
@@ -86,6 +95,7 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 		equipmentControls.selectedGrinder,
 		ctx.getWeightText,
 		syncSummary,
+		persistEquipment,
 	);
 
 	const getSelectedGrinder = () => ctx.equipment.grinders.find((grinder) => grinder.name === sel.grinder);
@@ -103,7 +113,7 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 			const grinder = ctx.equipment.grinders.find((item) => item.name === defaults.grinder);
 			if (grinder) {
 				if (equipRefs.grinderSelect) equipRefs.grinderSelect.value = grinder.name;
-				dialControls.rebuildGrindStepper(grinder);
+				dialControls.rebuildGrinderSteppers(grinder);
 			}
 		}
 		applyDefaultDials();
@@ -116,7 +126,7 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 			if (grinder) {
 				sel.grinder = grinder.name;
 				if (equipRefs.grinderSelect) equipRefs.grinderSelect.value = grinder.name;
-				dialControls.rebuildGrindStepper(grinder);
+				dialControls.rebuildGrinderSteppers(grinder);
 			}
 		}
 		if (record.method === 'espresso') sel.accessories = record.accessories;
@@ -154,6 +164,7 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 			grindSize: dialValues.grindSize,
 			dose: dialValues.dose,
 			grinder: sel.grinder,
+			rpm: dialValues.rpm,
 		};
 		if (isFilter) {
 			vars.waterTemp = dialValues.waterTemp;
