@@ -68,6 +68,21 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 		format: (v) => v.toFixed(1),
 	});
 
+	const recordGrinder = deps.equipment.grinders.find((g) => g.name === record.grinder);
+	const rpmConfig = recordGrinder?.rpm;
+	let rpmStepper: ReturnType<typeof createStepper> | null = null;
+	if (record.rpm != null || rpmConfig) {
+		rpmStepper = createStepper(form, {
+			label: t('form.rpm'),
+			initial: record.rpm ?? 0,
+			min: 0,
+			max: rpmConfig?.max ?? 3000,
+			step: rpmConfig?.step ?? 10,
+			pxPerStep: 4,
+			format: (v) => String(Math.round(v)),
+		});
+	}
+
 	const doseStepper = createStepper(form, {
 		label: t('form.dose'),
 		initial: record.dose,
@@ -239,6 +254,7 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 				temp,
 				grindSize: grindStepper.getValue(),
 				grinder: grinderSelect?.value || undefined,
+				rpm: rpmStepper ? rpmStepper.getValue() || undefined : record.rpm,
 				dose: doseStepper.getValue(),
 				time: record.time,
 				yield: record.yield,

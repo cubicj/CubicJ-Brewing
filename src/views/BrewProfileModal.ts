@@ -246,6 +246,7 @@ export class BrewProfileModal extends Modal {
 		if (record.grinder) {
 			equipRow.push([t('equipment.grinder'), record.grinder]);
 			equipRow.push([t('form.grindSize'), fmtGrind(record.grindSize)]);
+			if (record.rpm != null) equipRow.push([t('form.rpm'), String(record.rpm)]);
 		}
 		if (record.method === 'filter') {
 			if (record.dripper) equipRow.push([t('equipment.dripper'), record.dripper]);
@@ -266,7 +267,10 @@ export class BrewProfileModal extends Modal {
 			dataRow.push([t('form.method'), `${getMethodLabel(record.method)}(${temp})`]);
 		}
 		dataRow.push([t('modal.roasting'), record.roastDays !== null ? t('bean.roastDays', { n: record.roastDays }) : '-']);
-		if (!record.grinder) dataRow.push([t('form.grindSize'), fmtGrind(record.grindSize)]);
+		if (!record.grinder) {
+			dataRow.push([t('form.grindSize'), fmtGrind(record.grindSize)]);
+			if (record.rpm != null) dataRow.push([t('form.rpm'), String(record.rpm)]);
+		}
 		dataRow.push([t('form.dose'), t('modal.grams', { n: record.dose })]);
 		if (record.method === 'filter' && record.waterTemp) dataRow.push([t('form.waterTemp'), `${record.waterTemp}°C`]);
 		if (record.waterWeight != null) dataRow.push([t('form.addition'), `${record.waterWeight}g`]);
