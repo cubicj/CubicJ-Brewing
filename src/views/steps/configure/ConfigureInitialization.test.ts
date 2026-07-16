@@ -6,6 +6,7 @@ import type {
 	EquipmentSettings,
 	EspressoRecord,
 	FilterRecord,
+	GrinderConfig,
 } from '../../../brew/types';
 import {
 	buildConfigureSetupKey,
@@ -205,5 +206,23 @@ describe('ConfigureInitialization', () => {
 			dose: 0,
 			accessories: undefined,
 		});
+	});
+});
+
+describe('getDefaultDialValues rpm', () => {
+	it('defaults rpm to the grinder current rpm', () => {
+		const grinder: GrinderConfig = {
+			name: 'DF64V',
+			step: 1,
+			min: 0,
+			max: 90,
+			rpm: { min: 300, max: 2000, step: 10, current: 1200 },
+		};
+		expect(getDefaultDialValues('filter', grinder).rpm).toBe(1200);
+	});
+
+	it('omits rpm for a fixed-rpm grinder', () => {
+		const grinder: GrinderConfig = { name: 'C40', step: 1, min: 0, max: 40 };
+		expect(getDefaultDialValues('filter', grinder).rpm).toBeUndefined();
 	});
 });

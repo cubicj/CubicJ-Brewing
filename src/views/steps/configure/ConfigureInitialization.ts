@@ -12,6 +12,7 @@ export interface ConfigureDialDefaults {
 	dose: number;
 	waterTemp?: number;
 	accessories?: string[];
+	rpm?: number;
 }
 
 export function buildConfigureSetupKey(sel: BrewFlowSelection): string | undefined {
@@ -53,6 +54,7 @@ export function getDefaultDialValues(method: BrewMethod, grinder: GrinderConfig 
 		grindSize: grinder?.min ?? 0,
 		dose: 0,
 		accessories: undefined,
+		rpm: grinder?.rpm?.current,
 	};
 	if (method === 'filter') {
 		defaults.waterTemp = 93;
