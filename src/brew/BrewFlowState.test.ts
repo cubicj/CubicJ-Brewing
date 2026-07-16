@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { BrewFlowState } from './BrewFlowState';
+import type { BeanInfo } from './types';
 
 describe('BrewFlowState', () => {
 	it('starts in idle', () => {
@@ -356,5 +357,48 @@ describe('BrewFlowState', () => {
 		expect(record.bean).toBe('첼로');
 		expect(record.grindSize).toBe(2.6);
 		expect((record as any).waterTemp).toBe(96);
+	});
+});
+
+describe('rpm handling', () => {
+	const bean: BeanInfo = {
+		path: 'beans/rpm.md',
+		name: 'RPM Bean',
+		roaster: 'Roaster',
+		status: 'active',
+		roastDate: null,
+		weight: null,
+	};
+
+	function reachSaving(state: BrewFlowState): void {
+		state.startBrew();
+		state.selectMethod('filter', 'hot');
+		state.selectBean(bean);
+		state.updateVariables({ grindSize: 20, dose: 15, waterTemp: 93 });
+		state.startBrewing();
+		state.finishBrewing(180, 240);
+	}
+
+	it('includes rpm in the built record when set', () => {
+		const state = new BrewFlowState();
+		reachSaving(state);
+		state.updateVariables({ rpm: 1200 });
+		expect(state.buildRecord().rpm).toBe(1200);
+	});
+
+	it('omits rpm from the built record when unset', () => {
+		const state = new BrewFlowState();
+		reachSaving(state);
+		expect(state.buildRecord().rpm).toBeUndefined();
+	});
+
+	it('clears rpm when the bean changes', () => {
+		const state = new BrewFlowState();
+		state.startBrew();
+		state.selectMethod('filter', 'hot');
+		state.selectBean(bean);
+		state.updateVariables({ rpm: 1200 });
+		state.selectBean({ ...bean, name: 'Other Bean' });
+		expect(state.selection.rpm).toBeUndefined();
 	});
 });

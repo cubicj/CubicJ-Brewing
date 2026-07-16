@@ -40,6 +40,7 @@ export class BrewFlowState {
 		this.selection.filter = undefined;
 		this.selection.dripper = undefined;
 		this.selection.grinder = undefined;
+		this.selection.rpm = undefined;
 		this.selection.basket = undefined;
 		this.selection.accessories = undefined;
 	}
@@ -137,6 +138,7 @@ export class BrewFlowState {
 			temp: s.temp,
 			grindSize: s.grindSize,
 			grinder: s.grinder,
+			rpm: s.rpm,
 			dose: s.dose,
 			time: s.time,
 			yield: s.yield,
