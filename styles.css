@@ -174,7 +174,8 @@
 /* Data manage modal */
 
 .cubicj-data-manage-modal-container {
-	max-width: 640px;
+	width: min(92vw, 800px);
+	max-width: 92vw;
 	padding: 0;
 }
 
