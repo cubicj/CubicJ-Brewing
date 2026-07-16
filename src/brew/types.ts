@@ -41,11 +41,19 @@ export interface BrewProfilePoint {
 	s?: boolean;
 }
 
+export interface GrinderRpmConfig {
+	min: number;
+	max: number;
+	step: number;
+	current: number;
+}
+
 export interface GrinderConfig {
 	name: string;
 	step: number;
 	min: number;
 	max: number;
+	rpm?: GrinderRpmConfig;
 }
 
 export interface EquipmentSettings {
@@ -66,6 +74,7 @@ interface BrewRecordBase {
 	temp: BrewTemp;
 	grindSize: number;
 	grinder?: string;
+	rpm?: number;
 	dose: number;
 	time?: number;
 	yield?: number;
@@ -103,6 +112,7 @@ export interface BrewFlowSelection {
 	filter?: string;
 	basket?: string;
 	grinder?: string;
+	rpm?: number;
 	dripper?: string;
 	accessories?: string[];
 	recipe?: RecipeInfo;

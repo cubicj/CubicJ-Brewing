@@ -9,7 +9,7 @@ import { VaultDataService } from './services/VaultDataService';
 import { BeanCodeBlock } from './views/BeanCodeBlock';
 import { BrewCodeBlock } from './views/BrewCodeBlock';
 import { BrewDayCodeBlock } from './views/BrewDayCodeBlock';
-import type { EquipmentSettings, GrinderConfig, LogConfig } from './brew/types';
+import type { EquipmentSettings, GrinderConfig, GrinderRpmConfig, LogConfig } from './brew/types';
 import { BrewingSettingTab } from './views/SettingTab';
 import { initI18n, t } from './i18n/index';
 
@@ -322,9 +322,18 @@ export default class CubicJBrewingPlugin extends Plugin {
 					typeof (g as GrinderConfig).step === 'number' &&
 					typeof (g as GrinderConfig).min === 'number' &&
 					typeof (g as GrinderConfig).max === 'number';
+				const isRpm = (r: unknown): r is GrinderRpmConfig =>
+					r != null &&
+					typeof r === 'object' &&
+					typeof (r as GrinderRpmConfig).min === 'number' &&
+					typeof (r as GrinderRpmConfig).max === 'number' &&
+					typeof (r as GrinderRpmConfig).step === 'number' &&
+					typeof (r as GrinderRpmConfig).current === 'number';
+				const sanitizeGrinder = (g: GrinderConfig): GrinderConfig =>
+					g.rpm === undefined || isRpm(g.rpm) ? g : { name: g.name, step: g.step, min: g.min, max: g.max };
 				const isString = (s: unknown): s is string => typeof s === 'string';
 				this.equipment = {
-					grinders: (eq.grinders as unknown[]).filter(isGrinder),
+					grinders: (eq.grinders as unknown[]).filter(isGrinder).map(sanitizeGrinder),
 					drippers: (eq.drippers as unknown[]).filter(isString),
 					filters: (eq.filters as unknown[]).filter(isString),
 					baskets: (eq.baskets as unknown[]).filter(isString),

@@ -12,6 +12,13 @@ function makePlugin(data: unknown): CubicJBrewingPlugin {
 }
 
 const validGrinder: GrinderConfig = { name: 'C40', step: 1, min: 0, max: 40 };
+const rpmGrinder: GrinderConfig = {
+	name: 'DF64V',
+	step: 1,
+	min: 0,
+	max: 90,
+	rpm: { min: 300, max: 2000, step: 10, current: 1200 },
+};
 
 describe('loadPluginData equipment validation', () => {
 	it('keeps valid equipment intact', async () => {
@@ -71,5 +78,22 @@ describe('loadPluginData equipment validation', () => {
 		});
 		await plugin.loadPluginData();
 		expect(plugin.equipment).toEqual({ grinders: [], drippers: [], filters: [], baskets: [], accessories: [] });
+	});
+
+	it('keeps a valid rpm config on a grinder', async () => {
+		const plugin = makePlugin({
+			equipment: { grinders: [rpmGrinder], drippers: [], filters: [], baskets: [], accessories: [] },
+		});
+		await plugin.loadPluginData();
+		expect(plugin.equipment.grinders).toEqual([rpmGrinder]);
+	});
+
+	it('strips a malformed rpm config but keeps the grinder', async () => {
+		const broken = { ...validGrinder, rpm: { min: 300, max: 2000, step: 10, current: 'fast' } };
+		const plugin = makePlugin({
+			equipment: { grinders: [broken], drippers: [], filters: [], baskets: [], accessories: [] },
+		});
+		await plugin.loadPluginData();
+		expect(plugin.equipment.grinders).toEqual([validGrinder]);
 	});
 });
