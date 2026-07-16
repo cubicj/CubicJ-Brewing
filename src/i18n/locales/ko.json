@@ -92,6 +92,9 @@
 	"equip.grindRange": "분쇄도 범위",
 	"equip.stepSize": "최소 단위",
 	"equip.name": "이름",
+	"equip.rpmVariable": "RPM 가변",
+	"equip.rpmRange": "RPM 범위",
+	"equip.rpmCurrent": "현재 RPM",
 
 	"equipment.grinder": "그라인더",
 	"equipment.filter": "필터",
@@ -113,6 +116,7 @@
 	"form.temperature": "온도",
 	"form.grinder": "그라인더",
 	"form.grindSize": "분쇄도",
+	"form.rpm": "RPM",
 	"form.dose": "도징량(g)",
 	"form.waterTemp": "물 온도(°C)",
 	"form.filter": "필터",

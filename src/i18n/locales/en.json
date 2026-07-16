@@ -92,6 +92,9 @@
 	"equip.grindRange": "Grind Range",
 	"equip.stepSize": "Step Size",
 	"equip.name": "Name",
+	"equip.rpmVariable": "Variable RPM",
+	"equip.rpmRange": "RPM Range",
+	"equip.rpmCurrent": "Current RPM",
 
 	"equipment.grinder": "Grinder",
 	"equipment.filter": "Filter",
@@ -113,6 +116,7 @@
 	"form.temperature": "Temperature",
 	"form.grinder": "Grinder",
 	"form.grindSize": "Grind Size",
+	"form.rpm": "RPM",
 	"form.dose": "Dose (g)",
 	"form.waterTemp": "Water Temp (°C)",
 	"form.filter": "Filter",
