@@ -27,6 +27,31 @@ const makeFilter = (overrides: Partial<FilterRecord> = {}): FilterRecord => ({
 	...overrides,
 });
 
+const emptyEquipment = () => ({
+	grinders: [],
+	drippers: [],
+	filters: [],
+	baskets: [],
+	accessories: [],
+});
+
+async function renderRecords(records: FilterRecord[]): Promise<HTMLElement> {
+	const recordService = {
+		getAll: vi.fn().mockResolvedValue({ ok: true, data: records }),
+	};
+	const block = new BrewDayCodeBlock({} as any, recordService as any, {} as any, emptyEquipment);
+	let handler!: (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void;
+	block.register((_lang, registeredHandler) => {
+		handler = registeredHandler;
+	});
+	const el = createContainer();
+
+	handler('', el, { sourcePath: 'Daily/2026-07-01.md' } as MarkdownPostProcessorContext);
+	await Promise.resolve();
+
+	return el;
+}
+
 describe('BrewDayCodeBlock', () => {
 	it('keeps only the latest render when refreshes overlap', async () => {
 		const record = makeFilter();
@@ -59,5 +84,26 @@ describe('BrewDayCodeBlock', () => {
 
 		expect(el.querySelectorAll('.brew-day-record-group')).toHaveLength(1);
 		expect(el.querySelectorAll('.brew-record-table tbody tr')).toHaveLength(1);
+	});
+
+	it('renders roast age between the date and method columns', async () => {
+		const el = await renderRecords([
+			makeFilter({ id: 'roast-set', roastDays: 11 }),
+			makeFilter({ id: 'roast-null', timestamp: '2026-07-01T09:00:00', roastDays: null }),
+		]);
+		const headers = el.querySelectorAll('.brew-record-table thead th');
+		const roastCells = el.querySelectorAll('.brew-record-roast');
+
+		expect(headers).toHaveLength(5);
+		expect(headers[1]?.textContent).toBe('record.roastDays');
+		expect(Array.from(roastCells, (cell) => cell.textContent)).toEqual(['bean.roastDays', '-']);
+	});
+
+	it('spans the note expansion across all five columns', async () => {
+		const el = await renderRecords([makeFilter({ note: 'Tasting note' })]);
+
+		el.querySelector<HTMLElement>('.brew-record-note')?.click();
+
+		expect(el.querySelector<HTMLTableCellElement>('.brew-record-expand td')?.colSpan).toBe(5);
 	});
 });

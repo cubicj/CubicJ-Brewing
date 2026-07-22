@@ -52,6 +52,7 @@
 	"record.dayEmpty": "No brew records for this day",
 	"record.dayInvalidFileName": "Only available in daily notes named YYYY-MM-DD.md",
 	"record.date": "Date",
+	"record.roastDays": "Roast",
 	"record.method": "Method",
 	"record.memo": "Memo",
 	"record.detail": "Detail",

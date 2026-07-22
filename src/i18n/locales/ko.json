@@ -52,6 +52,7 @@
 	"record.dayEmpty": "이 날의 브루잉 기록이 없어요",
 	"record.dayInvalidFileName": "YYYY-MM-DD.md 형식의 일일노트에서만 사용 가능",
 	"record.date": "날짜",
+	"record.roastDays": "로스팅",
 	"record.method": "방식",
 	"record.memo": "메모",
 	"record.detail": "상세",

@@ -36,7 +36,13 @@ export function renderBrewRecordTable(
 	const table = el.createEl('table', { cls: 'brew-record-table' });
 	const thead = table.createEl('thead');
 	const headerRow = thead.createEl('tr');
-	for (const col of [t('record.date'), t('record.method'), t('record.memo'), t('record.detail')]) {
+	for (const col of [
+		t('record.date'),
+		t('record.roastDays'),
+		t('record.method'),
+		t('record.memo'),
+		t('record.detail'),
+	]) {
 		headerRow.createEl('th', { text: col });
 	}
 
@@ -57,6 +63,10 @@ export function renderBrewRecordTable(
 		const { date, time } = formatBrewDate(record.timestamp);
 		dateTd.createDiv({ text: date });
 		dateTd.createDiv({ text: time });
+		tr.createEl('td', {
+			text: record.roastDays != null ? t('bean.roastDays', { n: record.roastDays }) : '-',
+			cls: 'brew-record-roast',
+		});
 		const method = record.method === 'espresso' ? getDrinkLabel(record.drink ?? 'shot') : getMethodLabel('filter');
 		const temp = getTempLabel(record.temp);
 		tr.createEl('td', { text: `${method}(${temp})` });
@@ -74,7 +84,7 @@ export function renderBrewRecordTable(
 			expandTr.addClass('brew-record-expand');
 			tr.after(expandTr);
 			const expandTd = expandTr.createEl('td');
-			expandTd.colSpan = 4;
+			expandTd.colSpan = 5;
 			renderNoteExpand(expandTd, record, options.recordService);
 			expandState = { tr: expandTr, id: record.id };
 		});
