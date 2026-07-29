@@ -1,3 +1,10 @@
+.cubicj-brewing-view {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	overflow: hidden;
+}
+
 .cubicj-brewing-view .brewing-scale-header {
 	display: flex;
 	align-items: center;
@@ -59,6 +66,7 @@
 
 .cubicj-brewing-view .brewing-content-area {
 	flex: 1;
+	min-height: 0;
 	overflow-y: auto;
 	padding-top: var(--size-4-2);
 }
