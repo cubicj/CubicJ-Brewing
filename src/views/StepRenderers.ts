@@ -28,6 +28,7 @@ export const STEP_ORDER: FlowStep[] = STEP_CONFIG.map((c) => c.step);
 export interface AccordionActions {
 	update: () => void;
 	expand: (step: FlowStep) => void;
+	scrollToStep: (step: FlowStep) => void;
 	animateContentChange: (step: FlowStep, fn: () => void) => void;
 	updateSummaries: () => void;
 }

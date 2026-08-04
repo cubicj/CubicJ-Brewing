@@ -101,6 +101,19 @@ describe('AccordionManager', () => {
 		expect(bodies[1].classList.contains('is-open')).toBe(true);
 	});
 
+	it('scrollStepToTop aligns the target panel with the container top', () => {
+		acc.manager.build();
+		const panel = acc.container.querySelectorAll('.brew-accordion-panel')[3] as HTMLElement;
+		acc.container.scrollTop = 40;
+		acc.container.scrollTo = vi.fn();
+		vi.spyOn(acc.container, 'getBoundingClientRect').mockReturnValue({ top: 30 } as DOMRect);
+		vi.spyOn(panel, 'getBoundingClientRect').mockReturnValue({ top: 180 } as DOMRect);
+
+		acc.manager.scrollStepToTop('brewing');
+
+		expect(acc.container.scrollTo).toHaveBeenCalledWith({ top: 190, behavior: 'smooth' });
+	});
+
 	it('clearExpandedSteps stops rendering new content', () => {
 		acc.manager.build();
 		acc.manager.togglePanel(0);

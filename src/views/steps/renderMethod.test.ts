@@ -20,6 +20,7 @@ function makeContext(flowState: BrewFlowState): StepRenderContext {
 		accordion: {
 			update: vi.fn(),
 			expand: vi.fn(),
+			scrollToStep: vi.fn(),
 			animateContentChange: vi.fn((_, fn: () => void) => fn()),
 			updateSummaries: vi.fn(),
 		},

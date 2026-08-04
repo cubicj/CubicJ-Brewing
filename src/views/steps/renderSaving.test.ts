@@ -49,6 +49,7 @@ function makeSavingContext(bean: BeanInfo, setWeightResult: Result<void>) {
 		accordion: {
 			update: vi.fn(),
 			expand: vi.fn(),
+			scrollToStep: vi.fn(),
 			animateContentChange: vi.fn((_, fn: () => void) => fn()),
 			updateSummaries: vi.fn(),
 		},

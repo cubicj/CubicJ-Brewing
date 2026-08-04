@@ -165,6 +165,15 @@ export class AccordionManager {
 		this.expandedSteps.add(STEP_ORDER.indexOf(step));
 	}
 
+	scrollStepToTop(step: FlowStep): void {
+		const idx = STEP_ORDER.indexOf(step);
+		const panel = this.panels[idx]?.panel;
+		if (!panel) return;
+		const top =
+			panel.getBoundingClientRect().top - this.contentArea.getBoundingClientRect().top + this.contentArea.scrollTop;
+		this.contentArea.scrollTo({ top, behavior: 'smooth' });
+	}
+
 	animateContentChange(step: FlowStep, mutation: () => void): void {
 		const idx = STEP_ORDER.indexOf(step);
 		const p = this.panels[idx];

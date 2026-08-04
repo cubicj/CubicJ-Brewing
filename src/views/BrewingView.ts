@@ -201,6 +201,7 @@ export class BrewingView extends ItemView {
 			accordion: {
 				update: () => this.accordion.update(),
 				expand: (step) => this.accordion.expandStep(step),
+				scrollToStep: (step) => this.accordion.scrollStepToTop(step),
 				animateContentChange: (step, fn) => this.accordion.animateContentChange(step, fn),
 				updateSummaries: () => this.accordion.updateSummaries(),
 			},

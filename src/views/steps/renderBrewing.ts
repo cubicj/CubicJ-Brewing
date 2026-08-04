@@ -99,6 +99,7 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 					await ctx.timerController.handleTimerClick();
 				}
 				ctx.accordion.update();
+				ctx.accordion.scrollToStep('brewing');
 			} catch (err) {
 				console.error('[StepRenderers] brew start failed:', err);
 				new Notice(t('brew.unexpectedError'));
