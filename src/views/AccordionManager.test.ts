@@ -144,8 +144,8 @@ describe('AccordionManager', () => {
 		expect(animation.requestAnimationFrame).toHaveBeenCalledTimes(1);
 
 		animation.runFrame(1000);
-		animation.runFrame(1175);
-		animation.runFrame(1350);
+		animation.runFrame(1250);
+		animation.runFrame(1500);
 
 		expect(acc.container.scrollTop).toBe(190);
 	});

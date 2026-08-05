@@ -188,7 +188,7 @@ export class AccordionManager {
 		let startTime: number | null = null;
 		const animate = (timestamp: number) => {
 			if (startTime === null) startTime = timestamp;
-			const progress = Math.min((timestamp - startTime) / 350, 1);
+			const progress = Math.min((timestamp - startTime) / 500, 1);
 			if (progress === 1) {
 				this.contentArea.scrollTop = target;
 				this.scrollAnimationFrame = null;
