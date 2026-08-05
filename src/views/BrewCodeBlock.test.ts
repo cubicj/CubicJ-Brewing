@@ -2,6 +2,7 @@
 import type { App, MarkdownPostProcessorContext } from 'obsidian';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { installPolyfills, createContainer } from '../test/obsidian-dom-polyfill';
+import type { FilterRecord } from '../brew/types';
 
 vi.mock('../i18n/index', () => ({
 	t: (key: string) => key,
@@ -13,6 +14,20 @@ import { BrewCodeBlock } from './BrewCodeBlock';
 beforeAll(() => installPolyfills());
 
 const emptyEquipment = () => ({ grinders: [], drippers: [], filters: [], baskets: [], accessories: [] });
+
+const makeFilter = (overrides: Partial<FilterRecord> = {}): FilterRecord => ({
+	id: 'record-1',
+	timestamp: '2026-07-01T10:00:00',
+	bean: 'A Bean',
+	roastDate: '2026-06-20',
+	roastDays: 11,
+	method: 'filter',
+	temp: 'hot',
+	grindSize: 2.5,
+	dose: 18,
+	waterTemp: 93,
+	...overrides,
+});
 
 function makeBlock(app: App) {
 	const block = new BrewCodeBlock(
@@ -29,6 +44,40 @@ function makeBlock(app: App) {
 }
 
 describe('BrewCodeBlock bean resolution', () => {
+	it('refreshes detached blocks and keeps them tracked', async () => {
+		const app = {
+			metadataCache: {
+				getFileCache: vi.fn(() => ({ frontmatter: { type: 'bean', name: 'A Bean' } })),
+			},
+			vault: {
+				getAbstractFileByPath: vi.fn(() => ({ extension: 'md', name: 'A.md' })),
+			},
+		} as unknown as App;
+		let records = [makeFilter({ note: 'Old note' })];
+		const recordService = {
+			getByBean: vi.fn(async () => ({ ok: true as const, data: records })),
+		};
+		const block = new BrewCodeBlock(app, recordService as never, {} as never, emptyEquipment);
+		let handler!: (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void;
+		block.register((_lang, registeredHandler) => {
+			handler = registeredHandler;
+		});
+		const el = createContainer();
+		document.body.appendChild(el);
+
+		handler('', el, { sourcePath: 'A.md' } as MarkdownPostProcessorContext);
+		await vi.waitFor(() => expect(el.textContent).toContain('Old note'));
+
+		el.remove();
+		records = [makeFilter({ id: 'record-2', note: 'New note' })];
+		block.refreshAll();
+		await vi.waitFor(() => expect(el.textContent).toContain('New note'));
+		expect(recordService.getByBean).toHaveBeenCalledTimes(2);
+
+		block.refreshAll();
+		expect(recordService.getByBean).toHaveBeenCalledTimes(3);
+	});
+
 	it('falls back to the placeholder when metadata never resolves', async () => {
 		vi.useFakeTimers();
 		try {

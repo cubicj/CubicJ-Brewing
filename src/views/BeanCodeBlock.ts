@@ -37,7 +37,7 @@ export class BeanCodeBlock {
 	refreshAll(): void {
 		this.containers = this.containers.filter((ref) => {
 			const el = ref.deref();
-			if (!el || !el.isConnected) return false;
+			if (!el) return false;
 			this.render(el);
 			return true;
 		});

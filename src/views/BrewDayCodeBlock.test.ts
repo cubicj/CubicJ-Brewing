@@ -53,6 +53,32 @@ async function renderRecords(records: FilterRecord[]): Promise<HTMLElement> {
 }
 
 describe('BrewDayCodeBlock', () => {
+	it('refreshes detached blocks and keeps them tracked', async () => {
+		let records = [makeFilter({ bean: 'Old Bean' })];
+		const recordService = {
+			getAll: vi.fn(async () => ({ ok: true as const, data: records })),
+		};
+		const block = new BrewDayCodeBlock({} as any, recordService as any, {} as any, emptyEquipment);
+		let handler!: (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void;
+		block.register((_lang, registeredHandler) => {
+			handler = registeredHandler;
+		});
+		const el = createContainer();
+		document.body.appendChild(el);
+
+		handler('', el, { sourcePath: 'Daily/2026-07-01.md' } as MarkdownPostProcessorContext);
+		await vi.waitFor(() => expect(el.textContent).toContain('Old Bean'));
+
+		el.remove();
+		records = [makeFilter({ id: 'record-2', bean: 'New Bean' })];
+		block.refreshAll();
+		await vi.waitFor(() => expect(el.textContent).toContain('New Bean'));
+		expect(recordService.getAll).toHaveBeenCalledTimes(2);
+
+		block.refreshAll();
+		expect(recordService.getAll).toHaveBeenCalledTimes(3);
+	});
+
 	it('keeps only the latest render when refreshes overlap', async () => {
 		const record = makeFilter();
 		let resolveRecords!: (value: { ok: true; data: FilterRecord[] }) => void;

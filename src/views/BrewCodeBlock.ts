@@ -32,7 +32,7 @@ export class BrewCodeBlock {
 	refreshAll(): void {
 		this.containers = this.containers.filter((ref) => {
 			const el = ref.deref();
-			if (!el || !el.isConnected) return false;
+			if (!el) return false;
 			const path = el.dataset.sourcePath;
 			if (path) this.renderAsync(el, path);
 			return true;
