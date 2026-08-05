@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { installPolyfills, createContainer } from '../test/obsidian-dom-polyfill';
 
 vi.mock('../i18n/index', () => ({
@@ -26,11 +26,40 @@ function makeAccordion() {
 	return { container, manager, renderStep, getStepSummary, getCurrentStep };
 }
 
+function installAnimationFrameQueue() {
+	let nextId = 1;
+	const callbacks = new Map<number, FrameRequestCallback>();
+	const requestAnimationFrame = vi.fn((callback: FrameRequestCallback) => {
+		const id = nextId++;
+		callbacks.set(id, callback);
+		return id;
+	});
+	const cancelAnimationFrame = vi.fn((id: number) => {
+		callbacks.delete(id);
+	});
+	const runFrame = (timestamp: number) => {
+		const entry = callbacks.entries().next().value as [number, FrameRequestCallback] | undefined;
+		if (!entry) throw new Error('No animation frame queued');
+		const [id, callback] = entry;
+		callbacks.delete(id);
+		callback(timestamp);
+	};
+
+	vi.stubGlobal('requestAnimationFrame', requestAnimationFrame);
+	vi.stubGlobal('cancelAnimationFrame', cancelAnimationFrame);
+
+	return { requestAnimationFrame, cancelAnimationFrame, runFrame };
+}
+
 describe('AccordionManager', () => {
 	let acc: ReturnType<typeof makeAccordion>;
 
 	beforeEach(() => {
 		acc = makeAccordion();
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
 	});
 
 	it('isBuilt returns false before build', () => {
@@ -102,16 +131,39 @@ describe('AccordionManager', () => {
 	});
 
 	it('scrollStepToTop aligns the target panel with the container top', () => {
+		const animation = installAnimationFrameQueue();
 		acc.manager.build();
 		const panel = acc.container.querySelectorAll('.brew-accordion-panel')[3] as HTMLElement;
 		acc.container.scrollTop = 40;
-		acc.container.scrollTo = vi.fn();
+		Object.defineProperty(acc.container, 'scrollHeight', { configurable: true, value: 300 });
+		Object.defineProperty(acc.container, 'clientHeight', { configurable: true, value: 100 });
 		vi.spyOn(acc.container, 'getBoundingClientRect').mockReturnValue({ top: 30 } as DOMRect);
 		vi.spyOn(panel, 'getBoundingClientRect').mockReturnValue({ top: 180 } as DOMRect);
 
 		acc.manager.scrollStepToTop('brewing');
+		expect(animation.requestAnimationFrame).toHaveBeenCalledTimes(1);
 
-		expect(acc.container.scrollTo).toHaveBeenCalledWith({ top: 190, behavior: 'smooth' });
+		animation.runFrame(1000);
+		animation.runFrame(1175);
+		animation.runFrame(1350);
+
+		expect(acc.container.scrollTop).toBe(190);
+	});
+
+	it('scrollStepToTop cancels an in-flight animation before starting another', () => {
+		const animation = installAnimationFrameQueue();
+		acc.manager.build();
+		const panel = acc.container.querySelectorAll('.brew-accordion-panel')[3] as HTMLElement;
+		acc.container.scrollTop = 40;
+		Object.defineProperty(acc.container, 'scrollHeight', { configurable: true, value: 300 });
+		Object.defineProperty(acc.container, 'clientHeight', { configurable: true, value: 100 });
+		vi.spyOn(acc.container, 'getBoundingClientRect').mockReturnValue({ top: 30 } as DOMRect);
+		vi.spyOn(panel, 'getBoundingClientRect').mockReturnValue({ top: 180 } as DOMRect);
+
+		acc.manager.scrollStepToTop('brewing');
+		acc.manager.scrollStepToTop('brewing');
+
+		expect(animation.cancelAnimationFrame).toHaveBeenCalledWith(1);
 	});
 
 	it('clearExpandedSteps stops rendering new content', () => {

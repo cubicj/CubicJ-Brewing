@@ -16,6 +16,7 @@ export class AccordionManager {
 	}> = [];
 	private expandedSteps = new Set<number>();
 	private accordionEndListeners = new WeakMap<HTMLElement, (e: TransitionEvent) => void>();
+	private scrollAnimationFrame: number | null = null;
 
 	constructor(
 		private contentArea: HTMLElement,
@@ -169,9 +170,36 @@ export class AccordionManager {
 		const idx = STEP_ORDER.indexOf(step);
 		const panel = this.panels[idx]?.panel;
 		if (!panel) return;
+		if (this.scrollAnimationFrame !== null) {
+			cancelAnimationFrame(this.scrollAnimationFrame);
+			this.scrollAnimationFrame = null;
+		}
 		const top =
 			panel.getBoundingClientRect().top - this.contentArea.getBoundingClientRect().top + this.contentArea.scrollTop;
-		this.contentArea.scrollTo({ top, behavior: 'smooth' });
+		const maxScrollTop = Math.max(0, this.contentArea.scrollHeight - this.contentArea.clientHeight);
+		const target = Math.min(Math.max(top, 0), maxScrollTop);
+		const start = this.contentArea.scrollTop;
+		const distance = target - start;
+		if (Math.abs(distance) < 1) {
+			this.contentArea.scrollTop = target;
+			return;
+		}
+
+		let startTime: number | null = null;
+		const animate = (timestamp: number) => {
+			if (startTime === null) startTime = timestamp;
+			const progress = Math.min((timestamp - startTime) / 350, 1);
+			if (progress === 1) {
+				this.contentArea.scrollTop = target;
+				this.scrollAnimationFrame = null;
+				return;
+			}
+			const eased = 1 - Math.pow(1 - progress, 3);
+			this.contentArea.scrollTop = start + distance * eased;
+			this.scrollAnimationFrame = requestAnimationFrame(animate);
+		};
+
+		this.scrollAnimationFrame = requestAnimationFrame(animate);
 	}
 
 	animateContentChange(step: FlowStep, mutation: () => void): void {
