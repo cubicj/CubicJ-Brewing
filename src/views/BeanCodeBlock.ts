@@ -4,9 +4,10 @@ import type { BeanInfo } from '../brew/types';
 import { t } from '../i18n/index';
 import { renderActiveBeanRow, renderFinishedBeanRow } from './BeanRowRenderer';
 import { createNewBean, getSortedBeans } from './beanHelpers';
+import { CodeBlockRefreshRegistry } from './CodeBlockRefreshRegistry';
 
 export class BeanCodeBlock {
-	private containers: WeakRef<HTMLElement>[] = [];
+	private registry = new CodeBlockRefreshRegistry();
 	private getScaleWeight: (() => number | null) | null = null;
 
 	constructor(
@@ -29,18 +30,13 @@ export class BeanCodeBlock {
 		) => void,
 	): void {
 		registerFn('beans', (_source, el, _ctx) => {
-			this.containers.push(new WeakRef(el));
+			this.registry.track(el);
 			this.render(el);
 		});
 	}
 
 	refreshAll(): void {
-		this.containers = this.containers.filter((ref) => {
-			const el = ref.deref();
-			if (!el) return false;
-			this.render(el);
-			return true;
-		});
+		this.registry.refreshAll((el) => this.render(el));
 	}
 
 	render(el: HTMLElement): void {

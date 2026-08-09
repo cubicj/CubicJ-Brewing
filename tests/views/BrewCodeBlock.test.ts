@@ -78,6 +78,94 @@ describe('BrewCodeBlock bean resolution', () => {
 		expect(recordService.getByBean).toHaveBeenCalledTimes(3);
 	});
 
+	it('keeps the newer output when an older render resolves last', async () => {
+		const app = {
+			metadataCache: {
+				getFileCache: vi.fn(() => ({ frontmatter: { type: 'bean', name: 'A Bean' } })),
+			},
+			vault: {
+				getAbstractFileByPath: vi.fn(() => ({ extension: 'md', name: 'A.md' })),
+			},
+		} as unknown as App;
+		let resolveOlder!: (value: { ok: true; data: FilterRecord[] }) => void;
+		let resolveNewer!: (value: { ok: true; data: FilterRecord[] }) => void;
+		const older = new Promise<{ ok: true; data: FilterRecord[] }>((resolve) => {
+			resolveOlder = resolve;
+		});
+		const newer = new Promise<{ ok: true; data: FilterRecord[] }>((resolve) => {
+			resolveNewer = resolve;
+		});
+		const recordService = {
+			getByBean: vi.fn().mockReturnValueOnce(older).mockReturnValueOnce(newer),
+		};
+		const block = new BrewCodeBlock(app, recordService as never, {} as never, emptyEquipment);
+		let handler!: (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void;
+		block.register((_lang, registeredHandler) => {
+			handler = registeredHandler;
+		});
+		const el = createContainer();
+
+		handler('', el, { sourcePath: 'A.md' } as MarkdownPostProcessorContext);
+		block.refreshAll();
+		resolveNewer({ ok: true, data: [makeFilter({ id: 'newer', note: 'Newer output' })] });
+		await vi.waitFor(() => expect(el.textContent).toContain('Newer output'));
+
+		resolveOlder({ ok: true, data: [makeFilter({ id: 'older', note: 'Older output' })] });
+		await Promise.resolve();
+
+		expect(el.textContent).toContain('Newer output');
+		expect(el.textContent).not.toContain('Older output');
+	});
+
+	it('abandons an older render immediately after its metadata wait', async () => {
+		let resolvedCallback: (() => void) | null = null;
+		let pendingReady = false;
+		const app = {
+			metadataCache: {
+				on: vi.fn((_name: string, cb: () => void) => {
+					resolvedCallback = cb;
+					return { e: true };
+				}),
+				offref: vi.fn(),
+				getFileCache: vi.fn((file: { name: string }) => ({
+					frontmatter: {
+						type: 'bean',
+						name: file.name === 'Pending.md' ? 'Pending Bean' : 'Fresh Bean',
+					},
+				})),
+			},
+			vault: {
+				getAbstractFileByPath: vi.fn((path: string) =>
+					path === 'Pending.md' && !pendingReady ? null : { extension: 'md', name: path },
+				),
+			},
+		} as unknown as App;
+		const recordService = {
+			getByBean: vi.fn(async (beanName: string) => ({
+				ok: true as const,
+				data: [makeFilter({ id: beanName, note: `${beanName} output` })],
+			})),
+		};
+		const block = new BrewCodeBlock(app, recordService as never, {} as never, emptyEquipment);
+		let handler!: (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void;
+		block.register((_lang, registeredHandler) => {
+			handler = registeredHandler;
+		});
+		const el = createContainer();
+
+		handler('', el, { sourcePath: 'Pending.md' } as MarkdownPostProcessorContext);
+		handler('', el, { sourcePath: 'Fresh.md' } as MarkdownPostProcessorContext);
+		await vi.waitFor(() => expect(el.textContent).toContain('Fresh Bean output'));
+
+		pendingReady = true;
+		resolvedCallback!();
+		await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+		expect(el.textContent).toContain('Fresh Bean output');
+		expect(el.textContent).not.toContain('Pending Bean output');
+		expect(recordService.getByBean).toHaveBeenCalledTimes(1);
+	});
+
 	it('falls back to the placeholder when metadata never resolves', async () => {
 		vi.useFakeTimers();
 		try {

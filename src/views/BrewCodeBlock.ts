@@ -5,9 +5,10 @@ import type { EquipmentSettings } from '../brew/types';
 import { t } from '../i18n/index';
 import type { BeanWeightService } from '../services/BeanWeightService';
 import { renderBrewRecordTable } from './BrewRecordTable';
+import { CodeBlockRefreshRegistry } from './CodeBlockRefreshRegistry';
 
 export class BrewCodeBlock {
-	private containers: WeakRef<HTMLElement>[] = [];
+	private registry = new CodeBlockRefreshRegistry();
 
 	constructor(
 		private app: App,
@@ -24,22 +25,20 @@ export class BrewCodeBlock {
 		) => void,
 	): void {
 		registerFn('brews', (_source, el, ctx) => {
-			this.containers.push(new WeakRef(el));
+			this.registry.track(el);
 			this.renderAsync(el, ctx.sourcePath);
 		});
 	}
 
 	refreshAll(): void {
-		this.containers = this.containers.filter((ref) => {
-			const el = ref.deref();
-			if (!el) return false;
+		this.registry.refreshAll((el) => {
 			const path = el.dataset.sourcePath;
 			if (path) this.renderAsync(el, path);
-			return true;
 		});
 	}
 
 	private async renderAsync(el: HTMLElement, sourcePath: string): Promise<void> {
+		const renderToken = this.registry.beginRender(el);
 		el.dataset.sourcePath = sourcePath;
 		let beanName = this.resolveBeanName(sourcePath);
 		if (!beanName) {
@@ -54,6 +53,7 @@ export class BrewCodeBlock {
 					resolve();
 				});
 			});
+			if (!this.registry.isCurrent(el, renderToken)) return;
 			beanName = this.resolveBeanName(sourcePath);
 		}
 		if (!beanName) {
@@ -63,6 +63,7 @@ export class BrewCodeBlock {
 		}
 
 		const byBeanResult = await this.recordService.getByBean(beanName);
+		if (!this.registry.isCurrent(el, renderToken)) return;
 		const records = byBeanResult.ok ? byBeanResult.data : [];
 		renderBrewRecordTable(el, records, beanName, {
 			app: this.app,

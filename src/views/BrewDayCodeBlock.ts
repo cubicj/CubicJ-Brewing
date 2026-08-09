@@ -6,11 +6,10 @@ import type { BrewRecordService } from '../services/BrewRecordService';
 import { groupRecordsByBeanForDay, parseDailyNoteDateFromPath } from './brewDayRecords';
 import type { BeanWeightService } from '../services/BeanWeightService';
 import { renderBrewRecordTable } from './BrewRecordTable';
+import { CodeBlockRefreshRegistry } from './CodeBlockRefreshRegistry';
 
 export class BrewDayCodeBlock {
-	private containers: WeakRef<HTMLElement>[] = [];
-	private renderTokens = new WeakMap<HTMLElement, number>();
-	private nextRenderToken = 0;
+	private registry = new CodeBlockRefreshRegistry();
 
 	constructor(
 		private app: App,
@@ -27,24 +26,20 @@ export class BrewDayCodeBlock {
 		) => void,
 	): void {
 		registerFn('brew-day', (_source, el, ctx) => {
-			this.containers.push(new WeakRef(el));
+			this.registry.track(el);
 			this.renderAsync(el, ctx.sourcePath);
 		});
 	}
 
 	refreshAll(): void {
-		this.containers = this.containers.filter((ref) => {
-			const el = ref.deref();
-			if (!el) return false;
+		this.registry.refreshAll((el) => {
 			const path = el.dataset.sourcePath;
 			if (path) this.renderAsync(el, path);
-			return true;
 		});
 	}
 
 	private async renderAsync(el: HTMLElement, sourcePath: string): Promise<void> {
-		const renderToken = ++this.nextRenderToken;
-		this.renderTokens.set(el, renderToken);
+		const renderToken = this.registry.beginRender(el);
 		el.dataset.sourcePath = sourcePath;
 		el.empty();
 		el.addClass('brew-day-records');
@@ -56,7 +51,7 @@ export class BrewDayCodeBlock {
 		}
 
 		const result = await this.recordService.getAll();
-		if (this.renderTokens.get(el) !== renderToken) return;
+		if (!this.registry.isCurrent(el, renderToken)) return;
 		const records = result.ok ? result.data : [];
 		const groups = groupRecordsByBeanForDay(records, date);
 
