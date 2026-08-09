@@ -2,7 +2,6 @@ import esbuild from 'esbuild';
 import process from 'process';
 import builtins from 'module';
 import { existsSync, readFileSync } from 'fs';
-import { copyPluginFiles, printPluginDeployPlan } from './build/windows-plugin-target.mjs';
 
 if (existsSync('.env')) {
 	for (const line of readFileSync('.env', 'utf8').split('\n')) {
@@ -13,26 +12,6 @@ if (existsSync('.env')) {
 
 const mode = process.argv[2] ?? 'watch';
 const prod = mode === 'production';
-const copiesToVault = mode === 'watch:windows';
-
-const copyToVault = {
-	name: 'copy-to-vault',
-	setup(build) {
-		build.onEnd((result) => {
-			if (result.errors.length > 0) return;
-			copyPluginFiles('dev:windows');
-		});
-	},
-};
-
-if (mode === 'copy:windows') {
-	copyPluginFiles('copy:windows');
-	process.exit(0);
-}
-
-if (mode === 'watch:windows') {
-	printPluginDeployPlan('dev:windows');
-}
 
 const context = await esbuild.context({
 	entryPoints: ['src/main.ts'],
@@ -45,7 +24,6 @@ const context = await esbuild.context({
 	treeShaking: true,
 	outfile: 'main.js',
 	minify: prod,
-	plugins: copiesToVault ? [copyToVault] : [],
 });
 
 if (prod) {

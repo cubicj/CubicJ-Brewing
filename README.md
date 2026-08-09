@@ -160,8 +160,6 @@ npm run test         # vitest (single run)
 npm run test:watch   # vitest (watch mode)
 npm run check        # typecheck only
 npm run lint         # eslint
-npm run dev:windows  # watch + copy to the Windows Obsidian plugin target
-npm run deploy:windows # build + copy to the Windows Obsidian plugin target
 ```
 
 ### Build from Source

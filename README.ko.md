@@ -147,8 +147,6 @@ npm run test         # vitest (단일 실행)
 npm run test:watch   # vitest (워치 모드)
 npm run check        # 타입체크만
 npm run lint         # eslint
-npm run dev:windows  # 워치 + Windows Obsidian 플러그인 타깃 복사
-npm run deploy:windows # 빌드 + Windows Obsidian 플러그인 타깃 복사
 ```
 
 ### 소스에서 빌드
