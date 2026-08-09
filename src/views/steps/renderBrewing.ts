@@ -44,8 +44,10 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 
 	if (ctx.brewingStarted && scaleConnected) {
 		const chartContainer = container.createDiv({ cls: 'brew-profile-container' });
-		chart = new BrewProfileChart(chartContainer);
-		chart.startLive(ctx.recorder);
+		const liveChart = new BrewProfileChart(chartContainer);
+		chart = liveChart;
+		ctx.registerCleanup(() => liveChart.destroy());
+		liveChart.startLive(ctx.recorder);
 	} else if (!ctx.brewingStarted && hasProfile) {
 		const chartWrapper = container.createDiv({ cls: 'brew-profile-wrapper' });
 		const expandBtn = chartWrapper.createEl('button', { text: '⛶', cls: 'brew-profile-expand-btn' });
@@ -57,6 +59,7 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 		});
 		const chartContainer = chartWrapper.createDiv({ cls: 'brew-profile-container' });
 		const staticChart = new BrewProfileChart(chartContainer);
+		ctx.registerCleanup(() => staticChart.destroy());
 		staticChart.renderStatic(ctx.recorder.getPoints());
 	}
 

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { installPolyfills, createContainer } from '../helpers/obsidian-dom-polyfill';
+import type { FlowStep } from '../../src/views/StepRenderers';
 
 vi.mock('../../src/i18n/index', () => ({
 	t: (key: string) => key,
@@ -107,6 +108,100 @@ describe('AccordionManager', () => {
 		acc.manager.togglePanel(0);
 		acc.manager.togglePanel(0);
 		expect(acc.renderStep).toHaveBeenCalled();
+	});
+
+	it('runs a panel cleanup before re-rendering that panel', () => {
+		const cleanup = vi.fn();
+		let marker: HTMLElement | null = null;
+		acc.renderStep.mockImplementationOnce(
+			(_step: FlowStep, container: HTMLElement, registerCleanup: (fn: () => void) => void) => {
+				marker = container.createDiv();
+				const body = container.closest('.brew-accordion-body') as HTMLElement;
+				registerCleanup(() => {
+					expect(body.contains(marker)).toBe(true);
+					cleanup();
+				});
+			},
+		);
+		acc.manager.build();
+		acc.manager.togglePanel(0);
+
+		acc.manager.update();
+
+		expect(cleanup).toHaveBeenCalledTimes(1);
+		const body = acc.container.querySelector('.brew-accordion-body') as HTMLElement;
+		expect(body.contains(marker)).toBe(false);
+		acc.manager.destroy();
+		expect(cleanup).toHaveBeenCalledTimes(1);
+	});
+
+	it('runs a panel cleanup before collapse empties its body', () => {
+		const cleanup = vi.fn();
+		let marker: HTMLElement | null = null;
+		acc.renderStep.mockImplementationOnce(
+			(_step: FlowStep, container: HTMLElement, registerCleanup: (fn: () => void) => void) => {
+				marker = container.createDiv();
+				const body = container.closest('.brew-accordion-body') as HTMLElement;
+				registerCleanup(() => {
+					expect(body.contains(marker)).toBe(true);
+					cleanup();
+				});
+			},
+		);
+		acc.manager.build();
+		acc.manager.togglePanel(0);
+		acc.manager.togglePanel(0);
+		const body = acc.container.querySelector('.brew-accordion-body') as HTMLElement;
+		const transitionEnd = new Event('transitionend') as TransitionEvent;
+		Object.defineProperty(transitionEnd, 'propertyName', { value: 'max-height' });
+
+		body.dispatchEvent(transitionEnd);
+		body.dispatchEvent(transitionEnd);
+
+		expect(cleanup).toHaveBeenCalledTimes(1);
+		expect(body.contains(marker)).toBe(false);
+	});
+
+	it('runs every current panel cleanup before build replaces the accordion', () => {
+		const cleanups: Array<ReturnType<typeof vi.fn>> = [];
+		acc.renderStep.mockImplementation(
+			(_step: FlowStep, container: HTMLElement, registerCleanup: (fn: () => void) => void) => {
+				const marker = container.createDiv();
+				const cleanup = vi.fn(() => {
+					expect(acc.container.contains(marker)).toBe(true);
+				});
+				cleanups.push(cleanup);
+				registerCleanup(cleanup);
+			},
+		);
+		acc.manager.build();
+		acc.manager.togglePanel(0);
+		acc.manager.togglePanel(1);
+
+		acc.manager.build();
+
+		expect(cleanups).toHaveLength(3);
+		for (const cleanup of cleanups) expect(cleanup).toHaveBeenCalledTimes(1);
+	});
+
+	it('destroy runs every panel cleanup exactly once', () => {
+		const cleanups: Array<ReturnType<typeof vi.fn>> = [];
+		acc.renderStep.mockImplementation(
+			(_step: FlowStep, _container: HTMLElement, registerCleanup: (fn: () => void) => void) => {
+				const cleanup = vi.fn();
+				cleanups.push(cleanup);
+				registerCleanup(cleanup);
+			},
+		);
+		acc.manager.build();
+		acc.manager.togglePanel(0);
+		acc.manager.togglePanel(1);
+
+		acc.manager.destroy();
+		acc.manager.destroy();
+
+		expect(cleanups).toHaveLength(3);
+		for (const cleanup of cleanups) expect(cleanup).toHaveBeenCalledTimes(1);
 	});
 
 	it('focusStep clears and expands only target', () => {

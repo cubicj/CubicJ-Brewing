@@ -1,7 +1,7 @@
 import { type FlowStep, STEP_CONFIG, STEP_ORDER } from './StepRenderers';
 
 interface AccordionCallbacks {
-	renderStep: (step: FlowStep, container: HTMLElement) => void;
+	renderStep: (step: FlowStep, container: HTMLElement, registerCleanup: (fn: () => void) => void) => void;
 	getStepSummary: (step: FlowStep) => string;
 	getCurrentStep: () => string;
 }
@@ -15,6 +15,7 @@ export class AccordionManager {
 		body: HTMLElement;
 	}> = [];
 	private expandedSteps = new Set<number>();
+	private panelCleanups = new Map<number, Array<() => void>>();
 	private accordionEndListeners = new WeakMap<HTMLElement, (e: TransitionEvent) => void>();
 	private scrollAnimationFrame: number | null = null;
 
@@ -24,6 +25,7 @@ export class AccordionManager {
 	) {}
 
 	build(): void {
+		this.cleanupAllPanels();
 		this.contentArea.empty();
 		this.panels = [];
 		this.expandedSteps.clear();
@@ -101,9 +103,12 @@ export class AccordionManager {
 					this.accordionEndListeners.delete(body);
 				}
 
+				this.cleanupPanel(i);
 				body.empty();
 				const inner = body.createDiv({ cls: 'brew-accordion-body-inner' });
-				this.callbacks.renderStep(config.step, inner);
+				const cleanups: Array<() => void> = [];
+				this.panelCleanups.set(i, cleanups);
+				this.callbacks.renderStep(config.step, inner, (fn) => cleanups.push(fn));
 				if (!wasOpen) {
 					body.classList.add('is-open');
 					const h = body.scrollHeight;
@@ -140,6 +145,7 @@ export class AccordionManager {
 					const ref = body;
 					const onEnd = (e: TransitionEvent) => {
 						if (e.propertyName === 'max-height') {
+							this.cleanupPanel(i);
 							ref.empty();
 							ref.style.maxHeight = '';
 							ref.removeEventListener('transitionend', onEnd);
@@ -246,6 +252,23 @@ export class AccordionManager {
 	getStepPanel(step: FlowStep): HTMLElement | null {
 		const idx = STEP_ORDER.indexOf(step);
 		return idx >= 0 && idx < this.panels.length ? this.panels[idx].body : null;
+	}
+
+	destroy(): void {
+		this.cleanupAllPanels();
+	}
+
+	private cleanupPanel(index: number): void {
+		const cleanups = this.panelCleanups.get(index);
+		if (!cleanups) return;
+		this.panelCleanups.delete(index);
+		for (const fn of cleanups) fn();
+	}
+
+	private cleanupAllPanels(): void {
+		for (const index of [...this.panelCleanups.keys()]) {
+			this.cleanupPanel(index);
+		}
 	}
 
 	private renderCheckIcon(container: HTMLElement): void {

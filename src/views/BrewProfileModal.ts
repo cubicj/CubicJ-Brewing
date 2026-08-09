@@ -32,6 +32,7 @@ export class BrewProfileModal extends Modal {
 	private resolvePoints: () => Promise<BrewProfilePoint[]>;
 	private wheelHandler: ((e: WheelEvent) => void) | null = null;
 	private cachedPoints: BrewProfilePoint[] | null = null;
+	private chart: BrewProfileChart | null = null;
 
 	constructor(app: App, subtitle: string, mode: ModalMode) {
 		super(app);
@@ -58,10 +59,12 @@ export class BrewProfileModal extends Modal {
 
 	onClose(): void {
 		this.removeWheelHandler();
+		this.destroyChart();
 	}
 
 	private async renderReadMode(): Promise<void> {
 		this.removeWheelHandler();
+		this.destroyChart();
 		this.contentEl.empty();
 		this.modalEl.addClass('brew-profile-modal');
 		this.modalEl.removeClass('brew-profile-editing');
@@ -166,6 +169,7 @@ export class BrewProfileModal extends Modal {
 	private enterEditMode(): void {
 		if (!this.record || this.mode.type !== 'detail') return;
 		this.removeWheelHandler();
+		this.destroyChart();
 		this.contentEl.empty();
 		this.modalEl.addClass('brew-profile-editing');
 		this.titleEl.setText(t('modal.editBrew'));
@@ -186,11 +190,12 @@ export class BrewProfileModal extends Modal {
 	}
 
 	private renderChart(points: BrewProfilePoint[], height?: number, container?: HTMLElement): void {
+		this.destroyChart();
 		const chartContainer = container ?? this.contentEl.createDiv({ cls: 'brew-profile-container' });
 		chartContainer.addClass('brew-profile-container');
 		const modalHeight = height ?? Math.min(500, Math.round(window.innerHeight * 0.5));
-		const chart = new BrewProfileChart(chartContainer, modalHeight, 8, true);
-		chart.renderStatic(points);
+		this.chart = new BrewProfileChart(chartContainer, modalHeight, 8, true);
+		this.chart.renderStatic(points);
 
 		this.wheelHandler = (e: WheelEvent) => {
 			const dx = e.deltaX || (e.shiftKey ? e.deltaY : 0);
@@ -208,6 +213,7 @@ export class BrewProfileModal extends Modal {
 	private enterChartMode(): void {
 		if (!this.cachedPoints) return;
 		this.removeWheelHandler();
+		this.destroyChart();
 		this.contentEl.empty();
 		this.modalEl.addClass('brew-profile-chart-mode');
 		this.titleEl.setText(t('modal.brewDetail'));
@@ -230,6 +236,12 @@ export class BrewProfileModal extends Modal {
 			this.modalEl.removeEventListener('wheel', this.wheelHandler);
 			this.wheelHandler = null;
 		}
+	}
+
+	private destroyChart(): void {
+		const chart = this.chart;
+		this.chart = null;
+		chart?.destroy();
 	}
 
 	private renderDetails(record: BrewRecord): void {

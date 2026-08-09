@@ -69,7 +69,8 @@ export class BrewingView extends ItemView {
 
 		const contentArea = container.createDiv({ cls: 'brewing-content-area' });
 		this.accordion = new AccordionManager(contentArea, {
-			renderStep: (step, el) => renderStep(step, el, this.buildRenderContext()),
+			renderStep: (step, el, registerCleanup) =>
+				renderStep(step, el, this.buildRenderContext(registerCleanup)),
 			getStepSummary: (step) => getStepSummary(step, this.flowState.selection),
 			getCurrentStep: () => this.flowState.step,
 		});
@@ -82,6 +83,7 @@ export class BrewingView extends ItemView {
 	async onClose(): Promise<void> {
 		this.log('onClose');
 		this.timerController.destroy();
+		this.accordion.destroy();
 		for (const fn of this.cleanups) fn();
 		this.cleanups = [];
 		const service = this.plugin.acaiaService!;
@@ -163,6 +165,7 @@ export class BrewingView extends ItemView {
 	}
 
 	private renderContent(): void {
+		this.accordion.destroy();
 		for (const fn of this.cleanups) fn();
 		this.cleanups = [];
 
@@ -189,7 +192,7 @@ export class BrewingView extends ItemView {
 		this.accordion.update();
 	}
 
-	private buildRenderContext(): StepRenderContext {
+	private buildRenderContext(registerCleanup: (fn: () => void) => void): StepRenderContext {
 		const getBrewing = () => this.brewingStarted;
 		const setBrewing = (v: boolean) => {
 			this.brewingStarted = v;
@@ -217,9 +220,7 @@ export class BrewingView extends ItemView {
 			set brewingStarted(v: boolean) {
 				setBrewing(v);
 			},
-			registerCleanup: (fn: () => void) => {
-				this.cleanups.push(fn);
-			},
+			registerCleanup,
 		};
 	}
 
