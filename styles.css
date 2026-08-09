@@ -663,7 +663,8 @@
 	color: var(--text-on-accent);
 }
 
-.cm-embed-block:has(.block-language-beans) {
+.cm-embed-block:has(.block-language-beans),
+.cm-embed-block.cm-lang-beans {
 	--embed-block-shadow-hover: none;
 }
 
@@ -671,7 +672,8 @@
 .block-language-beans .copy-code-button,
 .block-language-beans .code-block-flair,
 .cm-embed-block:has(.block-language-beans) > .edit-block-button,
-.cm-embed-block:has(.block-language-beans):hover > .edit-block-button {
+.cm-embed-block:has(.block-language-beans):hover > .edit-block-button,
+.cm-embed-block.cm-lang-beans .edit-block-button {
 	display: none;
 }
 
@@ -827,7 +829,9 @@ body.is-mobile .cb-bean-weight {
 
 /* Brew Records Code Block */
 .cm-embed-block:has(.block-language-brews),
-.cm-embed-block:has(.block-language-brew-day) {
+.cm-embed-block:has(.block-language-brew-day),
+.cm-embed-block.cm-lang-brews,
+.cm-embed-block.cm-lang-brew-day {
 	--embed-block-shadow-hover: none;
 }
 .block-language-brews > button,
@@ -839,7 +843,9 @@ body.is-mobile .cb-bean-weight {
 .cm-embed-block:has(.block-language-brews) > .edit-block-button,
 .cm-embed-block:has(.block-language-brew-day) > .edit-block-button,
 .cm-embed-block:has(.block-language-brews):hover > .edit-block-button,
-.cm-embed-block:has(.block-language-brew-day):hover > .edit-block-button {
+.cm-embed-block:has(.block-language-brew-day):hover > .edit-block-button,
+.cm-embed-block.cm-lang-brews .edit-block-button,
+.cm-embed-block.cm-lang-brew-day .edit-block-button {
 	display: none !important;
 }
 
