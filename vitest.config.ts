@@ -11,16 +11,16 @@ if (process.platform === 'win32') {
 export default defineConfig({
 	resolve: {
 		alias: {
-			obsidian: path.resolve(__dirname, 'src/test/obsidian-mock.ts'),
+			obsidian: path.resolve(__dirname, 'tests/helpers/obsidian-mock.ts'),
 		},
 	},
 	test: {
-		include: ['src/**/*.test.ts'],
+		include: ['tests/**/*.test.ts'],
 		pool: 'threads',
 		coverage: {
 			provider: 'v8',
 			include: ['src/**/*.ts'],
-			exclude: ['src/**/*.test.ts', 'src/**/*.d.ts', 'src/test/**'],
+			exclude: ['src/**/*.d.ts'],
 			reporter: ['text', 'text-summary'],
 		},
 	},
