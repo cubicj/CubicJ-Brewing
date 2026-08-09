@@ -1,20 +1,6 @@
 import { EventEmitter } from 'events';
 import type { AcaiaEvents } from './types';
-import {
-	AcaiaState,
-	ButtonEvent,
-	SCALE_PREFIXES,
-	WRITE_UUID,
-	NOTIFY_UUID,
-	MSG_TYPE,
-	EVENT_TYPE,
-	BUTTON_CODE,
-	BUTTON_PAYLOAD,
-	Noble,
-	NoblePeripheral,
-	NobleCharacteristic,
-	resolveModelName,
-} from './types';
+import { AcaiaState, Noble, resolveModelName } from './types';
 import {
 	encodeIdentify,
 	encodeHeartbeat,
@@ -23,11 +9,10 @@ import {
 	encodeTimerControl,
 	encodeGetSettings,
 	encodePowerOff,
-	decodeWeight,
-	decodeTimer,
-	decodeSettings,
 	PacketBuffer,
 } from './protocol';
+import { NobleTransport } from './NobleTransport';
+import { decodePacket } from './packetDecoder';
 
 export interface BleLogger {
 	log(message: string): void;
@@ -63,11 +48,7 @@ export class AcaiaService extends EventEmitter {
 	}
 
 	private _state: AcaiaState = 'idle';
-	private nobleFactory: () => Noble | null;
-	private noble: Noble | null = null;
-	private peripheral: NoblePeripheral | null = null;
-	private writeChar: NobleCharacteristic | null = null;
-	private notifyChar: NobleCharacteristic | null = null;
+	private transport: NobleTransport;
 	private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 	private lastPacketTime = 0;
 	private packetBuffer = new PacketBuffer();
@@ -95,21 +76,21 @@ export class AcaiaService extends EventEmitter {
 		super();
 		this.on('error', () => {});
 		this.logger = options?.logger;
-		const noblePath = options?.noblePath ?? '@stoprocent/noble';
-		this.nobleFactory =
-			options?.nobleFactory ??
-			(() => {
-				try {
-					const noble = require(noblePath);
-					noble.removeAllListeners();
-					try {
-						noble.stopScanning();
-					} catch {}
-					return noble;
-				} catch {
-					return null;
-				}
-			});
+		this.transport = new NobleTransport({
+			nobleFactory: options?.nobleFactory,
+			noblePath: options?.noblePath,
+			log: (message) => this.log(message),
+			onPoweredOff: () => {
+				this.log('Bluetooth adapter powered off — cleaning up');
+				this.emitError('Bluetooth adapter turned off');
+				this.disconnect();
+			},
+			onDisconnect: () => this.handleDisconnect(),
+			onData: (data) => {
+				this.lastPacketTime = Date.now();
+				this.packetBuffer.push(data);
+			},
+		});
 	}
 
 	private log(msg: string): void {
@@ -152,18 +133,17 @@ export class AcaiaService extends EventEmitter {
 		this.log(`connect() start — id=${myId}, state=${this._state}, reconnectAttempt=${this.reconnectAttempt}`);
 
 		try {
-			const noble = this.initNoble();
+			this.initNoble();
 			this.setState('scanning');
 
-			await this.waitForPoweredOnOrThrow(noble, myId);
-			const peripheral = await this.scanForScaleOrThrow(noble, myId);
+			await this.waitForPoweredOnOrThrow(myId);
+			const scale = await this.scanForScaleOrThrow(myId);
 
-			this.peripheral = peripheral;
-			const localName = peripheral.advertisement?.localName ?? '';
+			const localName = scale.localName;
 			this._scaleName = localName ? resolveModelName(localName) : null;
 			this.setState('connecting');
 
-			await this.establishConnection(peripheral, myId);
+			await this.establishConnection(myId);
 			await this.setupNotifications(myId);
 			await this.performHandshake(myId);
 
@@ -191,35 +171,22 @@ export class AcaiaService extends EventEmitter {
 		}
 	}
 
-	private initNoble(): Noble {
-		const noble = this.nobleFactory();
-		if (!noble) {
+	private initNoble(): void {
+		if (!this.transport.initialize()) {
 			this.log('noble factory returned null');
 			this.emitError('Failed to load noble BLE library');
 			throw new Error('Noble unavailable');
 		}
-		this.noble = noble;
-		this.log(`noble.state=${noble.state}`);
-
-		noble.on('stateChange', (state: string) => {
-			this.log(`noble stateChange: ${state}`);
-			if (state === 'poweredOff') {
-				this.log('Bluetooth adapter powered off — cleaning up');
-				this.emitError('Bluetooth adapter turned off');
-				this.disconnect();
-			}
-		});
-
-		return noble;
+		this.log(`noble.state=${this.transport.adapterState}`);
 	}
 
-	private async waitForPoweredOnOrThrow(noble: Noble, myId: number): Promise<void> {
-		if (noble.state === 'poweredOn') {
+	private async waitForPoweredOnOrThrow(myId: number): Promise<void> {
+		if (this.transport.adapterState === 'poweredOn') {
 			this.log('already poweredOn');
 			return;
 		}
 		this.log('waiting for poweredOn...');
-		const ready = await this.waitForPoweredOn(noble);
+		const ready = await this.transport.waitForPoweredOn();
 		this.assertNotStale(myId);
 		if (!ready) {
 			this.emitError('BLE adapter not ready');
@@ -229,41 +196,45 @@ export class AcaiaService extends EventEmitter {
 		this.log('poweredOn ready');
 	}
 
-	private async scanForScaleOrThrow(noble: Noble, myId: number): Promise<NoblePeripheral> {
+	private async scanForScaleOrThrow(myId: number): Promise<{ localName: string; address: string }> {
 		this.log('scanning for scale...');
-		const peripheral = await this.scanForScale(noble);
+		const scale = await this.transport.scanForScale();
 		this.assertNotStale(myId);
-		if (!peripheral) {
+		if (!scale) {
 			this.log('scan done — no scale found');
 			this.emitError('No scale found (10s timeout)');
 			this.setState('idle');
 			throw new StaleConnectionError();
 		}
-		this.log(`scale found: ${peripheral.advertisement?.localName} (${peripheral.address})`);
-		return peripheral;
+		this.log(`scale found: ${scale.localName} (${scale.address})`);
+		return scale;
 	}
 
-	private async establishConnection(peripheral: NoblePeripheral, myId: number): Promise<void> {
-		if (peripheral.state === 'connected') {
+	private async establishConnection(myId: number): Promise<void> {
+		if (this.transport.peripheralState === 'connected') {
 			this.log('peripheral already connected at BLE level, disconnecting first...');
 			try {
-				await peripheral.disconnectAsync();
+				await this.transport.disconnectPeripheralAsync();
 			} catch {}
 		}
 
 		this.log('connectAsync...');
-		await this.connectWithCleanup(peripheral, 10000);
+		await this.transport.connectPeripheral(10000);
 		this.assertNotStale(myId);
 		this.log('connectAsync done');
 
-		peripheral.once('disconnect', () => this.handleDisconnect());
+		this.transport.watchDisconnect();
 
-		let characteristics: NobleCharacteristic[] | undefined;
+		let characteristics: {
+			count: number;
+			writeAvailable: boolean;
+			notifyAvailable: boolean;
+			ready: boolean;
+		};
 		for (let attempt = 0; ; attempt++) {
 			try {
 				this.log(`discoverAsync... (attempt ${attempt + 1})`);
-				const result = await this.discoverWithCleanup(peripheral, 10000);
-				characteristics = result.characteristics;
+				characteristics = await this.transport.discoverCharacteristics(10000);
 				break;
 			} catch (discoverErr: unknown) {
 				this.assertNotStale(myId);
@@ -271,26 +242,25 @@ export class AcaiaService extends EventEmitter {
 				const msg = discoverErr instanceof Error ? discoverErr.message : String(discoverErr);
 				this.log(`discover failed (attempt ${attempt + 1}): ${msg} — retrying after reconnect`);
 				try {
-					await peripheral.disconnectAsync();
+					await this.transport.disconnectPeripheralAsync();
 				} catch {}
 				await new Promise((r) => setTimeout(r, 500));
 				this.assertNotStale(myId);
 				this.log('reconnecting for discover retry...');
-				await this.connectWithCleanup(peripheral, 10000);
+				await this.transport.connectPeripheral(10000);
 				this.assertNotStale(myId);
 			}
 		}
 		this.assertNotStale(myId);
-		this.log(`discover done — ${characteristics!.length} characteristics`);
+		this.log(`discover done — ${characteristics.count} characteristics`);
 
-		this.writeChar = characteristics!.find((c) => c.uuid === WRITE_UUID) ?? null;
-		this.notifyChar = characteristics!.find((c) => c.uuid === NOTIFY_UUID) ?? null;
-
-		if (!this.writeChar || !this.notifyChar) {
-			this.log(`chars missing — write=${!!this.writeChar}, notify=${!!this.notifyChar}`);
+		if (!characteristics.ready) {
+			this.log(
+				`chars missing — write=${characteristics.writeAvailable}, notify=${characteristics.notifyAvailable}`,
+			);
 			this.emitError('Required BLE characteristics not found');
 			try {
-				await peripheral.disconnectAsync();
+				await this.transport.disconnectPeripheralAsync();
 			} catch {}
 			this.cleanupConnection();
 			this.setState('idle');
@@ -300,12 +270,8 @@ export class AcaiaService extends EventEmitter {
 
 	private async setupNotifications(myId: number): Promise<void> {
 		this.packetBuffer.onPacket = (packet) => this.handlePacket(packet);
-		this.notifyChar!.on('data', (data: Buffer) => {
-			this.lastPacketTime = Date.now();
-			this.packetBuffer.push(data);
-		});
 		this.log('subscribing to notify...');
-		await this.withTimeout(this.notifyChar!.subscribeAsync(), 5000, 'Notify subscribe');
+		await this.transport.subscribe(5000);
 		this.assertNotStale(myId);
 		this.log('notify subscribed');
 	}
@@ -325,16 +291,9 @@ export class AcaiaService extends EventEmitter {
 		this.connectAborted = true;
 		this.connecting = false;
 		this.cancelReconnect();
-		try {
-			if (this.noble) this.noble.stopScanning();
-		} catch {}
-		const peripheral = this.peripheral;
-		this.cleanupConnection();
-		if (peripheral) {
-			try {
-				await peripheral.disconnectAsync();
-			} catch {}
-		}
+		this.transport.stopScanning();
+		this.cleanupConnection(false);
+		await this.transport.cancelConnection();
 		this.setState('idle');
 	}
 
@@ -342,24 +301,13 @@ export class AcaiaService extends EventEmitter {
 		this.log(`disconnect() — user-initiated, state=${this._state}`);
 		this.userDisconnected = true;
 		this.cancelReconnect();
-		const peripheral = this.peripheral;
 		this.cleanupConnection();
-		if (peripheral) {
-			try {
-				peripheral.disconnect();
-			} catch {}
-		}
 		this.setState('idle');
 	}
 
 	async tare(): Promise<void> {
 		if (this._state !== 'connected') return;
 		await this.enqueueWrite(encodeTare());
-	}
-
-	async sendNotificationRequest(): Promise<void> {
-		if (this._state !== 'connected') return;
-		await this.enqueueWrite(encodeNotificationRequest());
 	}
 
 	async startTimer(): Promise<void> {
@@ -384,9 +332,9 @@ export class AcaiaService extends EventEmitter {
 		this.cancelReconnect();
 		this.stopTimers();
 		this.writeQueue = [];
-		if (this.writeChar) {
+		if (this.transport.canWrite) {
 			try {
-				await this.writeChar.writeAsync(encodePowerOff(), true);
+				await this.transport.write(encodePowerOff());
 				this.log('powerOff command written (msgType=24)');
 			} catch (e) {
 				this.log(`powerOff write failed: ${e}`);
@@ -401,155 +349,29 @@ export class AcaiaService extends EventEmitter {
 		this.connectId++;
 		this.connectAborted = true;
 		this.cancelReconnect();
-		const peripheral = this.peripheral;
 		this.cleanupConnection();
-		if (peripheral) {
-			try {
-				peripheral.disconnect();
-			} catch {}
-		}
-		if (this.noble) {
-			try {
-				this.noble.stopScanning();
-			} catch {}
-			this.noble.removeAllListeners();
-			this.noble = null;
-		}
+		this.transport.dispose();
 		this.removeAllListeners();
 		this._state = 'idle';
 	}
 
-	private waitForPoweredOn(noble: Noble, timeoutMs = 10000): Promise<boolean> {
-		return new Promise((resolve) => {
-			const onState = (state: string) => {
-				if (state === 'poweredOn') {
-					clearTimeout(timer);
-					noble.removeListener('stateChange', onState);
-					resolve(true);
-				}
-			};
-			const timer = setTimeout(() => {
-				noble.removeListener('stateChange', onState);
-				resolve(false);
-			}, timeoutMs);
-			noble.on('stateChange', onState);
-		});
-	}
-
-	private scanForScale(noble: Noble, timeoutMs = 10000): Promise<NoblePeripheral | null> {
-		return new Promise((resolve) => {
-			let discoverCount = 0;
-
-			const cleanup = () => {
-				noble.removeListener('discover', onDiscover);
-				try {
-					noble.stopScanning();
-				} catch {}
-			};
-
-			const timer = setTimeout(() => {
-				cleanup();
-				this.log(`scan timeout — ${discoverCount} peripherals seen, no scale`);
-				resolve(null);
-			}, timeoutMs);
-
-			const onDiscover = (p: NoblePeripheral) => {
-				discoverCount++;
-				const name = p.advertisement?.localName || '';
-				const addr = p.address || p.id || '??';
-				const prefix5 = name.substring(0, 5).toUpperCase();
-
-				if (SCALE_PREFIXES.includes(prefix5)) {
-					clearTimeout(timer);
-					cleanup();
-					resolve(p);
-				} else {
-					this.log(`scan: skipped "${name}" (${addr})`);
-				}
-			};
-
-			noble.on('discover', onDiscover);
-			try {
-				noble.startScanning([], false);
-			} catch (scanErr: unknown) {
-				const msg = scanErr instanceof Error ? scanErr.message : String(scanErr);
-				this.log(`startScanning error: ${msg}`);
-				clearTimeout(timer);
-				cleanup();
-				resolve(null);
-			}
-		});
-	}
-
 	private handlePacket(packet: Buffer): void {
-		if (packet.length < 3 || packet[0] !== 0xef || packet[1] !== 0xdd) return;
-
-		const cmd = packet[2];
-
-		if ((cmd === MSG_TYPE.NOTIFICATION_REQ || cmd === MSG_TYPE.IDENTIFY) && packet.length > 4) {
-			const totalPayloadLen = packet[3];
-			const payloadEnd = 3 + totalPayloadLen;
-			let offset = 4;
-
-			while (offset < payloadEnd) {
-				const innerType = packet[offset];
-
-				if (innerType === EVENT_TYPE.WEIGHT && offset + 7 <= packet.length) {
-					const w = decodeWeight(packet, offset + 1);
-					this.emit('weight', w.weight, w.stable);
-					this._lastWeight = w.weight;
-					offset += 7;
-				} else if (innerType === EVENT_TYPE.TIMER && offset + 4 <= packet.length) {
-					this.emit('timer', decodeTimer(packet, offset + 1));
-					offset += 4;
-				} else if (innerType === EVENT_TYPE.BUTTON && offset + 3 <= packet.length) {
-					this.handleButtonEvent(packet, offset);
-					break;
-				} else {
-					break;
-				}
-			}
-		} else if (cmd === MSG_TYPE.SETTINGS_RESP && packet.length >= 10) {
-			const settings = decodeSettings(packet, 3);
-			this.emit('battery', settings.battery);
-			if (settings.timerRunning !== this.scaleTimerRunning) {
-				this.scaleTimerRunning = settings.timerRunning;
-				if (settings.timerRunning) {
-					this.emit('button', { type: 'timer_start' });
-				} else {
-					this.emit('button', { type: 'timer_stop' });
+		for (const event of decodePacket(packet)) {
+			if (event.type === 'weight') {
+				this.emit('weight', event.weight, event.stable);
+				this._lastWeight = event.weight;
+			} else if (event.type === 'timer') {
+				this.emit('timer', event.seconds);
+			} else if (event.type === 'button') {
+				this.emit('button', event.event);
+			} else {
+				this.emit('battery', event.settings.battery);
+				if (event.settings.timerRunning !== this.scaleTimerRunning) {
+					this.scaleTimerRunning = event.settings.timerRunning;
+					this.emit('button', { type: event.settings.timerRunning ? 'timer_start' : 'timer_stop' });
 				}
 			}
 		}
-	}
-
-	private handleButtonEvent(packet: Buffer, typeOffset: number): void {
-		const code = packet[typeOffset + 1];
-		const payload = packet[typeOffset + 2];
-		let event: ButtonEvent | null = null;
-
-		if (code === BUTTON_CODE.TARE && payload === BUTTON_PAYLOAD.WITH_WEIGHT) {
-			event = { type: 'tare' };
-			if (typeOffset + 9 <= packet.length) event.weight = decodeWeight(packet, typeOffset + 3).weight;
-		} else if (code === BUTTON_CODE.TIMER_START) {
-			event = { type: 'timer_start' };
-			if (payload === BUTTON_PAYLOAD.WITH_WEIGHT && typeOffset + 9 <= packet.length)
-				event.weight = decodeWeight(packet, typeOffset + 3).weight;
-		} else if (code === BUTTON_CODE.TIMER_STOP) {
-			event = { type: 'timer_stop' };
-			if (payload === BUTTON_PAYLOAD.WITH_TIMER && typeOffset + 7 <= packet.length) {
-				event.timer = decodeTimer(packet, typeOffset + 3);
-				if (typeOffset + 13 <= packet.length) event.weight = decodeWeight(packet, typeOffset + 7).weight;
-			}
-		} else if (code === BUTTON_CODE.TIMER_RESET) {
-			event = { type: 'timer_reset' };
-			if (payload === BUTTON_PAYLOAD.WITH_TIMER && typeOffset + 7 <= packet.length) {
-				event.timer = decodeTimer(packet, typeOffset + 3);
-				if (typeOffset + 13 <= packet.length) event.weight = decodeWeight(packet, typeOffset + 7).weight;
-			}
-		}
-
-		if (event) this.emit('button', event);
 	}
 
 	private startHeartbeat(): void {
@@ -646,37 +468,7 @@ export class AcaiaService extends EventEmitter {
 		this.reconnectAttempt = 0;
 	}
 
-	private connectWithCleanup(peripheral: NoblePeripheral, timeoutMs: number): Promise<void> {
-		const timer = setTimeout(() => {
-			try {
-				peripheral.disconnect();
-			} catch {}
-		}, timeoutMs);
-		return peripheral.connectAsync().finally(() => clearTimeout(timer));
-	}
-
-	private discoverWithCleanup(
-		peripheral: NoblePeripheral,
-		timeoutMs: number,
-	): Promise<{ characteristics: NobleCharacteristic[] }> {
-		const timer = setTimeout(() => {
-			try {
-				peripheral.disconnect();
-			} catch {}
-		}, timeoutMs);
-		return peripheral
-			.discoverSomeServicesAndCharacteristicsAsync([], [WRITE_UUID, NOTIFY_UUID])
-			.finally(() => clearTimeout(timer));
-	}
-
-	private withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-		return Promise.race([
-			promise,
-			new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out (${ms}ms)`)), ms)),
-		]);
-	}
-
-	private cleanupConnection(): void {
+	private cleanupConnection(disconnectTransport = true): void {
 		this.log('cleanupConnection()');
 		this.stopTimers();
 		this.packetBuffer.reset();
@@ -685,18 +477,7 @@ export class AcaiaService extends EventEmitter {
 		this.scaleTimerRunning = false;
 		this.disconnecting = false;
 		this.consecutiveWriteFailures = 0;
-		if (this.notifyChar) {
-			this.notifyChar.removeAllListeners('data');
-			this.notifyChar = null;
-		}
-		this.writeChar = null;
-		if (this.peripheral) {
-			this.peripheral.removeAllListeners('disconnect');
-			try {
-				this.peripheral.disconnect();
-			} catch {}
-			this.peripheral = null;
-		}
+		if (disconnectTransport) this.transport.disconnectSync();
 	}
 
 	private async enqueueWrite(data: Buffer): Promise<void> {
@@ -708,9 +489,9 @@ export class AcaiaService extends EventEmitter {
 		this.writing = true;
 		while (this.writeQueue.length > 0) {
 			const data = this.writeQueue.shift()!;
-			if (!this.writeChar) break;
+			if (!this.transport.canWrite) break;
 			try {
-				await this.writeChar.writeAsync(data, true);
+				await this.transport.write(data);
 				this.consecutiveWriteFailures = 0;
 			} catch (err: unknown) {
 				this.consecutiveWriteFailures++;
