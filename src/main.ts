@@ -1,49 +1,57 @@
 import { Platform, Plugin } from 'obsidian';
-import type { AcaiaService, BleLogger } from './acaia/AcaiaService';
-import type { FileLogger } from './utils/FileLogger';
+import type { AcaiaService } from './acaia/AcaiaService';
+import { DesktopRuntime } from './DesktopRuntime';
 import { PluginLogger } from './utils/PluginLogger';
 import { BrewRecordService, type StorageAdapter } from './services/BrewRecordService';
 import { BrewProfileStorage } from './services/BrewProfileStorage';
 import type { FileAdapter } from './services/FileAdapter';
+import { DATA_VERSION, PluginDataStore } from './services/PluginDataStore';
 import { VaultDataService } from './services/VaultDataService';
 import { BeanCodeBlock } from './views/BeanCodeBlock';
 import { BrewCodeBlock } from './views/BrewCodeBlock';
 import { BrewDayCodeBlock } from './views/BrewDayCodeBlock';
-import type { EquipmentSettings, GrinderConfig, GrinderRpmConfig, LogConfig } from './brew/types';
+import type { EquipmentSettings, LogConfig } from './brew/types';
 import { BrewingSettingTab } from './views/SettingTab';
-import { initI18n, t } from './i18n/index';
+import { initI18n } from './i18n/index';
 
 const DATA_DIR = 'cubicj-brewing';
-const DATA_VERSION = 3;
 
 export default class CubicJBrewingPlugin extends Plugin {
 	acaiaService: AcaiaService | null = null;
 	recordService!: BrewRecordService;
 	profileStorage!: BrewProfileStorage;
 	vaultData!: VaultDataService;
-	equipment: EquipmentSettings = { grinders: [], drippers: [], filters: [], baskets: [], accessories: [] };
 	pluginLogger: PluginLogger | null = null;
-	private logConfig: LogConfig = { enabled: false, categories: [], packetLog: false };
-	private beforeUnloadHandler: (() => void) | null = null;
-	private blePacketLogger: FileLogger | null = null;
+	beanBlock!: BeanCodeBlock;
 	private fileAdapter!: FileAdapter;
-	private viewType: string | null = null;
-	private firstInstall = false;
-	private savedDataVersion = 0;
-	private beanFolder = '';
-	private locale = 'en';
-	private beanBlock!: BeanCodeBlock;
+	private desktopRuntime: DesktopRuntime | null = null;
+	private dataStore = new PluginDataStore({
+		loadData: () => this.loadData(),
+		saveData: (data) => this.saveData(data),
+	});
+
+	get equipment(): EquipmentSettings {
+		return this.dataStore.equipment;
+	}
+
+	set equipment(equipment: EquipmentSettings) {
+		this.dataStore.equipment = equipment;
+	}
 
 	async onload() {
 		await this.loadPluginData();
-		initI18n(this.locale);
-		this.vaultData = new VaultDataService(this.app, this.beanFolder);
-		if (this.logConfig.enabled) {
+		initI18n(this.dataStore.locale);
+		this.vaultData = new VaultDataService(this.app, this.dataStore.beanFolder);
+		if (this.dataStore.logConfig.enabled) {
 			const vaultIO = {
 				read: async (p: string) => this.app.vault.adapter.read(p),
 				write: async (p: string, c: string) => this.app.vault.adapter.write(p, c),
 			};
-			this.pluginLogger = new PluginLogger(vaultIO, `${this.manifest.dir}/plugin-debug.log`, this.logConfig.categories);
+			this.pluginLogger = new PluginLogger(
+				vaultIO,
+				`${this.manifest.dir}/plugin-debug.log`,
+				this.dataStore.logConfig.categories,
+			);
 			this.pluginLogger.start();
 		}
 		this.pluginLogger?.log('PLUGIN', 'onload');
@@ -146,21 +154,19 @@ export default class CubicJBrewingPlugin extends Plugin {
 		this.registerEvent(this.app.vault.on('create', handleRecordFileChange));
 
 		this.app.workspace.onLayoutReady(async () => {
-			if (this.savedDataVersion < 2) {
+			if (this.dataStore.savedDataVersion < 2) {
 				const failures = await this.vaultData.migrateFrontmatterKeys();
 				if (failures.length > 0) {
 					console.warn('[CubicJ-Brewing] frontmatter migration had failures, skipping version bump');
 				}
 			}
-			if (this.savedDataVersion < 3) {
+			if (this.dataStore.savedDataVersion < 3) {
 				await this.recordService.migrateYields(this.profileStorage);
 			}
-			if (this.savedDataVersion < DATA_VERSION) {
-				const data = (await this.loadData()) ?? {};
-				data.dataVersion = DATA_VERSION;
-				await this.saveData(data);
+			if (this.dataStore.savedDataVersion < DATA_VERSION) {
+				await this.dataStore.saveDataVersion();
 			}
-			if (this.firstInstall) this.activateView();
+			if (this.dataStore.firstInstall) this.desktopRuntime?.activateView();
 		});
 
 		this.addSettingTab(new BrewingSettingTab(this.app, this));
@@ -169,241 +175,52 @@ export default class CubicJBrewingPlugin extends Plugin {
 		// Mobile gets read-only features: bean/brew code blocks, record detail modals, brew history.
 		// Desktop adds BLE scale (AcaiaService), BrewingView sidebar, and live brew flow.
 		if (Platform.isDesktop) {
-			await this.initDesktop();
+			this.desktopRuntime = new DesktopRuntime(this);
+			await this.desktopRuntime.init();
 		}
-	}
-
-	private async initDesktop(): Promise<void> {
-		const { AcaiaService } = await import('./acaia/AcaiaService');
-		const { BrewingView, VIEW_TYPE_BREWING } = await import('./views/BrewingView');
-		this.viewType = VIEW_TYPE_BREWING;
-
-		const vaultAdapter = {
-			read: async (p: string) => this.app.vault.adapter.read(p),
-			write: async (p: string, c: string) => this.app.vault.adapter.write(p, c),
-		};
-
-		let logger: BleLogger | undefined;
-		if (this.pluginLogger) {
-			const pl = this.pluginLogger;
-			logger = { log: (msg: string) => pl.log('BLE', msg) };
-		}
-
-		if (this.logConfig.packetLog) {
-			const { FileLogger } = await import('./utils/FileLogger');
-			this.blePacketLogger = new FileLogger(vaultAdapter, `${this.manifest.dir}/ble-debug.log`, 1000, 5000);
-			this.blePacketLogger.start();
-			this.blePacketLogger.log(`\n=== session ${new Date().toISOString()} ===`);
-		}
-
-		const basePath = (this.app.vault.adapter as any).getBasePath();
-		const noblePath = require('path').join(basePath, this.manifest.dir, 'noble');
-		this.acaiaService = new AcaiaService({ logger, noblePath });
-
-		this.beanBlock.setScaleWeightGetter(() => {
-			if (this.acaiaService?.state !== 'connected') return null;
-			return this.acaiaService.lastWeight;
-		});
-
-		this.registerView(VIEW_TYPE_BREWING, (leaf) => new BrewingView(leaf, this));
-
-		const getView = (): InstanceType<typeof BrewingView> | null => {
-			const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_BREWING);
-			return leaves.length > 0 ? (leaves[0].view as InstanceType<typeof BrewingView>) : null;
-		};
-
-		this.addCommand({
-			id: 'open-view',
-			name: t('command.openView'),
-			callback: () => this.activateView(),
-		});
-
-		this.addCommand({
-			id: 'tare',
-			name: t('command.tare'),
-			checkCallback: (checking) => {
-				const view = getView();
-				if (!view) return false;
-				if (!checking) view.tare();
-				return true;
-			},
-		});
-
-		const doAutoFill = () => {
-			const popoverBtn = document.querySelector('.bwp-auto') as HTMLButtonElement | null;
-			if (popoverBtn) {
-				popoverBtn.click();
-				return;
-			}
-			getView()?.autoFill();
-		};
-
-		this.addCommand({
-			id: 'auto-fill',
-			name: t('command.autoFill'),
-			checkCallback: (checking) => {
-				const view = getView();
-				const hasPopover = !!document.querySelector('.bean-weight-popover');
-				if (!view && !hasPopover) return false;
-				if (!checking) doAutoFill();
-				return true;
-			},
-		});
-
-		this.addCommand({
-			id: 'toggle-brewing',
-			name: t('command.toggleBrewing'),
-			checkCallback: (checking) => {
-				const view = getView();
-				if (!view) return false;
-				if (!checking) view.toggleBrewing();
-				return true;
-			},
-		});
-
-		this.addCommand({
-			id: 'toggle-connect',
-			name: t('command.toggleConnect'),
-			checkCallback: (checking) => {
-				const view = getView();
-				if (!view) return false;
-				if (!checking) view.toggleConnect();
-				return true;
-			},
-		});
-
-		this.addCommand({
-			id: 'power-off-scale',
-			name: t('command.powerOff'),
-			checkCallback: (checking) => {
-				const view = getView();
-				if (!view || this.acaiaService?.state !== 'connected') return false;
-				if (!checking) view.powerOff();
-				return true;
-			},
-		});
-
-		this.addRibbonIcon('coffee', 'CubicJ Brewing', () => {
-			this.activateView();
-		});
-
-		this.beforeUnloadHandler = () => {
-			this.acaiaService?.destroy();
-			this.pluginLogger?.stop();
-			this.blePacketLogger?.stop();
-		};
-		window.addEventListener('beforeunload', this.beforeUnloadHandler);
 	}
 
 	onunload() {
 		this.pluginLogger?.log('PLUGIN', 'onunload');
-		if (this.beforeUnloadHandler) {
-			window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+		if (this.desktopRuntime) {
+			this.desktopRuntime.destroy();
+		} else {
+			this.pluginLogger?.stop();
 		}
-		this.acaiaService?.destroy();
-		this.pluginLogger?.stop();
-		this.blePacketLogger?.stop();
 	}
 
 	async loadPluginData(): Promise<void> {
-		const raw = await this.loadData();
-		this.firstInstall = raw === null || raw === undefined;
-		const data = raw ?? {};
-		this.savedDataVersion = typeof data.dataVersion === 'number' ? data.dataVersion : 0;
-		const eq = data.equipment;
-		if (eq && typeof eq === 'object' && !Array.isArray(eq)) {
-			const keys: (keyof EquipmentSettings)[] = ['grinders', 'drippers', 'filters', 'baskets', 'accessories'];
-			const valid = keys.every((k) => Array.isArray(eq[k]));
-			if (valid) {
-				const isGrinder = (g: unknown): g is GrinderConfig =>
-					g != null &&
-					typeof g === 'object' &&
-					typeof (g as GrinderConfig).name === 'string' &&
-					typeof (g as GrinderConfig).step === 'number' &&
-					typeof (g as GrinderConfig).min === 'number' &&
-					typeof (g as GrinderConfig).max === 'number';
-				const isRpm = (r: unknown): r is GrinderRpmConfig =>
-					r != null &&
-					typeof r === 'object' &&
-					typeof (r as GrinderRpmConfig).min === 'number' &&
-					typeof (r as GrinderRpmConfig).max === 'number' &&
-					typeof (r as GrinderRpmConfig).step === 'number' &&
-					typeof (r as GrinderRpmConfig).current === 'number';
-				const sanitizeGrinder = (g: GrinderConfig): GrinderConfig =>
-					g.rpm === undefined || isRpm(g.rpm) ? g : { name: g.name, step: g.step, min: g.min, max: g.max };
-				const isString = (s: unknown): s is string => typeof s === 'string';
-				this.equipment = {
-					grinders: (eq.grinders as unknown[]).filter(isGrinder).map(sanitizeGrinder),
-					drippers: (eq.drippers as unknown[]).filter(isString),
-					filters: (eq.filters as unknown[]).filter(isString),
-					baskets: (eq.baskets as unknown[]).filter(isString),
-					accessories: (eq.accessories as unknown[]).filter(isString),
-				};
-			}
-		}
-		const lc = data.logConfig;
-		if (lc && typeof lc === 'object' && !Array.isArray(lc)) {
-			this.logConfig = {
-				enabled: typeof lc.enabled === 'boolean' ? lc.enabled : false,
-				categories: Array.isArray(lc.categories) ? lc.categories : [],
-				packetLog: typeof lc.packetLog === 'boolean' ? lc.packetLog : false,
-			};
-		}
-		if (typeof data.beanFolder === 'string') {
-			this.beanFolder = data.beanFolder;
-		}
-		if (typeof data.locale === 'string') {
-			this.locale = data.locale;
-		}
-	}
-
-	private async patchData(patch: Record<string, unknown>): Promise<void> {
-		const data = (await this.loadData()) ?? {};
-		Object.assign(data, patch);
-		await this.saveData(data);
+		await this.dataStore.load();
 	}
 
 	async saveEquipment(): Promise<void> {
-		await this.patchData({ equipment: this.equipment });
+		await this.dataStore.saveEquipment();
 	}
 
 	getBeanFolder(): string {
-		return this.beanFolder;
+		return this.dataStore.beanFolder;
 	}
 
 	async saveBeanFolder(folder: string): Promise<void> {
-		this.beanFolder = folder;
+		this.dataStore.beanFolder = folder;
 		this.vaultData = new VaultDataService(this.app, folder);
 		this.beanBlock.updateVaultData(this.vaultData);
-		await this.patchData({ beanFolder: folder });
+		await this.dataStore.patchData({ beanFolder: folder });
 	}
 
 	getLocale(): string {
-		return this.locale;
+		return this.dataStore.locale;
 	}
 
 	async saveLocale(locale: string): Promise<void> {
-		this.locale = locale;
-		await this.patchData({ locale });
+		await this.dataStore.saveLocale(locale);
 	}
 
 	getLogConfig(): LogConfig {
-		return { ...this.logConfig };
+		return { ...this.dataStore.logConfig };
 	}
 
 	async saveLogConfig(config: LogConfig): Promise<void> {
-		this.logConfig = config;
-		await this.patchData({ logConfig: config });
-	}
-
-	private async activateView(): Promise<void> {
-		if (!this.viewType) return;
-		const leaves = this.app.workspace.getLeavesOfType(this.viewType);
-		if (leaves.length === 0) {
-			const leaf = this.app.workspace.getRightLeaf(false);
-			await leaf?.setViewState({ type: this.viewType, active: true });
-		}
-		const target = this.app.workspace.getLeavesOfType(this.viewType)[0];
-		if (target) this.app.workspace.revealLeaf(target);
+		await this.dataStore.saveLogConfig(config);
 	}
 }
