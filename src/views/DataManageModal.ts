@@ -1,10 +1,8 @@
-import { Modal, Notice, setIcon } from 'obsidian';
+import { Modal } from 'obsidian';
 import type CubicJBrewingPlugin from '../main';
-import type { GrinderConfig, EquipmentSettings } from '../brew/types';
 import { t } from '../i18n/index';
-import { renderActiveBeanRow, renderFinishedBeanRow } from './BeanRowRenderer';
-import { createNewBean, getSortedBeans } from './beanHelpers';
-import { renderGrinderForm } from './GrinderForm';
+import { BeanManagePanel } from './dataManage/BeanManagePanel';
+import { EquipmentManagePanel } from './dataManage/EquipmentManagePanel';
 
 type TabId = 'bean' | 'recipe' | 'equip';
 
@@ -15,19 +13,29 @@ interface TabDef {
 }
 
 export class DataManageModal extends Modal {
-	private plugin: CubicJBrewingPlugin;
 	private activeTab: TabId = 'bean';
 	private tabContentEl!: HTMLElement;
 	private tabIndicatorEl!: HTMLElement;
 	private tabs: TabDef[];
+	private beanPanel: BeanManagePanel;
+	private equipmentPanel: EquipmentManagePanel;
 
 	constructor(plugin: CubicJBrewingPlugin) {
 		super(plugin.app);
-		this.plugin = plugin;
+		this.beanPanel = new BeanManagePanel({
+			app: plugin.app,
+			vaultData: plugin.vaultData,
+			close: () => this.close(),
+			openLink: (path) => void plugin.app.workspace.openLinkText(path, ''),
+		});
+		this.equipmentPanel = new EquipmentManagePanel({
+			equipment: plugin.equipment,
+			saveEquipment: () => plugin.saveEquipment(),
+		});
 		this.tabs = [
-			{ id: 'bean', label: t('dataManage.beans'), render: (el) => this.renderBeanTab(el) },
-			{ id: 'recipe', label: t('dataManage.recipes'), render: (el) => this.renderRecipeTab(el) },
-			{ id: 'equip', label: t('dataManage.equipment'), render: (el) => this.renderEquipTab(el) },
+			{ id: 'bean', label: t('dataManage.beans'), render: (container) => this.beanPanel.render(container) },
+			{ id: 'recipe', label: t('dataManage.recipes'), render: (container) => this.renderRecipeTab(container) },
+			{ id: 'equip', label: t('dataManage.equipment'), render: (container) => this.equipmentPanel.render(container) },
 		];
 	}
 
@@ -53,11 +61,13 @@ export class DataManageModal extends Modal {
 	}
 
 	onClose(): void {
+		this.equipmentPanel.dispose();
 		this.contentEl.empty();
 	}
 
 	private switchTab(id: TabId): void {
 		if (id === this.activeTab) return;
+		if (this.activeTab === 'equip') this.equipmentPanel.dispose();
 		this.activeTab = id;
 
 		this.contentEl.querySelectorAll('.dm-tab-btn').forEach((btn) => {
@@ -69,7 +79,7 @@ export class DataManageModal extends Modal {
 	}
 
 	private updateIndicator(animate: boolean): void {
-		const idx = this.tabs.findIndex((t) => t.id === this.activeTab);
+		const idx = this.tabs.findIndex((tab) => tab.id === this.activeTab);
 		this.tabIndicatorEl.style.transition = animate ? 'transform 0.25s ease' : 'none';
 		this.tabIndicatorEl.style.width = `${100 / this.tabs.length}%`;
 		this.tabIndicatorEl.style.transform = `translateX(${idx * 100}%)`;
@@ -77,346 +87,11 @@ export class DataManageModal extends Modal {
 
 	private renderActiveTab(): void {
 		this.tabContentEl.empty();
-		const tab = this.tabs.find((t) => t.id === this.activeTab);
+		const tab = this.tabs.find((candidate) => candidate.id === this.activeTab);
 		tab?.render(this.tabContentEl);
-	}
-
-	private renderBeanTab(container: HTMLElement): void {
-		const headerEl = container.createDiv({ cls: 'cb-bean-header' });
-		const newBtn = headerEl.createEl('button', { text: t('bean.new'), cls: 'cb-bean-btn cb-bean-new-btn' });
-		newBtn.addEventListener('click', () => this.handleCreateNewBean());
-
-		const { active, finished } = getSortedBeans(this.plugin.vaultData);
-
-		const deps = {
-			vaultData: this.plugin.vaultData,
-			onNameClick: (bean: { path: string }) => {
-				this.close();
-				this.plugin.app.workspace.openLinkText(bean.path, '');
-			},
-			onStatusChange: () => this.renderActiveTab(),
-		};
-
-		if (active.length > 0) {
-			const card = container.createDiv({ cls: 'dm-card' });
-			card.createDiv({ cls: 'dm-card-title', text: t('bean.activeBeans') });
-			for (const bean of active) renderActiveBeanRow(card, bean, deps);
-		}
-
-		if (finished.length > 0) {
-			const card = container.createDiv({ cls: 'dm-card' });
-			card.createDiv({ cls: 'dm-card-title', text: t('bean.pastBeans') });
-			for (const bean of finished) renderFinishedBeanRow(card, bean, deps);
-		}
-
-		if (active.length === 0 && finished.length === 0) {
-			container.createDiv({ cls: 'dm-empty', text: t('bean.emptyState') });
-		}
-	}
-
-	private async handleCreateNewBean(): Promise<void> {
-		const created = await createNewBean(this.app, this.plugin.vaultData);
-		if (created) this.close();
 	}
 
 	private renderRecipeTab(container: HTMLElement): void {
 		container.createDiv({ cls: 'dm-empty', text: t('dataManage.comingSoon') });
-	}
-
-	private renderEquipTab(container: HTMLElement): void {
-		const eq = this.plugin.equipment;
-
-		this.renderEquipSection(container, t('equip.shared'), [
-			{ label: t('equipment.grinder'), items: eq.grinders, key: 'grinders' },
-		]);
-		this.renderEquipSection(container, t('equip.filterBrewing'), [
-			{ label: t('equipment.dripper'), items: eq.drippers, key: 'drippers' },
-			{ label: t('equipment.filter'), items: eq.filters, key: 'filters' },
-		]);
-		this.renderEquipSection(container, t('method.espresso'), [
-			{ label: t('equipment.basket'), items: eq.baskets, key: 'baskets' },
-			{ label: t('equipment.accessory'), items: eq.accessories, key: 'accessories' },
-		]);
-	}
-
-	private renderEquipSection(
-		container: HTMLElement,
-		categoryLabel: string,
-		lists: Array<{ label: string; items: string[] | GrinderConfig[]; key: keyof EquipmentSettings }>,
-	): void {
-		const section = container.createDiv({ cls: 'dm-equip-section' });
-		section.createDiv({ cls: 'dm-equip-category', text: categoryLabel });
-		for (const list of lists) {
-			if (list.key === 'grinders') {
-				this.renderGrinderList(section, list.label);
-			} else {
-				this.renderStringList(section, list.label, list.key as Exclude<keyof EquipmentSettings, 'grinders'>);
-			}
-		}
-	}
-
-	private makeDraggable<T>(listEl: HTMLElement, arr: T[], renderItems: () => void): void {
-		const DRAG_THRESHOLD = 5;
-		let active = false;
-
-		listEl.addEventListener('pointerdown', (e) => {
-			if (active) return;
-			const row = (e.target as HTMLElement).closest<HTMLElement>('.dm-equip-row');
-			if (!row || (e.target as HTMLElement).closest('.dm-equip-del-btn, .dm-equip-edit-btn')) return;
-
-			const rows = Array.from(listEl.querySelectorAll<HTMLElement>('.dm-equip-row'));
-			const dragIdx = rows.indexOf(row);
-			if (dragIdx === -1 || rows.length < 2) return;
-			active = true;
-
-			const startY = e.clientY;
-			const rowHeight = row.getBoundingClientRect().height;
-			const gap = rows.length > 1 ? rows[1].getBoundingClientRect().top - rows[0].getBoundingClientRect().bottom : 0;
-			const stride = rowHeight + gap;
-			const minDy = -dragIdx * stride;
-			const maxDy = (rows.length - 1 - dragIdx) * stride;
-			let dragging = false;
-			let hoverIdx = dragIdx;
-			let dy = 0;
-
-			const updateTransforms = (currentIdx: number) => {
-				for (let i = 0; i < rows.length; i++) {
-					if (i === dragIdx) continue;
-					let shift = 0;
-					if (dragIdx < currentIdx && i > dragIdx && i <= currentIdx) shift = -stride;
-					else if (dragIdx > currentIdx && i >= currentIdx && i < dragIdx) shift = stride;
-					rows[i].style.transform = shift ? `translateY(${shift}px)` : '';
-				}
-			};
-
-			const onMove = (ev: PointerEvent) => {
-				dy = Math.max(minDy, Math.min(maxDy, ev.clientY - startY));
-				if (!dragging) {
-					if (Math.abs(dy) < DRAG_THRESHOLD) return;
-					dragging = true;
-					row.addClass('is-dragging');
-					for (const r of rows) {
-						if (r !== row) r.style.transition = 'transform 200ms ease';
-					}
-				}
-
-				row.style.transform = `translateY(${dy}px)`;
-
-				let newIdx = dragIdx + Math.round(dy / stride);
-				newIdx = Math.max(0, Math.min(rows.length - 1, newIdx));
-				if (newIdx !== hoverIdx) {
-					hoverIdx = newIdx;
-					updateTransforms(hoverIdx);
-				}
-			};
-
-			const onUp = async () => {
-				document.removeEventListener('pointermove', onMove);
-				document.removeEventListener('pointerup', onUp);
-
-				if (!dragging) {
-					active = false;
-					return;
-				}
-
-				const finalY = (hoverIdx - dragIdx) * stride;
-				row.style.transition = 'transform 200ms ease';
-				row.style.transform = `translateY(${finalY}px)`;
-
-				let cleaned = false;
-				const cleanup = () => {
-					if (cleaned) return;
-					cleaned = true;
-					for (const r of rows) {
-						r.style.transition = '';
-						r.style.transform = '';
-					}
-					row.removeClass('is-dragging');
-					active = false;
-					if (hoverIdx !== dragIdx) renderItems();
-				};
-
-				if (hoverIdx !== dragIdx) {
-					const [item] = arr.splice(dragIdx, 1);
-					arr.splice(hoverIdx, 0, item);
-					try {
-						await this.plugin.saveEquipment();
-					} catch (err) {
-						console.error('[DataManageModal] equipment reorder failed:', err);
-						new Notice(t('error.equipSave'));
-					}
-				}
-
-				row.addEventListener('transitionend', cleanup, { once: true });
-				setTimeout(cleanup, 250);
-			};
-
-			document.addEventListener('pointermove', onMove);
-			document.addEventListener('pointerup', onUp);
-		});
-	}
-
-	private renderStringList(
-		container: HTMLElement,
-		label: string,
-		key: Exclude<keyof EquipmentSettings, 'grinders'>,
-	): void {
-		const section = container.createDiv({ cls: 'dm-equip-list' });
-		const header = section.createDiv({ cls: 'dm-equip-list-header' });
-		header.createSpan({ text: label });
-		const addBtn = header.createEl('button', { cls: 'clickable-icon dm-equip-add-btn' });
-		setIcon(addBtn, 'plus');
-
-		const listEl = section.createDiv({ cls: 'dm-equip-items' });
-		const items = this.plugin.equipment[key] as string[];
-
-		const renderItems = () => {
-			listEl.empty();
-			if (items.length === 0) {
-				listEl.createDiv({ cls: 'dm-empty', text: t('dataManage.addPrompt', { label }) });
-				return;
-			}
-			for (let i = 0; i < items.length; i++) {
-				const row = listEl.createDiv({ cls: 'dm-equip-row' });
-				row.createSpan({ text: items[i] });
-				const delBtn = row.createEl('button', { text: '\u2715', cls: 'dm-btn dm-equip-del-btn' });
-				delBtn.addEventListener('click', async () => {
-					try {
-						items.splice(i, 1);
-						await this.plugin.saveEquipment();
-						renderItems();
-					} catch (err) {
-						console.error('[DataManageModal] equipment delete failed:', err);
-						new Notice(t('error.equipSave'));
-					}
-				});
-			}
-		};
-		renderItems();
-		if (items.length > 1) this.makeDraggable(listEl, items, renderItems);
-
-		addBtn.addEventListener('click', () => {
-			const formEl = section.createDiv({ cls: 'dm-equip-grinder-form' });
-			const input = formEl.createEl('input', {
-				type: 'text',
-				cls: 'dm-equip-input',
-				placeholder: label,
-				attr: { spellcheck: 'false' },
-			});
-
-			const btnRow = formEl.createDiv({ cls: 'dm-equip-grinder-actions' });
-			const saveBtn = btnRow.createEl('button', { text: t('bean.add'), cls: 'dm-btn dm-btn-accent' });
-			const cancelBtn = btnRow.createEl('button', { text: t('common.cancel'), cls: 'dm-btn dm-btn-muted' });
-
-			input.focus();
-
-			saveBtn.addEventListener('click', async () => {
-				const val = input.value.trim();
-				if (!val || items.includes(val)) return;
-				try {
-					items.push(val);
-					await this.plugin.saveEquipment();
-					formEl.remove();
-					renderItems();
-				} catch (err) {
-					console.error('[DataManageModal] equipment add failed:', err);
-					new Notice(t('error.equipSave'));
-				}
-			});
-			cancelBtn.addEventListener('click', () => formEl.remove());
-			input.addEventListener('keydown', (e) => {
-				if (e.key === 'Enter') saveBtn.click();
-				if (e.key === 'Escape') formEl.remove();
-			});
-		});
-	}
-
-	private renderGrinderList(container: HTMLElement, label: string): void {
-		const section = container.createDiv({ cls: 'dm-equip-list' });
-		const header = section.createDiv({ cls: 'dm-equip-list-header' });
-		header.createSpan({ text: label });
-		const addBtn = header.createEl('button', { cls: 'clickable-icon dm-equip-add-btn' });
-		setIcon(addBtn, 'plus');
-
-		const listEl = section.createDiv({ cls: 'dm-equip-items' });
-		const grinders = this.plugin.equipment.grinders;
-
-		const submitGrinder = async (apply: () => void): Promise<boolean> => {
-			try {
-				apply();
-				await this.plugin.saveEquipment();
-				return true;
-			} catch (err) {
-				console.error('[DataManageModal] grinder save failed:', err);
-				new Notice(t('error.equipSave'));
-				return false;
-			}
-		};
-
-		const openGrinderForm = (options: Parameters<typeof renderGrinderForm>[1]) => {
-			section.querySelector('.dm-equip-grinder-form')?.remove();
-			return renderGrinderForm(section, options);
-		};
-
-		const renderItems = () => {
-			listEl.empty();
-			if (grinders.length === 0) {
-				listEl.createDiv({ cls: 'dm-empty', text: t('dataManage.addPrompt', { label }) });
-				return;
-			}
-			for (let i = 0; i < grinders.length; i++) {
-				const g = grinders[i];
-				const row = listEl.createDiv({ cls: 'dm-equip-row' });
-				row.createSpan({ cls: 'dm-equip-grinder-name', text: g.name });
-				const metaParts = [`${t('equip.grindRange')}: ${g.min}~${g.max}`, `${t('equip.stepSize')}: ${g.step}`];
-				if (g.rpm) metaParts.push(`RPM: ${g.rpm.current} (${g.rpm.min}~${g.rpm.max})`);
-				row.createSpan({ cls: 'dm-equip-grinder-meta', text: metaParts.join(', ') });
-				const editBtn = row.createEl('button', { text: '✎', cls: 'dm-btn dm-equip-edit-btn' });
-				editBtn.addEventListener('click', () => {
-					const formEl = openGrinderForm({
-						initial: g,
-						submitLabel: t('form.save'),
-						onSubmit: async (updated) => {
-							const idx = grinders.indexOf(g);
-							if (idx === -1) {
-								formEl.remove();
-								renderItems();
-								return;
-							}
-							const saved = await submitGrinder(() => {
-								Object.assign(g, updated);
-								if (!updated.rpm) delete g.rpm;
-							});
-							if (!saved) return;
-							formEl.remove();
-							renderItems();
-						},
-					});
-				});
-				const delBtn = row.createEl('button', { text: '✕', cls: 'dm-btn dm-equip-del-btn' });
-				delBtn.addEventListener('click', async () => {
-					const saved = await submitGrinder(() => {
-						grinders.splice(i, 1);
-					});
-					if (saved) renderItems();
-				});
-			}
-		};
-		renderItems();
-		if (grinders.length > 1) this.makeDraggable(listEl, grinders, renderItems);
-
-		addBtn.addEventListener('click', () => {
-			const formEl = openGrinderForm({
-				submitLabel: t('bean.add'),
-				onSubmit: async (grinder) => {
-					const saved = await submitGrinder(() => {
-						grinders.push(grinder);
-					});
-					if (!saved) return;
-					formEl.remove();
-					renderItems();
-				},
-			});
-		});
 	}
 }

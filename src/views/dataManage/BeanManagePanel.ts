@@ -1,0 +1,55 @@
+import type { App } from 'obsidian';
+import type { BeanInfo } from '../../brew/types';
+import { t } from '../../i18n/index';
+import type { VaultDataService } from '../../services/VaultDataService';
+import { renderActiveBeanRow, renderFinishedBeanRow } from '../BeanRowRenderer';
+import { createNewBean, getSortedBeans } from '../beanHelpers';
+
+export interface BeanManagePanelDeps {
+	app: App;
+	vaultData: VaultDataService;
+	close: () => void;
+	openLink: (path: string) => void;
+}
+
+export class BeanManagePanel {
+	constructor(private deps: BeanManagePanelDeps) {}
+
+	render(container: HTMLElement): void {
+		container.empty();
+		const headerEl = container.createDiv({ cls: 'cb-bean-header' });
+		const newBtn = headerEl.createEl('button', { text: t('bean.new'), cls: 'cb-bean-btn cb-bean-new-btn' });
+		newBtn.addEventListener('click', () => void this.handleCreateNewBean());
+
+		const { active, finished } = getSortedBeans(this.deps.vaultData);
+		const rowDeps = {
+			vaultData: this.deps.vaultData,
+			onNameClick: (bean: BeanInfo) => {
+				this.deps.close();
+				this.deps.openLink(bean.path);
+			},
+			onStatusChange: () => this.render(container),
+		};
+
+		if (active.length > 0) {
+			const card = container.createDiv({ cls: 'dm-card' });
+			card.createDiv({ cls: 'dm-card-title', text: t('bean.activeBeans') });
+			for (const bean of active) renderActiveBeanRow(card, bean, rowDeps);
+		}
+
+		if (finished.length > 0) {
+			const card = container.createDiv({ cls: 'dm-card' });
+			card.createDiv({ cls: 'dm-card-title', text: t('bean.pastBeans') });
+			for (const bean of finished) renderFinishedBeanRow(card, bean, rowDeps);
+		}
+
+		if (active.length === 0 && finished.length === 0) {
+			container.createDiv({ cls: 'dm-empty', text: t('bean.emptyState') });
+		}
+	}
+
+	private async handleCreateNewBean(): Promise<void> {
+		const created = await createNewBean(this.deps.app, this.deps.vaultData);
+		if (created) this.deps.close();
+	}
+}
