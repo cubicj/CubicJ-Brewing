@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Desktop%20%2B%20Mobile-brightgreen)
-![Version](https://img.shields.io/badge/version-0.4.0-orange)
+![Version](https://img.shields.io/badge/version-0.5.0-orange)
 
 [English](README.md)
 
@@ -23,8 +23,8 @@
 - **필터 & 에스프레소 모드** — 추출 방식별 파라미터
 - **라이브 브루 프로파일 차트** — 추출 중 실시간 무게-시간 그래프 기록, 호버 시 무게·유량·시간 표시
 - **원두 인벤토리** — 로스팅 일수, 남은 원두 무게, 상태 추적
-- **브루 히스토리** — 원두별/일자별 기록, 추출 그래프, 사용 장비, 인라인 메모 편집
-- **장비 관리** — 그라인더, 드리퍼, 필터, 바스켓, 액세서리
+- **브루 히스토리** — 원두별/일자별 기록, 추출 그래프, 로스팅 경과일, 사용 장비, 인라인 메모 편집
+- **장비 관리** — RPM 설정을 포함한 그라인더, 드리퍼, 필터, 바스켓, 액세서리
 - **볼트 네이티브 저장** — 모든 데이터를 일반 파일로, Obsidian Sync 호환
 - **다국어 지원** — 한국어, 영어, 커뮤니티 확장 가능
 

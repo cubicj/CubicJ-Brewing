@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Desktop%20%2B%20Mobile-brightgreen)
-![Version](https://img.shields.io/badge/version-0.4.0-orange)
+![Version](https://img.shields.io/badge/version-0.5.0-orange)
 
 [한국어](README.ko.md)
 
@@ -23,8 +23,8 @@ An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE s
 - **Filter & espresso modes** with method-specific parameter sets
 - **Live brew profile chart** — weight-over-time curve recorded during brewing, with hover readout of weight, flow rate, and time
 - **Bean inventory** — roast days, remaining weight, status tracking
-- **Brew history** — per-bean and daily records with profile charts, equipment used, and inline memo editing
-- **Equipment registry** — grinders, drippers, filters, baskets, accessories
+- **Brew history** — per-bean and daily records with profile charts, roast age, equipment used, and inline memo editing
+- **Equipment registry** — grinders with RPM settings, drippers, filters, baskets, accessories
 - **Vault-native storage** — all data as plain files, Obsidian Sync compatible
 - **Multi-language** — English and Korean, community-extensible
 
