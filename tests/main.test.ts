@@ -4,7 +4,6 @@ import CubicJBrewingPlugin from '../src/main';
 
 const desktopMocks = vi.hoisted(() => ({
 	acaiaOptions: [] as unknown[],
-	fileLoggerArgs: [] as unknown[][],
 	teardown: [] as string[],
 	viewCreations: [] as Array<{ leaf: unknown; plugin: unknown }>,
 }));
@@ -20,20 +19,6 @@ vi.mock('../src/acaia/AcaiaService', () => ({
 
 		destroy(): void {
 			desktopMocks.teardown.push('acaia');
-		}
-	},
-}));
-
-vi.mock('../src/utils/FileLogger', () => ({
-	FileLogger: class {
-		constructor(...args: unknown[]) {
-			desktopMocks.fileLoggerArgs.push(args);
-		}
-
-		start(): void {}
-		log(_message: string): void {}
-		stop(): void {
-			desktopMocks.teardown.push('packet');
 		}
 	},
 }));
@@ -55,7 +40,6 @@ vi.mock('../src/views/BrewingView', () => ({
 
 beforeEach(() => {
 	desktopMocks.acaiaOptions.length = 0;
-	desktopMocks.fileLoggerArgs.length = 0;
 	desktopMocks.teardown.length = 0;
 	desktopMocks.viewCreations.length = 0;
 });
@@ -182,7 +166,7 @@ describe('plugin data delegation', () => {
 	it('keeps locale and log config getter semantics across saves', async () => {
 		let data: unknown = {
 			locale: 'en',
-			logConfig: { enabled: false, categories: [], packetLog: false },
+			logConfig: { enabled: false, categories: [] },
 		};
 		const plugin = makePlugin(data);
 		const saveData = vi.fn(async (nextData: unknown) => {
@@ -192,12 +176,12 @@ describe('plugin data delegation', () => {
 		await plugin.loadPluginData();
 
 		await plugin.saveLocale('ko');
-		await plugin.saveLogConfig({ enabled: true, categories: ['BLE'], packetLog: true });
+		await plugin.saveLogConfig({ enabled: true, categories: ['BLE'] });
 		const config = plugin.getLogConfig();
 		config.enabled = false;
 
 		expect(plugin.getLocale()).toBe('ko');
-		expect(plugin.getLogConfig()).toEqual({ enabled: true, categories: ['BLE'], packetLog: true });
+		expect(plugin.getLogConfig()).toEqual({ enabled: true, categories: ['BLE'] });
 		expect(saveData).toHaveBeenCalledTimes(2);
 	});
 });
@@ -265,7 +249,7 @@ function makeRuntimeHarness(): RuntimeHarness {
 			}),
 		},
 		beanBlock: { setScaleWeightGetter },
-		getLogConfig: () => ({ enabled: true, categories: ['BLE'], packetLog: true }),
+		getLogConfig: () => ({ enabled: true, categories: ['BLE'] }),
 		registerView,
 		addCommand: vi.fn((command: { id: string; name: string }) => {
 			commands.push(command);
@@ -288,7 +272,7 @@ function makeRuntimeHarness(): RuntimeHarness {
 }
 
 describe('DesktopRuntime', () => {
-	it('initializes the desktop service, view, commands, ribbon, packet log, and scale getter', async () => {
+	it('initializes the desktop service, view, commands, ribbon, and scale getter', async () => {
 		const { DesktopRuntime } = await import('../src/DesktopRuntime');
 		const harness = makeRuntimeHarness();
 		const runtime = new DesktopRuntime(harness.plugin);
@@ -298,9 +282,6 @@ describe('DesktopRuntime', () => {
 		expect(harness.plugin.acaiaService).not.toBeNull();
 		expect(desktopMocks.acaiaOptions).toEqual([
 			{ logger: expect.any(Object), noblePath: '/vault/.obsidian/plugins/cubicj-brewing/noble' },
-		]);
-		expect(desktopMocks.fileLoggerArgs).toEqual([
-			[expect.any(Object), '.obsidian/plugins/cubicj-brewing/ble-debug.log', 1000, 5000],
 		]);
 		expect(harness.registerView).toHaveBeenCalledWith('cubicj-brewing', expect.any(Function));
 		expect(harness.commands).toEqual([
@@ -337,15 +318,7 @@ describe('DesktopRuntime', () => {
 		harness.beforeUnload();
 		runtime.destroy();
 
-		expect(desktopMocks.teardown).toEqual([
-			'acaia',
-			'plugin',
-			'packet',
-			'listener',
-			'acaia',
-			'plugin',
-			'packet',
-		]);
+		expect(desktopMocks.teardown).toEqual(['acaia', 'plugin', 'listener', 'acaia', 'plugin']);
 		expect(harness.removeEventListener).toHaveBeenCalledOnce();
 	});
 });

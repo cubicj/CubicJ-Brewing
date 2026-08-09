@@ -1,11 +1,9 @@
 import type { BleLogger } from './acaia/AcaiaService';
-import type { FileLogger } from './utils/FileLogger';
 import type CubicJBrewingPlugin from './main';
 import { t } from './i18n/index';
 
 export class DesktopRuntime {
 	private beforeUnloadHandler: (() => void) | null = null;
-	private blePacketLogger: FileLogger | null = null;
 	private viewType: string | null = null;
 
 	constructor(private plugin: CubicJBrewingPlugin) {}
@@ -15,27 +13,10 @@ export class DesktopRuntime {
 		const { BrewingView, VIEW_TYPE_BREWING } = await import('./views/BrewingView');
 		this.viewType = VIEW_TYPE_BREWING;
 
-		const vaultAdapter = {
-			read: async (p: string) => this.plugin.app.vault.adapter.read(p),
-			write: async (p: string, c: string) => this.plugin.app.vault.adapter.write(p, c),
-		};
-
 		let logger: BleLogger | undefined;
 		if (this.plugin.pluginLogger) {
 			const pl = this.plugin.pluginLogger;
 			logger = { log: (msg: string) => pl.log('BLE', msg) };
-		}
-
-		if (this.plugin.getLogConfig().packetLog) {
-			const { FileLogger } = await import('./utils/FileLogger');
-			this.blePacketLogger = new FileLogger(
-				vaultAdapter,
-				`${this.plugin.manifest.dir}/ble-debug.log`,
-				1000,
-				5000,
-			);
-			this.blePacketLogger.start();
-			this.blePacketLogger.log(`\n=== session ${new Date().toISOString()} ===`);
 		}
 
 		const basePath = (this.plugin.app.vault.adapter as any).getBasePath();
@@ -155,6 +136,5 @@ export class DesktopRuntime {
 		}
 		this.plugin.acaiaService?.destroy();
 		this.plugin.pluginLogger?.stop();
-		this.blePacketLogger?.stop();
 	}
 }

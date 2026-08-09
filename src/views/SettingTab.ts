@@ -118,16 +118,6 @@ export class BrewingSettingTab extends PluginSettingTab {
 					}),
 			);
 
-		new Setting(details)
-			.setName(t('settings.packetLog'))
-			.setDesc(t('settings.packetLogDesc'))
-			.addToggle((toggle) =>
-				toggle.setValue(logConfig.packetLog).onChange(async (value) => {
-					logConfig.packetLog = value;
-					await this.plugin.saveLogConfig(logConfig);
-				}),
-			);
-
 		containerEl.createEl('h2', { text: t('settings.usageGuide') });
 
 		new Setting(containerEl).setName(t('settings.beansCodeBlock')).setDesc(t('settings.beansCodeBlockDesc'));

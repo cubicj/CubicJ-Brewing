@@ -79,8 +79,6 @@
 	"settings.debugLogDesc": "Write plugin debug log to file.",
 	"settings.logCategories": "Log Categories",
 	"settings.logCategoriesDesc": "Comma-separated category filter (empty = all).",
-	"settings.packetLog": "BLE Packet Log",
-	"settings.packetLogDesc": "Log raw BLE packets (high volume).",
 
 	"settings.usageGuide": "Usage Guide",
 	"settings.beansCodeBlock": "Beans Widget",

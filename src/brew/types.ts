@@ -1,7 +1,6 @@
 export interface LogConfig {
 	enabled: boolean;
 	categories: string[];
-	packetLog: boolean;
 }
 
 export type BrewMethod = 'filter' | 'espresso';

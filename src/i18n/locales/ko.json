@@ -79,8 +79,6 @@
 	"settings.debugLogDesc": "플러그인 디버그 로그를 파일에 기록합니다.",
 	"settings.logCategories": "로그 카테고리",
 	"settings.logCategoriesDesc": "쉼표로 구분된 카테고리 필터 (비우면 전체).",
-	"settings.packetLog": "BLE 패킷 로그",
-	"settings.packetLogDesc": "BLE 원시 패킷을 로그합니다 (고용량).",
 
 	"settings.usageGuide": "사용 가이드",
 	"settings.beansCodeBlock": "원두 위젯",

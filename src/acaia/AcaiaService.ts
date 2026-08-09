@@ -482,7 +482,6 @@ export class AcaiaService extends EventEmitter {
 	}
 
 	private handlePacket(packet: Buffer): void {
-		this.emit('rawPacket', packet.toString('hex'));
 		if (packet.length < 3 || packet[0] !== 0xef || packet[1] !== 0xdd) return;
 
 		const cmd = packet[2];

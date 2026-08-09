@@ -9,7 +9,7 @@ export interface PluginDataPort {
 
 export class PluginDataStore {
 	equipment: EquipmentSettings = { grinders: [], drippers: [], filters: [], baskets: [], accessories: [] };
-	logConfig: LogConfig = { enabled: false, categories: [], packetLog: false };
+	logConfig: LogConfig = { enabled: false, categories: [] };
 	beanFolder = '';
 	locale = 'en';
 	firstInstall = false;
@@ -58,7 +58,6 @@ export class PluginDataStore {
 			this.logConfig = {
 				enabled: typeof lc.enabled === 'boolean' ? lc.enabled : false,
 				categories: Array.isArray(lc.categories) ? lc.categories : [],
-				packetLog: typeof lc.packetLog === 'boolean' ? lc.packetLog : false,
 			};
 		}
 		if (typeof data.beanFolder === 'string') {

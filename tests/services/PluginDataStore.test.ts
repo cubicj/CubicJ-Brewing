@@ -130,7 +130,7 @@ describe('PluginDataStore settings state', () => {
 	it('loads version, log config, bean folder, locale, and existing-install state', async () => {
 		const { port } = makePort({
 			dataVersion: 2,
-			logConfig: { enabled: true, categories: ['BLE'], packetLog: true },
+			logConfig: { enabled: true, categories: ['BLE'] },
 			beanFolder: 'Coffee/Beans',
 			locale: 'ko',
 		});
@@ -139,7 +139,7 @@ describe('PluginDataStore settings state', () => {
 		await store.load();
 
 		expect(store.savedDataVersion).toBe(2);
-		expect(store.logConfig).toEqual({ enabled: true, categories: ['BLE'], packetLog: true });
+		expect(store.logConfig).toEqual({ enabled: true, categories: ['BLE'] });
 		expect(store.beanFolder).toBe('Coffee/Beans');
 		expect(store.locale).toBe('ko');
 		expect(store.firstInstall).toBe(false);
@@ -152,7 +152,7 @@ describe('PluginDataStore settings state', () => {
 		await store.load();
 
 		expect(store.savedDataVersion).toBe(0);
-		expect(store.logConfig).toEqual({ enabled: false, categories: [], packetLog: false });
+		expect(store.logConfig).toEqual({ enabled: false, categories: [] });
 		expect(store.beanFolder).toBe('');
 		expect(store.locale).toBe('en');
 		expect(store.firstInstall).toBe(true);
@@ -160,13 +160,13 @@ describe('PluginDataStore settings state', () => {
 
 	it('defaults malformed log config fields independently', async () => {
 		const { port } = makePort({
-			logConfig: { enabled: 'yes', categories: 'BLE', packetLog: 1 },
+			logConfig: { enabled: 'yes', categories: 'BLE' },
 		});
 		const store = new PluginDataStore(port);
 
 		await store.load();
 
-		expect(store.logConfig).toEqual({ enabled: false, categories: [], packetLog: false });
+		expect(store.logConfig).toEqual({ enabled: false, categories: [] });
 	});
 });
 
@@ -182,7 +182,7 @@ describe('PluginDataStore persistence', () => {
 		equipment.drippers.push('V60');
 
 		await store.saveEquipment();
-		await store.saveLogConfig({ enabled: true, categories: ['FLOW'], packetLog: false });
+		await store.saveLogConfig({ enabled: true, categories: ['FLOW'] });
 		await store.saveBeanFolder('Beans');
 		await store.saveLocale('ko');
 		await store.saveDataVersion();
@@ -191,7 +191,7 @@ describe('PluginDataStore persistence', () => {
 		expect(getData()).toEqual({
 			custom: 'preserved',
 			equipment,
-			logConfig: { enabled: true, categories: ['FLOW'], packetLog: false },
+			logConfig: { enabled: true, categories: ['FLOW'] },
 			beanFolder: 'Beans',
 			locale: 'ko',
 			dataVersion: DATA_VERSION,
