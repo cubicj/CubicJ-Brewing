@@ -4,7 +4,7 @@ import { t } from '../i18n/index';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import type { BrewRecordService } from '../services/BrewRecordService';
 import { groupRecordsByBeanForDay, parseDailyNoteDateFromPath } from './brewDayRecords';
-import type { BeanWeightService } from './BrewProfileModal';
+import type { BeanWeightService } from '../services/BeanWeightService';
 import { renderBrewRecordTable } from './BrewRecordTable';
 
 export class BrewDayCodeBlock {

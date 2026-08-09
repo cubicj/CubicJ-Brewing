@@ -5,7 +5,8 @@ import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import type { BrewRecordService } from '../services/BrewRecordService';
 import { t } from '../i18n/index';
 import { formatBrewDate } from '../utils/format';
-import { type BeanWeightService, BrewProfileModal } from './BrewProfileModal';
+import type { BeanWeightService } from '../services/BeanWeightService';
+import { BrewProfileModal } from './BrewProfileModal';
 
 export interface BrewRecordTableOptions {
 	app: App;

@@ -6,7 +6,8 @@ import { getDrinkLabel, getMethodLabel, getTempLabel } from '../brew/constants';
 import { t } from '../i18n/index';
 import { createStepper } from './Stepper';
 import { createAccessoryChecklist } from './FormHelpers';
-import { ConfirmModal, type BeanWeightService } from './BrewProfileModal';
+import type { BeanWeightService } from '../services/BeanWeightService';
+import { deleteBrewRecordFlow } from './deleteBrewRecordFlow';
 
 export interface BrewRecordFormDeps {
 	app: App;
@@ -207,34 +208,7 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 	const footer = container.createDiv({ cls: 'brew-profile-footer' });
 	const deleteBtn = footer.createEl('button', { text: t('form.delete'), cls: 'mod-warning' });
 	deleteBtn.addEventListener('click', () => {
-		const bean = deps.vaultData?.getAllBeans().find((b) => b.name === record.bean);
-		const canRestore = bean != null && bean.weight != null && record.dose > 0;
-		const checkbox = canRestore
-			? { label: t('form.restoreWeight', { dose: record.dose, bean: record.bean }), checked: true }
-			: undefined;
-		const modal = new ConfirmModal(
-			deps.app,
-			t('form.deleteConfirm'),
-			async (restoreWeight) => {
-				const delResult = await deps.recordService.removeWithProfile(
-					record.id,
-					record.profilePath,
-					deps.profileStorage,
-				);
-				if (delResult.ok) {
-					if (restoreWeight && canRestore) {
-						const newWeight = Math.round((bean.weight! + record.dose) * 10) / 10;
-						await deps.vaultData!.setWeight(bean.path, newWeight);
-					}
-					deps.onDeleted();
-				} else {
-					console.error(`[BrewRecordForm] delete failed: [${delResult.error.code}] ${delResult.error.message}`);
-					new Notice(t('error.recordDelete'));
-				}
-			},
-			checkbox,
-		);
-		modal.open();
+		deleteBrewRecordFlow(deps, record, deps.onDeleted);
 	});
 
 	const rightGroup = footer.createDiv({ cls: 'brew-profile-footer-right' });

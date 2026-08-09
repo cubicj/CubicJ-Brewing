@@ -3,7 +3,7 @@ import type { BrewRecordService } from '../services/BrewRecordService';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import type { EquipmentSettings } from '../brew/types';
 import { t } from '../i18n/index';
-import type { BeanWeightService } from './BrewProfileModal';
+import type { BeanWeightService } from '../services/BeanWeightService';
 import { renderBrewRecordTable } from './BrewRecordTable';
 
 export class BrewCodeBlock {
