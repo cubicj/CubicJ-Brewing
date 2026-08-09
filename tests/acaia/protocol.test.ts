@@ -234,18 +234,6 @@ describe('PacketBuffer', () => {
 		expect(packets[0][2]).toBe(0x0c);
 	});
 
-	it('flush emits incomplete buffered data', () => {
-		const buf = new PacketBuffer();
-		const packets: Buffer[] = [];
-		buf.onPacket = (p) => packets.push(p);
-
-		buf.push(Buffer.from([0xef, 0xdd, 0x0c, 0x07, 0x05, 0xdf]));
-		expect(packets.length).toBe(0);
-
-		buf.flush();
-		expect(packets.length).toBe(1);
-	});
-
 	it('resets buffer when exceeding 2048 byte cap', () => {
 		const buf = new PacketBuffer();
 		const packets: Buffer[] = [];
@@ -266,7 +254,8 @@ describe('PacketBuffer', () => {
 
 		buf.push(Buffer.from([0xef, 0xdd, 0x0c]));
 		buf.reset();
-		buf.flush();
-		expect(packets.length).toBe(0);
+		buf.push(Buffer.from([0xef, 0xdd, 0x05, 0x01, 0xaa, 0xaa, 0x00]));
+		expect(packets).toHaveLength(1);
+		expect(packets[0][2]).toBe(0x05);
 	});
 });

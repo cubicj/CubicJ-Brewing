@@ -76,8 +76,6 @@ export function resolveModelName(bleName: string): string {
 export const WRITE_UUID = '49535343884143f4a8d4ecbe34729bb3';
 export const NOTIFY_UUID = '495353431e4d4bd9ba6123c647249616';
 
-export const HEADER = [0xef, 0xdd] as const;
-
 export const MSG_TYPE = {
 	HEARTBEAT: 0,
 	TARE: 4,

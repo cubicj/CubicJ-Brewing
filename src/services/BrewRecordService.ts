@@ -184,17 +184,6 @@ export class BrewRecordService {
 		return ok(this.filterRecords(result.data, bean, method, temp, equip));
 	}
 
-	async getLastRecord(
-		bean: string,
-		method: BrewMethod,
-		temp: BrewTemp,
-		equip?: { filter?: string; grinder?: string; dripper?: string; basket?: string; drink?: EspressoDrink },
-	): Promise<Result<BrewRecord | undefined>> {
-		const result = await this.load();
-		if (!result.ok) return result;
-		return ok(this.filterRecords(result.data, bean, method, temp, equip)[0]);
-	}
-
 	async migrateYields(profileStorage: { load(path: string): Promise<Result<BrewProfilePoint[]>> }): Promise<void> {
 		const result = await this.load();
 		if (!result.ok) return;

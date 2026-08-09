@@ -1,4 +1,4 @@
-import type { App, CachedMetadata, TFile } from 'obsidian';
+import type { App, TFile } from 'obsidian';
 import type { BeanInfo, RecipeInfo, RecipeStep } from '../brew/types';
 import { calcRoastDays } from '../brew/constants';
 import { t } from '../i18n/index';
@@ -147,10 +147,6 @@ export class VaultDataService {
 	getDaysSinceRoast(bean: BeanInfo): number | null {
 		return calcRoastDays(bean.roastDate);
 	}
-
-	async refreshRoastDays(): Promise<void> {}
-
-	onMetadataChanged(_file: TFile, _data: string, _cache: CachedMetadata): void {}
 
 	async migrateFrontmatterKeys(): Promise<string[]> {
 		const files = this.app.vault.getMarkdownFiles();

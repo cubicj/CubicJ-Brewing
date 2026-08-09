@@ -19,13 +19,6 @@ class InMemoryFileAdapter implements FileAdapter {
 	async remove(path: string): Promise<void> {
 		this.files.delete(path);
 	}
-	async list(path: string): Promise<string[]> {
-		const prefix = path.endsWith('/') ? path : path + '/';
-		return [...this.files.keys()]
-			.filter((k) => k.startsWith(prefix))
-			.map((k) => k.slice(prefix.length).split('/')[0])
-			.filter((v, i, a) => a.indexOf(v) === i);
-	}
 }
 
 describe('BrewProfileStorage', () => {

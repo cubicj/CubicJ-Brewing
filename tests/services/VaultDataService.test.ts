@@ -61,32 +61,4 @@ describe('VaultDataService', () => {
 		expect(result.ok).toBe(true);
 		expect(app.vault.create).toHaveBeenCalledWith('Beans/New Bean.md', expect.not.stringContaining('roast_days'));
 	});
-
-	it('does not rewrite all bean notes for derived roast day refresh', async () => {
-		const file = makeFile('Beans/A.md');
-		const frontmatter = {
-			[file.path]: { type: 'bean', roast_date: '2026-06-01', roast_days: 'old' },
-		};
-		const app = makeApp([file], frontmatter);
-		const service = new VaultDataService(app);
-
-		await service.refreshRoastDays();
-
-		expect(app.fileManager.processFrontMatter).not.toHaveBeenCalled();
-		expect(frontmatter[file.path]).toEqual({ type: 'bean', roast_date: '2026-06-01', roast_days: 'old' });
-	});
-
-	it('does not rewrite changed bean notes only to refresh derived roast days', () => {
-		const file = makeFile('Beans/A.md');
-		const frontmatter = {
-			[file.path]: { type: 'bean', roast_date: '2026-06-01', roast_days: 'old' },
-		};
-		const app = makeApp([file], frontmatter);
-		const service = new VaultDataService(app);
-
-		service.onMetadataChanged(file, '', { frontmatter: frontmatter[file.path] });
-
-		expect(app.fileManager.processFrontMatter).not.toHaveBeenCalled();
-		expect(frontmatter[file.path]).toEqual({ type: 'bean', roast_date: '2026-06-01', roast_days: 'old' });
-	});
 });

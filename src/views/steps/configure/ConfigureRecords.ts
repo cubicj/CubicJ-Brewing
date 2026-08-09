@@ -25,14 +25,6 @@ export function buildStrictRecordQuery(sel: BrewFlowSelection): ConfigureRecordQ
 	return equip;
 }
 
-export async function getLooseLastRecord(
-	recordService: BrewRecordService,
-	sel: BrewFlowSelection,
-): Promise<BrewRecord | undefined> {
-	const result = await recordService.getLastRecord(sel.bean!.name, sel.method!, sel.temp!, buildLooseRecordQuery(sel));
-	return result.ok ? result.data : undefined;
-}
-
 export async function getLooseMatchingRecords(
 	recordService: BrewRecordService,
 	sel: BrewFlowSelection,

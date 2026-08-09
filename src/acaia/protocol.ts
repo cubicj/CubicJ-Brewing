@@ -110,13 +110,6 @@ export class PacketBuffer {
 		this.drain();
 	}
 
-	flush(): void {
-		if (this.buf.length >= 5 && this.buf[0] === 0xef && this.buf[1] === 0xdd) {
-			if (this.onPacket) this.onPacket(Buffer.from(this.buf));
-		}
-		this.buf = [];
-	}
-
 	reset(): void {
 		this.buf = [];
 	}

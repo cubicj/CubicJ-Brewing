@@ -84,14 +84,6 @@ export default class CubicJBrewingPlugin extends Plugin {
 			remove: async (path) => {
 				await this.app.vault.adapter.remove(path);
 			},
-			list: async (path) => {
-				try {
-					const listed = await this.app.vault.adapter.list(path);
-					return listed.files.map((f) => f.split('/').pop()!);
-				} catch {
-					return [];
-				}
-			},
 		};
 
 		const recordsPath = `${DATA_DIR}/brew-records.json`;
