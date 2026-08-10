@@ -30,6 +30,26 @@ An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE s
 
 BLE and the brewing sidebar are desktop-only (Windows); bean inventory, brew history, and daily records also work on mobile.
 
+## Screenshots
+
+<p align="center">
+  <img src="assets/beans-table.png" alt="Bean inventory with roast days and remaining weight" width="720">
+  <br>
+  <em>Bean inventory — roast days, remaining weight, and status tracking per bean</em>
+</p>
+
+<p align="center">
+  <img src="assets/brews-table.png" alt="Brew records table with date, method, and memo" width="720">
+  <br>
+  <em>Per-bean brew history table</em>
+</p>
+
+<p align="center">
+  <img src="assets/brews-detail.png" alt="Brew detail modal with profile chart" width="720">
+  <br>
+  <em>Brew detail — extraction parameters and weight-over-time profile chart</em>
+</p>
+
 ## Installation
 
 1. Download `cubicj-brewing.zip` from the [latest release](https://github.com/cubicj/CubicJ-Brewing/releases/latest)

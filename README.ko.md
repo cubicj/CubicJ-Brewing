@@ -30,6 +30,26 @@
 
 BLE와 브루잉 사이드바는 데스크톱(Windows) 전용이며, 원두 인벤토리·브루 히스토리·일일 기록은 모바일에서도 동작합니다.
 
+## 스크린샷
+
+<p align="center">
+  <img src="assets/ko/beans-table.png" alt="원두 인벤토리 — 로스팅 일수와 잔여 무게" width="720">
+  <br>
+  <em>원두 인벤토리 — 원두별 로스팅 일수, 남은 원두 무게, 상태 추적</em>
+</p>
+
+<p align="center">
+  <img src="assets/ko/brews-table.png" alt="브루잉 기록 테이블 — 날짜, 방식, 메모" width="720">
+  <br>
+  <em>원두별 브루잉 히스토리 테이블</em>
+</p>
+
+<p align="center">
+  <img src="assets/ko/brews-detail.png" alt="브루잉 상세 모달 — 프로파일 차트" width="720">
+  <br>
+  <em>브루잉 상세 — 추출 파라미터와 무게-시간 그래프</em>
+</p>
+
 ## 설치
 
 1. [최신 릴리즈](https://github.com/cubicj/CubicJ-Brewing/releases/latest)에서 `cubicj-brewing.zip` 다운로드
