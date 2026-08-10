@@ -133,13 +133,19 @@ function openWeightPopover(
 	});
 	depletedBtn.addEventListener('click', async () => {
 		const statusResult = await vaultData.setBeanStatus(bean.path, 'finished');
-		if (statusResult.ok) {
-			onSave();
-			close();
-		} else {
+		if (!statusResult.ok) {
 			console.error(`[BeanCodeBlock] depleted failed: [${statusResult.error.code}] ${statusResult.error.message}`);
 			new Notice(t('error.beanUpdate'));
+			return;
 		}
+		const weightResult = await vaultData.setWeight(bean.path, null);
+		if (weightResult.ok) {
+			bean.weight = null;
+		} else {
+			console.error(`[BeanCodeBlock] weight clear failed: [${weightResult.error.code}] ${weightResult.error.message}`);
+		}
+		onSave();
+		close();
 	});
 
 	const close = () => {
