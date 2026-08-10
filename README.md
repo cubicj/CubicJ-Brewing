@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Desktop%20%2B%20Mobile-brightgreen)
-![Version](https://img.shields.io/badge/version-0.5.0-orange)
+[![Release](https://img.shields.io/github/v/release/cubicj/CubicJ-Brewing)](https://github.com/cubicj/CubicJ-Brewing/releases/latest)
 
 [한국어](README.ko.md)
 
@@ -28,29 +28,7 @@ An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE s
 - **Vault-native storage** — all data as plain files, Obsidian Sync compatible
 - **Multi-language** — English and Korean, community-extensible
 
-## Platform Strategy
-
-`isDesktopOnly: false` — this is intentional. The plugin provides useful read-only features on mobile.
-
-| | Desktop | Mobile |
-|---|---------|--------|
-| Bean inventory (`beans` block) | Full | Full |
-| Brew history (`brews` block) | Full | Full |
-| Daily brew records (`brew-day` block) | Full | Full |
-| Brew detail modal | Inline chart | "View Chart" button |
-| Data Manager | Full | Full |
-| **BLE scale connection** | Acaia Pearl S | Not available |
-| **Brewing sidebar** | Live brew flow | Not available |
-| **Live profile chart** | Real-time canvas | Not available |
-
-Desktop-only features (BLE, BrewingView, live chart) are loaded conditionally via `Platform.isDesktop` — they are never imported on mobile.
-
-### Desktop Requirements
-
-- **Windows** with Bluetooth LE support
-- **Acaia Pearl S** scale
-
-> macOS/Linux support depends on [@stoprocent/noble](https://github.com/nicedoc/noble) platform compatibility. Not tested yet.
+BLE and the brewing sidebar are desktop-only (Windows); bean inventory, brew history, and daily records also work on mobile.
 
 ## Installation
 
@@ -61,116 +39,13 @@ Desktop-only features (BLE, BrewingView, live chart) are loaded conditionally vi
 
 > The `noble/` folder contains the native BLE addon — do not omit it.
 
-## Usage
+## Documentation
 
-### Bean Inventory (`beans` code block)
+Full documentation lives in the **[wiki](https://github.com/cubicj/CubicJ-Brewing/wiki)**:
 
-Place a `beans` code block in any note to create a bean inventory hub:
-
-````markdown
-```beans
-```
-````
-
-<p>
-  <img src="assets/beans-table.png" alt="Bean inventory with roast days and remaining weight" width="720">
-  <br>
-  <em>Bean inventory — roast days, remaining weight, and status tracking per bean</em>
-</p>
-
-- **Active / Finished** sections — beans grouped by status
-- **Roast days** — automatically calculated from roast date
-- **Remaining weight** — click to set, add, or subtract (with optional scale auto-read)
-- **Status toggle** — mark as finished or repurchase with new roast date
-- **New bean button** — creates a bean note with frontmatter template and a `brews` block
-
-> The `beans` block is **not created automatically** — add it manually to a note of your choice (e.g., a "Coffee Dashboard" note). One block per vault is enough.
-
-### Bean Notes
-
-Each bean is a regular note with `type: bean` frontmatter:
-
-```yaml
----
-type: bean
-roaster: My Roaster
-status: active
-roast_date: 2026-03-01
-weight: 200
----
-```
-
-The plugin discovers beans via Obsidian's metadata cache — no special folder structure required.
-
-### Brew Records (`brews` code block)
-
-Each bean note includes a `brews` code block (auto-inserted on creation) that shows its brew history:
-
-````markdown
-```brews
-```
-````
-
-<p>
-  <img src="assets/brews-table.png" alt="Brew records table with date, method, and memo" width="720">
-  <br>
-  <em>Per-bean brew history table</em>
-</p>
-
-<p>
-  <img src="assets/brews-detail.png" alt="Brew detail modal with profile chart" width="720">
-  <br>
-  <em>Brew detail — extraction parameters and weight-over-time profile chart</em>
-</p>
-
-### Daily Brew Records (`brew-day` code block)
-
-Place a `brew-day` code block in a daily note named `YYYY-MM-DD.md` to show that day's brew records grouped by bean:
-
-````markdown
-```brew-day
-```
-````
-
-Records are sorted newest first and use the note's date as the local day boundary.
-
----
-
-## Architecture
-
-```
-TypeScript · vitest · esbuild CommonJS bundle
-```
-
-| Layer | Key Components |
-|-------|----------------|
-| **BLE** | Binary protocol codec, packet buffer (fragmentation handling), typed EventEmitter service |
-| **Brew State** | 6-step finite state machine with step guards and discriminated union records |
-| **Signal** | Median spike filter, time-aware EMA trend line |
-| **Storage** | File-adapter abstraction, JSON CRUD with schema validation, corrupt-file backup |
-| **Views** | Accordion manager, stepper component, Canvas 2D chart, code block processors |
-
-## Development
-
-```bash
-npm run dev          # watch mode, repo-local only
-npm run watch        # same repo-local watch mode
-npm run build        # test → typecheck → production build
-npm run test         # vitest (single run)
-npm run test:watch   # vitest (watch mode)
-npm run check        # typecheck only
-npm run lint         # eslint
-```
-
-### Build from Source
-
-```bash
-git clone https://github.com/cubicj/CubicJ-Brewing.git
-cd CubicJ-Brewing
-npm install
-npm run build
-npm run release      # generate release zip
-```
+- [Installation](https://github.com/cubicj/CubicJ-Brewing/wiki/Installation) — requirements, install steps, building from source
+- [Getting Started](https://github.com/cubicj/CubicJ-Brewing/wiki/Getting-Started) — scale connection, brew flow, code blocks, commands, settings
+- [Troubleshooting](https://github.com/cubicj/CubicJ-Brewing/wiki/Troubleshooting) — connection issues, data recovery, debug logging
 
 ## Acknowledgments
 
