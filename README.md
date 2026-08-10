@@ -1,10 +1,10 @@
 # CubicJ Brewing
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Platform](https://img.shields.io/badge/platform-Desktop%20%2B%20Mobile-brightgreen)
+[![Obsidian](https://img.shields.io/badge/Obsidian-Desktop%20%2B%20Mobile-483699?logo=obsidian&logoColor=white)](https://obsidian.md)
 [![Release](https://img.shields.io/github/v/release/cubicj/CubicJ-Brewing)](https://github.com/cubicj/CubicJ-Brewing/releases/latest)
 
-[한국어](README.ko.md)
+**English** | [한국어](README.ko.md)
 
 An [Obsidian](https://obsidian.md) plugin for coffee brewing — real-time BLE scale integration, guided brew flow, and structured record keeping, all inside your vault.
 
