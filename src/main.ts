@@ -4,6 +4,7 @@ import { DesktopRuntime } from './DesktopRuntime';
 import { PluginLogger } from './utils/PluginLogger';
 import { BrewRecordService, type StorageAdapter } from './services/BrewRecordService';
 import { BrewProfileStorage } from './services/BrewProfileStorage';
+import { EquipmentStorage } from './services/EquipmentStorage';
 import type { FileAdapter } from './services/FileAdapter';
 import { DATA_VERSION, PluginDataStore } from './services/PluginDataStore';
 import { VaultDataService } from './services/VaultDataService';
@@ -24,6 +25,14 @@ export default class CubicJBrewingPlugin extends Plugin {
 	pluginLogger: PluginLogger | null = null;
 	beanBlock!: BeanCodeBlock;
 	private fileAdapter!: FileAdapter;
+	private equipmentStorage!: EquipmentStorage;
+	private equipmentState: EquipmentSettings = {
+		grinders: [],
+		drippers: [],
+		filters: [],
+		baskets: [],
+		accessories: [],
+	};
 	private desktopRuntime: DesktopRuntime | null = null;
 	private dataStore = new PluginDataStore({
 		loadData: () => this.loadData(),
@@ -31,15 +40,48 @@ export default class CubicJBrewingPlugin extends Plugin {
 	});
 
 	get equipment(): EquipmentSettings {
-		return this.dataStore.equipment;
+		return this.equipmentState;
 	}
 
 	set equipment(equipment: EquipmentSettings) {
-		this.dataStore.equipment = equipment;
+		this.equipmentState = equipment;
+	}
+
+	private updateEquipmentFromStorage(equipment: EquipmentSettings): void {
+		if (JSON.stringify(this.equipmentState) === JSON.stringify(equipment)) return;
+		this.equipmentState.grinders.splice(0, this.equipmentState.grinders.length, ...equipment.grinders);
+		this.equipmentState.drippers.splice(0, this.equipmentState.drippers.length, ...equipment.drippers);
+		this.equipmentState.filters.splice(0, this.equipmentState.filters.length, ...equipment.filters);
+		this.equipmentState.baskets.splice(0, this.equipmentState.baskets.length, ...equipment.baskets);
+		this.equipmentState.accessories.splice(0, this.equipmentState.accessories.length, ...equipment.accessories);
 	}
 
 	async onload() {
+		this.fileAdapter = {
+			read: async (path) => {
+				if (!(await this.app.vault.adapter.exists(path))) return null;
+				return this.app.vault.adapter.read(path);
+			},
+			write: async (path, content) => {
+				await this.app.vault.adapter.write(path, content);
+			},
+			mkdir: async (path) => {
+				await this.app.vault.adapter.mkdir(path);
+			},
+			remove: async (path) => {
+				await this.app.vault.adapter.remove(path);
+			},
+		};
+		this.equipmentStorage = new EquipmentStorage(DATA_DIR, this.fileAdapter);
 		await this.loadPluginData();
+		const loadedEquipment = await this.equipmentStorage.load();
+		if (loadedEquipment) {
+			this.equipment = loadedEquipment;
+		} else if (this.dataStore.legacyEquipment) {
+			this.equipment = this.dataStore.legacyEquipment;
+			await this.equipmentStorage.save(this.equipment);
+			await this.dataStore.clearLegacyEquipment();
+		}
 		initI18n(this.dataStore.locale);
 		this.vaultData = new VaultDataService(this.app, this.dataStore.beanFolder);
 		if (this.dataStore.logConfig.enabled) {
@@ -67,26 +109,8 @@ export default class CubicJBrewingPlugin extends Plugin {
 			}),
 		);
 
-		this.fileAdapter = {
-			read: async (path) => {
-				try {
-					return await this.app.vault.adapter.read(path);
-				} catch {
-					return null;
-				}
-			},
-			write: async (path, content) => {
-				await this.app.vault.adapter.write(path, content);
-			},
-			mkdir: async (path) => {
-				await this.app.vault.adapter.mkdir(path);
-			},
-			remove: async (path) => {
-				await this.app.vault.adapter.remove(path);
-			},
-		};
-
 		const recordsPath = `${DATA_DIR}/brew-records.json`;
+		const equipmentPath = `${DATA_DIR}/equipment.json`;
 		const adapter: StorageAdapter = {
 			read: async () => {
 				try {
@@ -144,6 +168,25 @@ export default class CubicJBrewingPlugin extends Plugin {
 		};
 		this.registerEvent(this.app.vault.on('modify', handleRecordFileChange));
 		this.registerEvent(this.app.vault.on('create', handleRecordFileChange));
+		let equipmentReloadGeneration = 0;
+		const refreshEquipmentBlocksFromVault = async () => {
+			const generation = ++equipmentReloadGeneration;
+			try {
+				const equipment = await this.equipmentStorage.load();
+				if (generation !== equipmentReloadGeneration) return;
+				if (equipment) this.updateEquipmentFromStorage(equipment);
+			} catch (error) {
+				if (generation !== equipmentReloadGeneration) return;
+				console.warn('[CubicJ-Brewing] failed to reload equipment:', error);
+			}
+			brewBlock.refreshAll();
+			brewDayBlock.refreshAll();
+		};
+		const handleEquipmentFileChange = (file: { path: string }) => {
+			if (file.path === equipmentPath) void refreshEquipmentBlocksFromVault();
+		};
+		this.registerEvent(this.app.vault.on('modify', handleEquipmentFileChange));
+		this.registerEvent(this.app.vault.on('create', handleEquipmentFileChange));
 
 		this.app.workspace.onLayoutReady(async () => {
 			if (this.dataStore.savedDataVersion < 2) {
@@ -186,7 +229,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 	}
 
 	async saveEquipment(): Promise<void> {
-		await this.dataStore.saveEquipment();
+		await this.equipmentStorage.save(this.equipment);
 	}
 
 	getBeanFolder(): string {

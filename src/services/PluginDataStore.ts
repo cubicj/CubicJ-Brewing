@@ -1,4 +1,5 @@
-import type { EquipmentSettings, GrinderConfig, GrinderRpmConfig, LogConfig } from '../brew/types';
+import type { EquipmentSettings, LogConfig } from '../brew/types';
+import { parseEquipmentSettings } from './EquipmentStorage';
 
 export const DATA_VERSION = 3;
 
@@ -8,7 +9,7 @@ export interface PluginDataPort {
 }
 
 export class PluginDataStore {
-	equipment: EquipmentSettings = { grinders: [], drippers: [], filters: [], baskets: [], accessories: [] };
+	legacyEquipment: EquipmentSettings | null = null;
 	logConfig: LogConfig = { enabled: false, categories: [] };
 	beanFolder = '';
 	locale = 'en';
@@ -22,37 +23,7 @@ export class PluginDataStore {
 		this.firstInstall = raw === null || raw === undefined;
 		const data = (raw ?? {}) as Record<string, unknown>;
 		this.savedDataVersion = typeof data.dataVersion === 'number' ? data.dataVersion : 0;
-		const eq = data.equipment as Record<string, unknown> | undefined;
-		if (eq && typeof eq === 'object' && !Array.isArray(eq)) {
-			const keys: (keyof EquipmentSettings)[] = ['grinders', 'drippers', 'filters', 'baskets', 'accessories'];
-			const valid = keys.every((k) => Array.isArray(eq[k]));
-			if (valid) {
-				const isGrinder = (g: unknown): g is GrinderConfig =>
-					g != null &&
-					typeof g === 'object' &&
-					typeof (g as GrinderConfig).name === 'string' &&
-					typeof (g as GrinderConfig).step === 'number' &&
-					typeof (g as GrinderConfig).min === 'number' &&
-					typeof (g as GrinderConfig).max === 'number';
-				const isRpm = (r: unknown): r is GrinderRpmConfig =>
-					r != null &&
-					typeof r === 'object' &&
-					typeof (r as GrinderRpmConfig).min === 'number' &&
-					typeof (r as GrinderRpmConfig).max === 'number' &&
-					typeof (r as GrinderRpmConfig).step === 'number' &&
-					typeof (r as GrinderRpmConfig).current === 'number';
-				const sanitizeGrinder = (g: GrinderConfig): GrinderConfig =>
-					g.rpm === undefined || isRpm(g.rpm) ? g : { name: g.name, step: g.step, min: g.min, max: g.max };
-				const isString = (s: unknown): s is string => typeof s === 'string';
-				this.equipment = {
-					grinders: (eq.grinders as unknown[]).filter(isGrinder).map(sanitizeGrinder),
-					drippers: (eq.drippers as unknown[]).filter(isString),
-					filters: (eq.filters as unknown[]).filter(isString),
-					baskets: (eq.baskets as unknown[]).filter(isString),
-					accessories: (eq.accessories as unknown[]).filter(isString),
-				};
-			}
-		}
+		this.legacyEquipment = parseEquipmentSettings(data.equipment);
 		const lc = data.logConfig as Record<string, unknown> | undefined;
 		if (lc && typeof lc === 'object' && !Array.isArray(lc)) {
 			this.logConfig = {
@@ -74,8 +45,11 @@ export class PluginDataStore {
 		await this.port.saveData(data);
 	}
 
-	async saveEquipment(): Promise<void> {
-		await this.patchData({ equipment: this.equipment });
+	async clearLegacyEquipment(): Promise<void> {
+		const data = ((await this.port.loadData()) ?? {}) as Record<string, unknown>;
+		delete data.equipment;
+		await this.port.saveData(data);
+		this.legacyEquipment = null;
 	}
 
 	async saveBeanFolder(folder: string): Promise<void> {

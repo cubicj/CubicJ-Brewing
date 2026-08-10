@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { GrinderConfig } from '../src/brew/types';
+import { Platform } from 'obsidian';
+import type { EquipmentSettings, GrinderConfig } from '../src/brew/types';
 import CubicJBrewingPlugin from '../src/main';
+import { BrewCodeBlock } from '../src/views/BrewCodeBlock';
+import { BrewDayCodeBlock } from '../src/views/BrewDayCodeBlock';
 
 const desktopMocks = vi.hoisted(() => ({
 	acaiaOptions: [] as unknown[],
@@ -42,10 +45,13 @@ beforeEach(() => {
 	desktopMocks.acaiaOptions.length = 0;
 	desktopMocks.teardown.length = 0;
 	desktopMocks.viewCreations.length = 0;
+	Platform.isDesktop = true;
+	Platform.isMobile = false;
 });
 
 afterEach(() => {
 	vi.unstubAllGlobals();
+	vi.restoreAllMocks();
 });
 
 function makePlugin(data: unknown): CubicJBrewingPlugin {
@@ -66,103 +72,273 @@ const rpmGrinder: GrinderConfig = {
 	rpm: { min: 300, max: 2000, step: 10, current: 1200 },
 };
 
-describe('loadPluginData equipment validation', () => {
-	it('keeps valid equipment intact', async () => {
-		const plugin = makePlugin({
-			equipment: {
-				grinders: [validGrinder],
-				drippers: ['V60'],
-				filters: ['HF'],
-				baskets: ['18g'],
-				accessories: ['WDT'],
+const defaultEquipment: EquipmentSettings = {
+	grinders: [],
+	drippers: [],
+	filters: [],
+	baskets: [],
+	accessories: [],
+};
+
+interface OnloadHarness {
+	plugin: CubicJBrewingPlugin;
+	files: Map<string, string>;
+	getPluginData: () => unknown;
+	emitVaultEvent: (event: 'modify' | 'create', path: string) => void;
+	enableModifyOnWrite: () => void;
+	setEquipmentRead: (read: () => Promise<string>) => void;
+}
+
+function makeOnloadHarness(initialData: unknown, initialFiles: Record<string, string> = {}): OnloadHarness {
+	let pluginData = initialData;
+	let emitModifyOnWrite = false;
+	let equipmentRead: (() => Promise<string>) | null = null;
+	const files = new Map(Object.entries(initialFiles));
+	const vaultHandlers = new Map<string, Array<(file: { path: string }) => void>>();
+	const app = {
+		vault: {
+			adapter: {
+				exists: vi.fn(async (path: string) => files.has(path)),
+				read: vi.fn(async (path: string) => {
+					if (path === 'cubicj-brewing/equipment.json' && equipmentRead) return equipmentRead();
+					const content = files.get(path);
+					if (content === undefined) throw new Error('not found');
+					return content;
+				}),
+				write: vi.fn(async (path: string, content: string) => {
+					files.set(path, content);
+					if (emitModifyOnWrite && path === 'cubicj-brewing/equipment.json') {
+						for (const handler of vaultHandlers.get('modify') ?? []) handler({ path });
+					}
+				}),
+				mkdir: vi.fn(async () => {}),
+				remove: vi.fn(async (path: string) => {
+					files.delete(path);
+				}),
 			},
-		});
-		await plugin.loadPluginData();
-		expect(plugin.equipment).toEqual({
-			grinders: [validGrinder],
-			drippers: ['V60'],
-			filters: ['HF'],
-			baskets: ['18g'],
-			accessories: ['WDT'],
-		});
+			on: vi.fn((event: string, handler: (file: { path: string }) => void) => {
+				const handlers = vaultHandlers.get(event) ?? [];
+				handlers.push(handler);
+				vaultHandlers.set(event, handlers);
+				return {};
+			}),
+		},
+		metadataCache: {
+			on: vi.fn(() => ({})),
+			getFileCache: vi.fn(() => null),
+		},
+		workspace: {
+			onLayoutReady: vi.fn(),
+		},
+	};
+	const plugin = new (CubicJBrewingPlugin as unknown as new (
+		app: unknown,
+		manifest: unknown,
+	) => CubicJBrewingPlugin)(app, { dir: '.obsidian/plugins/cubicj-brewing' });
+	Object.assign(plugin, { app, manifest: { dir: '.obsidian/plugins/cubicj-brewing' } });
+	(plugin as unknown as { loadData: () => Promise<unknown> }).loadData = async () => pluginData;
+	(plugin as unknown as { saveData: (data: unknown) => Promise<void> }).saveData = async (data) => {
+		pluginData = data;
+	};
+	(plugin as unknown as { registerEvent: (ref: unknown) => void }).registerEvent = vi.fn();
+	(
+		plugin as unknown as {
+			registerMarkdownCodeBlockProcessor: (lang: string, handler: unknown) => void;
+		}
+	).registerMarkdownCodeBlockProcessor = vi.fn();
+	(plugin as unknown as { addSettingTab: (tab: unknown) => void }).addSettingTab = vi.fn();
+
+	return {
+		plugin,
+		files,
+		getPluginData: () => pluginData,
+		emitVaultEvent: (event, path) => {
+			for (const handler of vaultHandlers.get(event) ?? []) handler({ path });
+		},
+		enableModifyOnWrite: () => {
+			emitModifyOnWrite = true;
+		},
+		setEquipmentRead: (read) => {
+			equipmentRead = read;
+		},
+	};
+}
+
+describe('equipment storage wiring', () => {
+	it('migrates legacy equipment into the vault file and removes only the legacy data key', async () => {
+		Platform.isDesktop = false;
+		Platform.isMobile = true;
+		const legacyEquipment: EquipmentSettings = { ...defaultEquipment, grinders: [rpmGrinder], drippers: ['V60'] };
+		const harness = makeOnloadHarness({ equipment: legacyEquipment, locale: 'ko', custom: 'preserved' });
+
+		await harness.plugin.onload();
+
+		expect(harness.plugin.equipment).toEqual(legacyEquipment);
+		expect(harness.files.get('cubicj-brewing/equipment.json')).toBe(JSON.stringify(legacyEquipment, null, 2));
+		expect(harness.getPluginData()).toEqual({ locale: 'ko', custom: 'preserved' });
 	});
 
-	it('filters malformed grinder entries', async () => {
-		const plugin = makePlugin({
-			equipment: {
-				grinders: [validGrinder, { name: 'no-range' }, null, { name: 5, step: 0.1, min: 0, max: 50 }],
-				drippers: [],
-				filters: [],
-				baskets: [],
-				accessories: [],
-			},
+	it('does not overwrite an existing equipment file when reading it fails', async () => {
+		Platform.isDesktop = false;
+		Platform.isMobile = true;
+		const legacyEquipment: EquipmentSettings = { ...defaultEquipment, drippers: ['Legacy'] };
+		const storedEquipment: EquipmentSettings = { ...defaultEquipment, drippers: ['Stored'] };
+		const rawStoredEquipment = JSON.stringify(storedEquipment);
+		const harness = makeOnloadHarness(
+			{ equipment: legacyEquipment, locale: 'ko' },
+			{ 'cubicj-brewing/equipment.json': rawStoredEquipment },
+		);
+		harness.setEquipmentRead(async () => {
+			throw new Error('permission denied');
 		});
-		await plugin.loadPluginData();
-		expect(plugin.equipment.grinders).toEqual([validGrinder]);
+
+		await expect(harness.plugin.onload()).rejects.toThrow('permission denied');
+
+		expect(harness.files.get('cubicj-brewing/equipment.json')).toBe(rawStoredEquipment);
+		expect(harness.getPluginData()).toEqual({ equipment: legacyEquipment, locale: 'ko' });
 	});
 
-	it('filters non-string entries from string lists', async () => {
-		const plugin = makePlugin({
-			equipment: {
-				grinders: [],
-				drippers: ['V60', 3, null],
-				filters: [{}],
-				baskets: ['18g'],
-				accessories: [false],
-			},
-		});
-		await plugin.loadPluginData();
-		expect(plugin.equipment.drippers).toEqual(['V60']);
-		expect(plugin.equipment.filters).toEqual([]);
-		expect(plugin.equipment.baskets).toEqual(['18g']);
-		expect(plugin.equipment.accessories).toEqual([]);
+	it('persists mutations through the same equipment object exposed to views', async () => {
+		Platform.isDesktop = false;
+		Platform.isMobile = true;
+		const storedEquipment: EquipmentSettings = { ...defaultEquipment, grinders: [validGrinder] };
+		const harness = makeOnloadHarness(
+			{},
+			{ 'cubicj-brewing/equipment.json': JSON.stringify(storedEquipment) },
+		);
+		await harness.plugin.onload();
+		const equipment = harness.plugin.equipment;
+		equipment.drippers.push('V60');
+
+		await harness.plugin.saveEquipment();
+
+		expect(harness.plugin.equipment).toBe(equipment);
+		expect(JSON.parse(harness.files.get('cubicj-brewing/equipment.json') ?? '')).toEqual(equipment);
 	});
 
-	it('keeps defaults when an equipment key is not an array', async () => {
-		const plugin = makePlugin({
-			equipment: { grinders: 'broken', drippers: [], filters: [], baskets: [], accessories: [] },
-		});
-		await plugin.loadPluginData();
-		expect(plugin.equipment).toEqual({ grinders: [], drippers: [], filters: [], baskets: [], accessories: [] });
+	it('preserves equipment and list identity when an internal save triggers a modify event', async () => {
+		Platform.isDesktop = false;
+		Platform.isMobile = true;
+		const storedEquipment: EquipmentSettings = { ...defaultEquipment, grinders: [validGrinder] };
+		const harness = makeOnloadHarness(
+			{},
+			{ 'cubicj-brewing/equipment.json': JSON.stringify(storedEquipment) },
+		);
+		const brewRefresh = vi.spyOn(BrewCodeBlock.prototype, 'refreshAll');
+		const brewDayRefresh = vi.spyOn(BrewDayCodeBlock.prototype, 'refreshAll');
+		await harness.plugin.onload();
+		const equipment = harness.plugin.equipment;
+		const drippers = equipment.drippers;
+		const grinder = equipment.grinders[0];
+		harness.enableModifyOnWrite();
+		drippers.push('V60');
+
+		await harness.plugin.saveEquipment();
+		await vi.waitFor(() => expect(brewRefresh).toHaveBeenCalledOnce());
+		expect(brewDayRefresh).toHaveBeenCalledOnce();
+		drippers.push('Kalita');
+		await harness.plugin.saveEquipment();
+		await vi.waitFor(() => expect(brewRefresh).toHaveBeenCalledTimes(2));
+		expect(brewDayRefresh).toHaveBeenCalledTimes(2);
+
+		expect(harness.plugin.equipment).toBe(equipment);
+		expect(harness.plugin.equipment.drippers).toBe(drippers);
+		expect(harness.plugin.equipment.grinders[0]).toBe(grinder);
+		expect(JSON.parse(harness.files.get('cubicj-brewing/equipment.json') ?? '').drippers).toEqual([
+			'V60',
+			'Kalita',
+		]);
 	});
 
-	it('keeps a valid rpm config on a grinder', async () => {
-		const plugin = makePlugin({
-			equipment: { grinders: [rpmGrinder], drippers: [], filters: [], baskets: [], accessories: [] },
-		});
-		await plugin.loadPluginData();
-		expect(plugin.equipment.grinders).toEqual([rpmGrinder]);
+	it('reloads external equipment edits and refreshes both brew code blocks', async () => {
+		Platform.isDesktop = false;
+		Platform.isMobile = true;
+		const harness = makeOnloadHarness(
+			{},
+			{ 'cubicj-brewing/equipment.json': JSON.stringify(defaultEquipment) },
+		);
+		const brewRefresh = vi.spyOn(BrewCodeBlock.prototype, 'refreshAll');
+		const brewDayRefresh = vi.spyOn(BrewDayCodeBlock.prototype, 'refreshAll');
+		await harness.plugin.onload();
+		const externalEquipment: EquipmentSettings = { ...defaultEquipment, filters: ['Sibarist'] };
+		harness.files.set('cubicj-brewing/equipment.json', JSON.stringify(externalEquipment));
+
+		harness.emitVaultEvent('modify', 'cubicj-brewing/equipment.json');
+
+		await vi.waitFor(() => expect(harness.plugin.equipment).toEqual(externalEquipment));
+		expect(brewRefresh).toHaveBeenCalledOnce();
+		expect(brewDayRefresh).toHaveBeenCalledOnce();
 	});
 
-	it('strips a malformed rpm config but keeps the grinder', async () => {
-		const broken = { ...validGrinder, rpm: { min: 300, max: 2000, step: 10, current: 'fast' } };
-		const plugin = makePlugin({
-			equipment: { grinders: [broken], drippers: [], filters: [], baskets: [], accessories: [] },
+	it('retains equipment and contains read failures from the modify watcher', async () => {
+		Platform.isDesktop = false;
+		Platform.isMobile = true;
+		const storedEquipment: EquipmentSettings = { ...defaultEquipment, filters: ['Stored'] };
+		const harness = makeOnloadHarness(
+			{},
+			{ 'cubicj-brewing/equipment.json': JSON.stringify(storedEquipment) },
+		);
+		const brewRefresh = vi.spyOn(BrewCodeBlock.prototype, 'refreshAll');
+		const brewDayRefresh = vi.spyOn(BrewDayCodeBlock.prototype, 'refreshAll');
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		await harness.plugin.onload();
+		harness.setEquipmentRead(async () => {
+			throw new Error('sync read failed');
 		});
-		await plugin.loadPluginData();
-		expect(plugin.equipment.grinders).toEqual([validGrinder]);
+
+		harness.emitVaultEvent('modify', 'cubicj-brewing/equipment.json');
+
+		await vi.waitFor(() =>
+			expect(warn).toHaveBeenCalledWith('[CubicJ-Brewing] failed to reload equipment:', expect.any(Error)),
+		);
+		expect(harness.plugin.equipment).toEqual(storedEquipment);
+		expect(brewRefresh).toHaveBeenCalledOnce();
+		expect(brewDayRefresh).toHaveBeenCalledOnce();
+	});
+
+	it('ignores an older equipment reload that completes after a newer edit', async () => {
+		Platform.isDesktop = false;
+		Platform.isMobile = true;
+		const harness = makeOnloadHarness(
+			{},
+			{ 'cubicj-brewing/equipment.json': JSON.stringify(defaultEquipment) },
+		);
+		const brewRefresh = vi.spyOn(BrewCodeBlock.prototype, 'refreshAll');
+		const brewDayRefresh = vi.spyOn(BrewDayCodeBlock.prototype, 'refreshAll');
+		await harness.plugin.onload();
+		let resolveFirst!: (raw: string) => void;
+		let resolveSecond!: (raw: string) => void;
+		let readCount = 0;
+		let settledReads = 0;
+		harness.setEquipmentRead(
+			() =>
+				new Promise<string>((resolve) => {
+					if (readCount++ === 0) resolveFirst = resolve;
+					else resolveSecond = resolve;
+				}).then((raw) => {
+					settledReads++;
+					return raw;
+				}),
+		);
+		harness.emitVaultEvent('modify', 'cubicj-brewing/equipment.json');
+		harness.emitVaultEvent('modify', 'cubicj-brewing/equipment.json');
+		await vi.waitFor(() => expect(readCount).toBe(2));
+		const olderEquipment: EquipmentSettings = { ...defaultEquipment, filters: ['Old'] };
+		const newerEquipment: EquipmentSettings = { ...defaultEquipment, filters: ['New'] };
+
+		resolveSecond(JSON.stringify(newerEquipment));
+		await vi.waitFor(() => expect(harness.plugin.equipment).toEqual(newerEquipment));
+		resolveFirst(JSON.stringify(olderEquipment));
+		await vi.waitFor(() => expect(settledReads).toBe(2));
+		await Promise.resolve();
+
+		expect(harness.plugin.equipment).toEqual(newerEquipment);
+		expect(brewRefresh).toHaveBeenCalledOnce();
+		expect(brewDayRefresh).toHaveBeenCalledOnce();
 	});
 });
 
 describe('plugin data delegation', () => {
-	it('persists mutations through the same equipment object exposed to views', async () => {
-		let data: unknown = {
-			equipment: { grinders: [validGrinder], drippers: [], filters: [], baskets: [], accessories: [] },
-		};
-		const plugin = makePlugin(data);
-		(plugin as unknown as { saveData: (nextData: unknown) => Promise<void> }).saveData = async (nextData) => {
-			data = nextData;
-		};
-		await plugin.loadPluginData();
-		const equipment = plugin.equipment;
-		equipment.drippers.push('V60');
-
-		await plugin.saveEquipment();
-
-		expect(plugin.equipment).toBe(equipment);
-		expect((data as { equipment: unknown }).equipment).toBe(equipment);
-	});
-
 	it('keeps locale and log config getter semantics across saves', async () => {
 		let data: unknown = {
 			locale: 'en',

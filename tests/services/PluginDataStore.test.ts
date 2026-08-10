@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { GrinderConfig } from '../../src/brew/types';
+import type { EquipmentSettings, GrinderConfig } from '../../src/brew/types';
 import { DATA_VERSION, PluginDataStore, type PluginDataPort } from '../../src/services/PluginDataStore';
 
 function makePort(initialData: unknown): {
@@ -30,8 +30,8 @@ const rpmGrinder: GrinderConfig = {
 	rpm: { min: 300, max: 2000, step: 10, current: 1200 },
 };
 
-describe('PluginDataStore equipment validation', () => {
-	it('keeps valid equipment intact', async () => {
+describe('PluginDataStore legacy equipment', () => {
+	it('parses valid legacy equipment separately from plugin settings', async () => {
 		const { port } = makePort({
 			equipment: {
 				grinders: [validGrinder],
@@ -45,7 +45,7 @@ describe('PluginDataStore equipment validation', () => {
 
 		await store.load();
 
-		expect(store.equipment).toEqual({
+		expect(store.legacyEquipment).toEqual({
 			grinders: [validGrinder],
 			drippers: ['V60'],
 			filters: ['HF'],
@@ -68,7 +68,7 @@ describe('PluginDataStore equipment validation', () => {
 
 		await store.load();
 
-		expect(store.equipment.grinders).toEqual([validGrinder]);
+		expect(store.legacyEquipment?.grinders).toEqual([validGrinder]);
 	});
 
 	it('filters non-string entries from string lists', async () => {
@@ -85,10 +85,10 @@ describe('PluginDataStore equipment validation', () => {
 
 		await store.load();
 
-		expect(store.equipment.drippers).toEqual(['V60']);
-		expect(store.equipment.filters).toEqual([]);
-		expect(store.equipment.baskets).toEqual(['18g']);
-		expect(store.equipment.accessories).toEqual([]);
+		expect(store.legacyEquipment?.drippers).toEqual(['V60']);
+		expect(store.legacyEquipment?.filters).toEqual([]);
+		expect(store.legacyEquipment?.baskets).toEqual(['18g']);
+		expect(store.legacyEquipment?.accessories).toEqual([]);
 	});
 
 	it('keeps defaults when an equipment key is not an array', async () => {
@@ -99,7 +99,7 @@ describe('PluginDataStore equipment validation', () => {
 
 		await store.load();
 
-		expect(store.equipment).toEqual({ grinders: [], drippers: [], filters: [], baskets: [], accessories: [] });
+		expect(store.legacyEquipment).toBeNull();
 	});
 
 	it('keeps a valid rpm config on a grinder', async () => {
@@ -110,7 +110,7 @@ describe('PluginDataStore equipment validation', () => {
 
 		await store.load();
 
-		expect(store.equipment.grinders).toEqual([rpmGrinder]);
+		expect(store.legacyEquipment?.grinders).toEqual([rpmGrinder]);
 	});
 
 	it('strips a malformed rpm config but keeps the grinder', async () => {
@@ -122,7 +122,30 @@ describe('PluginDataStore equipment validation', () => {
 
 		await store.load();
 
-		expect(store.equipment.grinders).toEqual([validGrinder]);
+		expect(store.legacyEquipment?.grinders).toEqual([validGrinder]);
+	});
+
+	it('removes only the legacy equipment key from the latest plugin data', async () => {
+		const legacyEquipment: EquipmentSettings = {
+			grinders: [validGrinder],
+			drippers: [],
+			filters: [],
+			baskets: [],
+			accessories: [],
+		};
+		const { port, getData, saveData } = makePort({
+			equipment: legacyEquipment,
+			locale: 'ko',
+			custom: { preserved: true },
+		});
+		const store = new PluginDataStore(port);
+		await store.load();
+
+		await store.clearLegacyEquipment();
+
+		expect(getData()).toEqual({ locale: 'ko', custom: { preserved: true } });
+		expect(saveData).toHaveBeenCalledOnce();
+		expect(store.legacyEquipment).toBeNull();
 	});
 });
 
@@ -156,6 +179,7 @@ describe('PluginDataStore settings state', () => {
 		expect(store.beanFolder).toBe('');
 		expect(store.locale).toBe('en');
 		expect(store.firstInstall).toBe(true);
+		expect(store.legacyEquipment).toBeNull();
 	});
 
 	it('defaults malformed log config fields independently', async () => {
@@ -171,35 +195,25 @@ describe('PluginDataStore settings state', () => {
 });
 
 describe('PluginDataStore persistence', () => {
-	it('patches each setting into the latest saved data and round-trips equipment mutations', async () => {
+	it('patches each setting into the latest saved data without adding equipment', async () => {
 		const { port, getData, saveData } = makePort({
 			custom: 'preserved',
-			equipment: { grinders: [validGrinder], drippers: [], filters: [], baskets: [], accessories: [] },
 		});
 		const store = new PluginDataStore(port);
 		await store.load();
-		const equipment = store.equipment;
-		equipment.drippers.push('V60');
 
-		await store.saveEquipment();
 		await store.saveLogConfig({ enabled: true, categories: ['FLOW'] });
 		await store.saveBeanFolder('Beans');
 		await store.saveLocale('ko');
 		await store.saveDataVersion();
 
-		expect(store.equipment).toBe(equipment);
 		expect(getData()).toEqual({
 			custom: 'preserved',
-			equipment,
 			logConfig: { enabled: true, categories: ['FLOW'] },
 			beanFolder: 'Beans',
 			locale: 'ko',
 			dataVersion: DATA_VERSION,
 		});
-		expect(saveData).toHaveBeenCalledTimes(5);
-
-		const reloaded = new PluginDataStore(port);
-		await reloaded.load();
-		expect(reloaded.equipment).toEqual(equipment);
+		expect(saveData).toHaveBeenCalledTimes(4);
 	});
 });
