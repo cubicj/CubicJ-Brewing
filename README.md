@@ -63,9 +63,10 @@ BLE and the brewing sidebar are desktop-only (Windows); bean inventory, brew his
 
 Full documentation lives in the **[wiki](https://github.com/cubicj/CubicJ-Brewing/wiki)**:
 
-- [Installation](https://github.com/cubicj/CubicJ-Brewing/wiki/Installation) — requirements, install steps, building from source
-- [Getting Started](https://github.com/cubicj/CubicJ-Brewing/wiki/Getting-Started) — scale connection, brew flow, code blocks, commands, settings
-- [Troubleshooting](https://github.com/cubicj/CubicJ-Brewing/wiki/Troubleshooting) — connection issues, data recovery, debug logging
+- [Installation](https://github.com/cubicj/CubicJ-Brewing/wiki/Installation) — requirements and install steps
+- [Getting Started](https://github.com/cubicj/CubicJ-Brewing/wiki/Getting-Started) — scale connection and the guided brew flow
+- [Record Keeping](https://github.com/cubicj/CubicJ-Brewing/wiki/Record-Keeping) — bean inventory, brew history, daily records
+- [Settings & Equipment](https://github.com/cubicj/CubicJ-Brewing/wiki/Settings-and-Equipment) — plugin settings and gear management
 
 ## Acknowledgments
 

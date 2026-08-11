@@ -63,9 +63,10 @@ BLE와 브루잉 사이드바는 데스크톱(Windows) 전용이며, 원두 인�
 
 전체 문서는 **[위키](https://github.com/cubicj/CubicJ-Brewing/wiki)**에 있습니다:
 
-- [설치](https://github.com/cubicj/CubicJ-Brewing/wiki/Installation-(Korean)) — 요구사항, 설치 절차, 소스 빌드
-- [시작하기](https://github.com/cubicj/CubicJ-Brewing/wiki/Getting-Started-(Korean)) — 저울 연결, 브루 플로우, 코드블록, 명령어, 설정
-- [문제 해결](https://github.com/cubicj/CubicJ-Brewing/wiki/Troubleshooting-(Korean)) — 연결 문제, 데이터 복구, 디버그 로그
+- [설치](https://github.com/cubicj/CubicJ-Brewing/wiki/Installation-(Korean)) — 요구사항과 설치 절차
+- [시작하기](https://github.com/cubicj/CubicJ-Brewing/wiki/Getting-Started-(Korean)) — 저울 연결과 단계별 브루 플로우
+- [기록 관리](https://github.com/cubicj/CubicJ-Brewing/wiki/Record-Keeping-(Korean)) — 원두 재고, 브루잉 기록, 일일 기록
+- [설정과 장비](https://github.com/cubicj/CubicJ-Brewing/wiki/Settings-and-Equipment-(Korean)) — 플러그인 설정과 장비 관리
 
 ## 감사의 말
 
