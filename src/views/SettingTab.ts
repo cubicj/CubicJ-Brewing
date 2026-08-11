@@ -87,41 +87,26 @@ export class BrewingSettingTab extends PluginSettingTab {
 				});
 			});
 
-		const details = containerEl.createEl('details');
-		details.createEl('summary', { text: t('settings.debugLog') });
-
-		const logConfig = this.plugin.getLogConfig();
-
-		new Setting(details)
-			.setName(t('settings.debugLog'))
-			.setDesc(t('settings.debugLogDesc'))
-			.addToggle((toggle) =>
-				toggle.setValue(logConfig.enabled).onChange(async (value) => {
-					logConfig.enabled = value;
-					await this.plugin.saveLogConfig(logConfig);
+		new Setting(containerEl)
+			.setName(t('settings.github'))
+			.setDesc(t('settings.githubDesc'))
+			.addButton((btn) =>
+				btn.setButtonText(t('settings.open')).onClick(() => {
+					window.open('https://github.com/cubicj/CubicJ-Brewing');
 				}),
 			);
 
-		new Setting(details)
-			.setName(t('settings.logCategories'))
-			.setDesc(t('settings.logCategoriesDesc'))
-			.addText((text) =>
-				text
-					.setPlaceholder('BLE,VIEW')
-					.setValue(logConfig.categories.join(','))
-					.onChange(async (value) => {
-						logConfig.categories = value
-							.split(',')
-							.map((s) => s.trim())
-							.filter(Boolean);
-						await this.plugin.saveLogConfig(logConfig);
-					}),
+		new Setting(containerEl)
+			.setName(t('settings.wiki'))
+			.setDesc(t('settings.wikiDesc'))
+			.addButton((btn) =>
+				btn.setButtonText(t('settings.open')).onClick(() => {
+					window.open(
+						this.plugin.getLocale() === 'ko'
+							? 'https://github.com/cubicj/CubicJ-Brewing/wiki/Home-(Korean)'
+							: 'https://github.com/cubicj/CubicJ-Brewing/wiki',
+					);
+				}),
 			);
-
-		containerEl.createEl('h2', { text: t('settings.usageGuide') });
-
-		new Setting(containerEl).setName(t('settings.beansCodeBlock')).setDesc(t('settings.beansCodeBlockDesc'));
-
-		new Setting(containerEl).setName(t('settings.brewsCodeBlock')).setDesc(t('settings.brewsCodeBlockDesc'));
 	}
 }
