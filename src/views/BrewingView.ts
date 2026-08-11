@@ -105,6 +105,10 @@ export class BrewingView extends ItemView {
 		if (btns.length > 0) btns[btns.length - 1].click();
 	}
 
+	toggleTimer(): void {
+		this.timerController.handleTimerClick();
+	}
+
 	powerOff(): void {
 		if (this.plugin.acaiaService?.state === 'connected') {
 			this.plugin.acaiaService.powerOff();

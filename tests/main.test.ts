@@ -465,6 +465,7 @@ describe('DesktopRuntime', () => {
 			{ id: 'tare', name: 'Tare Scale', checkCallback: expect.any(Function) },
 			{ id: 'auto-fill', name: 'Auto-fill Weight', checkCallback: expect.any(Function) },
 			{ id: 'toggle-brewing', name: 'Proceed / Start / Stop / Save', checkCallback: expect.any(Function) },
+			{ id: 'toggle-timer', name: 'Start / Stop / Reset Timer', checkCallback: expect.any(Function) },
 			{ id: 'toggle-connect', name: 'Connect / Disconnect Scale', checkCallback: expect.any(Function) },
 			{ id: 'power-off-scale', name: 'Power Off Scale', checkCallback: expect.any(Function) },
 		]);

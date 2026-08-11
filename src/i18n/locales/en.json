@@ -3,6 +3,7 @@
 	"command.tare": "Tare Scale",
 	"command.autoFill": "Auto-fill Weight",
 	"command.toggleBrewing": "Proceed / Start / Stop / Save",
+	"command.toggleTimer": "Start / Stop / Reset Timer",
 	"command.toggleConnect": "Connect / Disconnect Scale",
 	"command.powerOff": "Power Off Scale",
 

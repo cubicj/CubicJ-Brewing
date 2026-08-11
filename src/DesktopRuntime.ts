@@ -85,6 +85,17 @@ export class DesktopRuntime {
 		});
 
 		this.plugin.addCommand({
+			id: 'toggle-timer',
+			name: t('command.toggleTimer'),
+			checkCallback: (checking) => {
+				const view = getView();
+				if (!view || this.plugin.acaiaService?.state !== 'connected') return false;
+				if (!checking) view.toggleTimer();
+				return true;
+			},
+		});
+
+		this.plugin.addCommand({
 			id: 'toggle-connect',
 			name: t('command.toggleConnect'),
 			checkCallback: (checking) => {

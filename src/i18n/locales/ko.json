@@ -3,6 +3,7 @@
 	"command.tare": "영점 맞추기",
 	"command.autoFill": "무게 자동 입력",
 	"command.toggleBrewing": "진행 / 시작 / 중지 / 저장",
+	"command.toggleTimer": "타이머 시작 / 정지 / 리셋",
 	"command.toggleConnect": "저울 연결 / 해제",
 	"command.powerOff": "저울 전원 끄기",
 
