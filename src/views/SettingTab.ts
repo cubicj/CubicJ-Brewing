@@ -2,7 +2,6 @@ import { AbstractInputSuggest, App, Notice, PluginSettingTab, Setting, type TFol
 import type { NobleInstallStatus } from '../acaia/NobleInstaller';
 import type CubicJBrewingPlugin from '../main';
 import { t, getAvailableLocales } from '../i18n/index';
-import { NobleInstallModal } from './NobleInstallModal';
 
 class FolderSuggest extends AbstractInputSuggest<TFolder> {
 	private onPick: (folder: TFolder) => void;
@@ -127,13 +126,19 @@ export class BrewingSettingTab extends PluginSettingTab {
 				nobleSetting.addButton((btn) =>
 					btn
 						.setButtonText(status.kind === 'not-installed' ? t('noble.install') : t('noble.reinstall'))
-						.onClick(() => {
+						.onClick(async () => {
+							const { NobleInstallModal } = await import('./NobleInstallModal');
 							const wikiUrl =
 								this.plugin.getLocale() === 'ko'
 									? 'https://github.com/cubicj/CubicJ-Brewing/wiki/Installation-(Korean)'
 									: 'https://github.com/cubicj/CubicJ-Brewing/wiki/Installation';
 							new NobleInstallModal(this.app, {
-								variant: status.kind === 'not-installed' ? 'install' : 'update',
+								variant:
+									status.kind === 'not-installed'
+										? 'install'
+										: status.kind === 'installed'
+											? 'reinstall'
+											: 'update',
 								installed: status.kind === 'version-mismatch' ? status.installed : undefined,
 								installer,
 								wikiUrl,

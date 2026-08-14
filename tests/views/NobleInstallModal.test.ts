@@ -5,7 +5,8 @@ import { createContainer, installPolyfills } from '../helpers/obsidian-dom-polyf
 import { NobleInstallError } from '../../src/acaia/NobleInstaller';
 
 vi.mock('../../src/i18n/index', () => ({
-	t: (key: string) => key,
+	t: (key: string, vars?: Record<string, string>) =>
+		vars?.installed === undefined ? key : `${key}:${vars.installed}`,
 	initI18n: vi.fn(),
 }));
 
@@ -13,9 +14,13 @@ import { NobleInstallModal } from '../../src/views/NobleInstallModal';
 
 beforeAll(() => installPolyfills());
 
-function makeModal(installer: { install: ReturnType<typeof vi.fn> }, onDone: (installed: boolean) => void) {
+function makeModal(
+	installer: { install: ReturnType<typeof vi.fn> },
+	onDone: (installed: boolean) => void,
+	options: { variant: 'install' | 'update' | 'reinstall'; installed?: string } = { variant: 'install' },
+) {
 	const modal = new NobleInstallModal({} as App, {
-		variant: 'install',
+		...options,
 		installer: installer as never,
 		wikiUrl: 'https://example.com/wiki',
 		onDone,
@@ -35,6 +40,27 @@ function installButton(modal: NobleInstallModal): HTMLButtonElement {
 }
 
 describe('NobleInstallModal', () => {
+	it('renders reinstall copy and interpolates the installed update version', () => {
+		const installer = { install: vi.fn() };
+		const reinstallModal = makeModal(installer, vi.fn(), { variant: 'reinstall' });
+		reinstallModal.onOpen();
+		const reinstallContent = (reinstallModal as never as { contentEl: HTMLElement }).contentEl;
+		expect((reinstallModal as never as { titleEl: HTMLElement }).titleEl.textContent).toBe(
+			'noble.reinstallTitle',
+		);
+		expect(reinstallContent.querySelector('.cubicj-noble-message')!.textContent).toBe(
+			'noble.reinstallMessage',
+		);
+		expect(installButton(reinstallModal).textContent).toBe('noble.reinstall');
+
+		const updateModal = makeModal(installer, vi.fn(), { variant: 'update', installed: '2.3.15' });
+		updateModal.onOpen();
+		const updateContent = (updateModal as never as { contentEl: HTMLElement }).contentEl;
+		expect(updateContent.querySelector('.cubicj-noble-message')!.textContent).toBe(
+			'noble.updateMessage:2.3.15',
+		);
+	});
+
 	it('runs the install and reports success', async () => {
 		const install = vi.fn(async (onPhase: (p: string) => void) => {
 			onPhase('downloading');

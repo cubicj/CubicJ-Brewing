@@ -63,6 +63,7 @@ function verifyMagic(bytes: Uint8Array, offset: number): void {
 }
 
 function validatePath(path: string, root: string): void {
+	if (path.includes('\\')) throw new TarFormatError(`backslash in path: ${path}`);
 	if (path.startsWith('/')) throw new TarFormatError(`absolute path: ${path}`);
 	if (path.split('/').includes('..')) throw new TarFormatError(`path traversal: ${path}`);
 	const normalizedRoot = root.replace(/\/+$/, '');

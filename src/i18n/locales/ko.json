@@ -164,8 +164,10 @@
 
 	"noble.installTitle": "블루투스 애드온 설치",
 	"noble.updateTitle": "블루투스 애드온 업데이트",
+	"noble.reinstallTitle": "블루투스 애드온 다시 설치",
 	"noble.installMessage": "저울 연결에는 네이티브 블루투스 애드온(약 3MB)이 필요합니다. 이 플러그인의 GitHub 릴리즈에서 다운로드한 뒤 검증을 거쳐 설치됩니다.",
 	"noble.updateMessage": "설치된 블루투스 애드온({{installed}})이 현재 플러그인 버전과 맞지 않습니다. 다시 설치해 업데이트하세요.",
+	"noble.reinstallMessage": "이 플러그인의 GitHub 릴리즈에서 블루투스 애드온(약 3MB)을 다시 다운로드해 설치합니다.",
 	"noble.install": "설치",
 	"noble.reinstall": "다시 설치",
 	"noble.phase.downloading": "다운로드 중...",

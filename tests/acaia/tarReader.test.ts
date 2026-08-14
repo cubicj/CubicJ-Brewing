@@ -53,6 +53,11 @@ describe('readTar', () => {
 		expect(() => readTar(tar, { root: 'noble/' })).toThrow(TarFormatError);
 	});
 
+	it('rejects Windows backslash path traversal', () => {
+		const tar = buildTar([{ path: 'noble/..\\main.js', type: 'file', data: text('x') }]);
+		expect(() => readTar(tar, { root: 'noble/' })).toThrow(TarFormatError);
+	});
+
 	it('rejects absolute paths', () => {
 		const tar = buildTar([{ path: '/noble/a.js', type: 'file', data: text('x') }]);
 		expect(() => readTar(tar, { root: 'noble/' })).toThrow(TarFormatError);

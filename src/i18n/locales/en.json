@@ -164,8 +164,10 @@
 
 	"noble.installTitle": "Install Bluetooth addon",
 	"noble.updateTitle": "Update Bluetooth addon",
+	"noble.reinstallTitle": "Reinstall Bluetooth addon",
 	"noble.installMessage": "Connecting to the scale needs a native Bluetooth addon (about 3 MB). It is downloaded from this plugin's GitHub release and verified before it is installed.",
 	"noble.updateMessage": "The installed Bluetooth addon ({{installed}}) does not match this plugin version. Reinstall it to update.",
+	"noble.reinstallMessage": "Download and reinstall the Bluetooth addon (about 3 MB) from this plugin's GitHub release.",
 	"noble.install": "Install",
 	"noble.reinstall": "Reinstall",
 	"noble.phase.downloading": "Downloading...",

@@ -8,7 +8,7 @@ import {
 } from '../acaia/NobleInstaller';
 
 export interface NobleInstallModalOptions {
-	variant: 'install' | 'update';
+	variant: 'install' | 'update' | 'reinstall';
 	installed?: string;
 	installer: NobleInstaller;
 	wikiUrl: string;
@@ -47,18 +47,21 @@ export class NobleInstallModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 		const isUpdate = this.options.variant === 'update';
-		this.titleEl.setText(t(isUpdate ? 'noble.updateTitle' : 'noble.installTitle'));
+		const isReinstall = this.options.variant === 'reinstall';
+		this.titleEl.setText(
+			t(isUpdate ? 'noble.updateTitle' : isReinstall ? 'noble.reinstallTitle' : 'noble.installTitle'),
+		);
 		contentEl.createDiv({
 			cls: 'cubicj-noble-message',
 			text: isUpdate
 				? t('noble.updateMessage', { installed: this.options.installed ?? '?' })
-				: t('noble.installMessage'),
+				: t(isReinstall ? 'noble.reinstallMessage' : 'noble.installMessage'),
 		});
 		this.statusEl = contentEl.createDiv({ cls: 'cubicj-noble-status' });
 		this.errorEl = contentEl.createDiv({ cls: 'cubicj-noble-error' });
 		const footer = contentEl.createDiv({ cls: 'cubicj-noble-footer' });
 		this.installBtn = footer.createEl('button', {
-			text: t(isUpdate ? 'noble.reinstall' : 'noble.install'),
+			text: t(this.options.variant === 'install' ? 'noble.install' : 'noble.reinstall'),
 			cls: 'mod-cta',
 		});
 		this.installBtn.addEventListener('click', () => void this.runInstall());
