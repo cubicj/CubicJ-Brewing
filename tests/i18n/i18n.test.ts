@@ -15,6 +15,16 @@ describe('i18n', () => {
 		expect(t('common.confirm')).toBe('확인');
 	});
 
+	it('returns the restart instruction when the Noble addon is locked', () => {
+		expect(t('noble.error.locked')).toBe(
+			'The Bluetooth addon is in use in this session. Restart Obsidian, then try installing again.',
+		);
+		initI18n('ko');
+		expect(t('noble.error.locked')).toBe(
+			'블루투스 애드온이 현재 세션에서 사용 중입니다. Obsidian을 재시작한 뒤 다시 시도하세요.',
+		);
+	});
+
 	it('falls back to English for missing keys in locale', () => {
 		initI18n('ko');
 		expect(t('common.confirm')).toBeTruthy();

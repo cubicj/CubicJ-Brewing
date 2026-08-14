@@ -110,6 +110,21 @@ describe('NobleInstallModal', () => {
 		expect(installButton(modal).disabled).toBe(false);
 	});
 
+	it('shows the locked addon error', async () => {
+		const install = vi.fn(async () => {
+			throw new NobleInstallError('locked', 'in use');
+		});
+		const modal = makeModal({ install }, vi.fn());
+		modal.onOpen();
+
+		installButton(modal).click();
+
+		const contentEl = (modal as never as { contentEl: HTMLElement }).contentEl;
+		await vi.waitFor(() =>
+			expect(contentEl.querySelector('.cubicj-noble-error')!.textContent).toContain('noble.error.locked'),
+		);
+	});
+
 	it('reports false when closed without installing', () => {
 		const done = vi.fn();
 		const modal = makeModal({ install: vi.fn() }, done);

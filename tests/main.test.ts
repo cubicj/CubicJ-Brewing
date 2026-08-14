@@ -9,6 +9,19 @@ const desktopMocks = vi.hoisted(() => ({
 	acaiaOptions: [] as unknown[],
 	teardown: [] as string[],
 	viewCreations: [] as Array<{ leaf: unknown; plugin: unknown }>,
+	nobleGuards: [] as Array<() => boolean>,
+	loadedNoblePaths: [] as string[],
+}));
+
+vi.mock('../src/acaia/NobleInstaller', () => ({
+	createNobleInstaller: vi.fn((_plugin: unknown, guard: () => boolean) => {
+		desktopMocks.nobleGuards.push(guard);
+		return {};
+	}),
+	isNobleModuleLoaded: vi.fn((path: string) => {
+		desktopMocks.loadedNoblePaths.push(path);
+		return true;
+	}),
 }));
 
 vi.mock('../src/acaia/AcaiaService', () => ({
@@ -45,6 +58,8 @@ beforeEach(() => {
 	desktopMocks.acaiaOptions.length = 0;
 	desktopMocks.teardown.length = 0;
 	desktopMocks.viewCreations.length = 0;
+	desktopMocks.nobleGuards.length = 0;
+	desktopMocks.loadedNoblePaths.length = 0;
 	Platform.isDesktop = true;
 	Platform.isMobile = false;
 });
@@ -472,6 +487,20 @@ describe('DesktopRuntime', () => {
 		expect(harness.addRibbonIcon).toHaveBeenCalledWith('coffee', 'CubicJ Brewing', expect.any(Function));
 		expect(harness.setScaleWeightGetter).toHaveBeenCalledOnce();
 		expect(harness.getScaleWeight()).toBe(42);
+	});
+
+	it('guards installer writes with the resolved Noble module path', async () => {
+		const { DesktopRuntime } = await import('../src/DesktopRuntime');
+		const harness = makeRuntimeHarness();
+		const runtime = new DesktopRuntime(harness.plugin);
+
+		await runtime.init();
+
+		expect(desktopMocks.nobleGuards).toHaveLength(1);
+		expect(desktopMocks.nobleGuards[0]()).toBe(true);
+		expect(desktopMocks.loadedNoblePaths).toEqual([
+			'/vault/.obsidian/plugins/cubicj-brewing/noble',
+		]);
 	});
 
 	it('activates and reveals the desktop view through the existing workspace flow', async () => {

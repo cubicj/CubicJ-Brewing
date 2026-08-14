@@ -174,6 +174,7 @@
 	"noble.phase.verifying": "Verifying...",
 	"noble.phase.extracting": "Installing...",
 	"noble.done": "Bluetooth addon installed.",
+	"noble.error.locked": "The Bluetooth addon is in use in this session. Restart Obsidian, then try installing again.",
 	"noble.error.network": "Download failed. Check your network connection.",
 	"noble.error.http": "The addon package was not found for this version.",
 	"noble.error.checksum": "The downloaded file failed verification. Try again.",

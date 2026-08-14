@@ -1,6 +1,12 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { gzipSync } from 'zlib';
-import { NobleInstaller, NobleInstallError, type InstallerFilePort, type InstallerHttpPort } from '../../src/acaia/NobleInstaller';
+import {
+	isNobleModuleLoaded,
+	NobleInstaller,
+	NobleInstallError,
+	type InstallerFilePort,
+	type InstallerHttpPort,
+} from '../../src/acaia/NobleInstaller';
 import { buildTar } from '../helpers/tarFixture';
 
 const text = (s: string) => new TextEncoder().encode(s);
@@ -31,36 +37,53 @@ interface Fake {
 	files: InstallerFilePort;
 	written: Map<string, Uint8Array>;
 	dirs: string[];
-	removed: string[];
 	existing: Map<string, string>;
+	existingDirs: Set<string>;
+	fileCalls: string[];
+	writeOrder: string[];
 }
 
 function makeFiles(): Fake {
 	const written = new Map<string, Uint8Array>();
 	const dirs: string[] = [];
-	const removed: string[] = [];
 	const existing = new Map<string, string>();
+	const existingDirs = new Set<string>();
+	const fileCalls: string[] = [];
+	const writeOrder: string[] = [];
 	const files: InstallerFilePort = {
-		exists: async (p) => existing.has(p) || dirs.includes(p),
-		read: async (p) => existing.get(p) ?? null,
+		exists: async (p) => {
+			fileCalls.push(`exists:${p}`);
+			return existing.has(p) || existingDirs.has(p);
+		},
+		read: async (p) => {
+			fileCalls.push(`read:${p}`);
+			return existing.get(p) ?? null;
+		},
 		mkdir: async (p) => {
+			fileCalls.push(`mkdir:${p}`);
 			dirs.push(p);
+			existingDirs.add(p);
 		},
 		writeBinary: async (p, data) => {
+			fileCalls.push(`writeBinary:${p}`);
+			writeOrder.push(p);
 			written.set(p, new Uint8Array(data));
-		},
-		rmdir: async (p) => {
-			removed.push(p);
+			existing.set(p, new TextDecoder().decode(data));
 		},
 	};
-	return { files, written, dirs, removed, existing };
+	return { files, written, dirs, existing, existingDirs, fileCalls, writeOrder };
 }
 
 function makeHttp(status: number, body: Uint8Array): InstallerHttpPort {
 	return { fetchBinary: async () => ({ status, body: toArrayBuffer(body) }) };
 }
 
-function makeInstaller(fake: Fake, http: InstallerHttpPort, expectedSha256: string) {
+function makeInstaller(
+	fake: Fake,
+	http: InstallerHttpPort,
+	expectedSha256: string,
+	isAddonLoaded?: () => boolean,
+) {
 	return new NobleInstaller({
 		files: fake.files,
 		http,
@@ -68,6 +91,7 @@ function makeInstaller(fake: Fake, http: InstallerHttpPort, expectedSha256: stri
 		pluginVersion: '0.6.0',
 		expectedVersion: '9.9.9',
 		expectedSha256,
+		isAddonLoaded,
 	});
 }
 
@@ -120,14 +144,58 @@ describe('NobleInstaller.install', () => {
 		expect(fake.written.has('.obsidian/plugins/cubicj-brewing/noble/lib/index.js')).toBe(true);
 	});
 
-	it('removes an existing noble directory before writing', async () => {
+	it('rejects before phases or I/O when the addon is already loaded', async () => {
+		const fetchBinary = vi.fn(async () => ({ status: 200, body: new ArrayBuffer(0) }));
+		const onPhase = vi.fn();
+		const installer = makeInstaller(fake, { fetchBinary }, 'x', () => true);
+
+		await expect(installer.install(onPhase)).rejects.toMatchObject({ code: 'locked' });
+		expect(onPhase).not.toHaveBeenCalled();
+		expect(fetchBinary).not.toHaveBeenCalled();
+		expect(fake.fileCalls).toEqual([]);
+	});
+
+	it('overwrites an existing noble tree without deleting its other files', async () => {
 		const bundle = makeBundle();
 		const sha = await sha256Hex(toArrayBuffer(bundle));
-		fake.existing.set('.obsidian/plugins/cubicj-brewing/noble/package.json', '{"version":"1.0.0"}');
-		fake.dirs.push('.obsidian/plugins/cubicj-brewing/noble');
+		const nobleDir = '.obsidian/plugins/cubicj-brewing/noble';
+		fake.existingDirs.add(nobleDir);
+		fake.existingDirs.add(`${nobleDir}/lib`);
+		fake.existing.set(`${nobleDir}/package.json`, '{"version":"1.0.0"}');
+		fake.existing.set(`${nobleDir}/lib/index.js`, 'module.exports = 0;');
+		fake.existing.set(`${nobleDir}/locked.node`, 'native');
 		const installer = makeInstaller(fake, makeHttp(200, bundle), sha);
+
 		await installer.install(() => {});
-		expect(fake.removed).toEqual(['.obsidian/plugins/cubicj-brewing/noble']);
+
+		expect(fake.existing.get(`${nobleDir}/package.json`)).toBe('{"version":"9.9.9"}');
+		expect(fake.existing.get(`${nobleDir}/lib/index.js`)).toBe('module.exports = 1;');
+		expect(fake.existing.get(`${nobleDir}/locked.node`)).toBe('native');
+		expect(fake.dirs).toEqual([]);
+	});
+
+	it('writes package.json after every other file', async () => {
+		const bundle = makeBundle();
+		const sha = await sha256Hex(toArrayBuffer(bundle));
+		const installer = makeInstaller(fake, makeHttp(200, bundle), sha);
+
+		await installer.install(() => {});
+
+		expect(fake.writeOrder).toEqual([
+			'.obsidian/plugins/cubicj-brewing/noble/lib/index.js',
+			'.obsidian/plugins/cubicj-brewing/noble/package.json',
+		]);
+	});
+
+	it('creates only archive directories that do not exist', async () => {
+		const bundle = makeBundle();
+		const sha = await sha256Hex(toArrayBuffer(bundle));
+		fake.existingDirs.add('.obsidian/plugins/cubicj-brewing/noble');
+		const installer = makeInstaller(fake, makeHttp(200, bundle), sha);
+
+		await installer.install(() => {});
+
+		expect(fake.dirs).toEqual(['.obsidian/plugins/cubicj-brewing/noble/lib']);
 	});
 
 	it('fails with network when the fetch throws', async () => {
@@ -167,5 +235,45 @@ describe('NobleInstaller.install', () => {
 		const installer = makeInstaller(fake, makeHttp(200, bundle), sha);
 		await expect(installer.install(() => {})).rejects.toMatchObject({ code: 'write' });
 		await expect(installer.install(() => {})).rejects.toBeInstanceOf(NobleInstallError);
+	});
+});
+
+describe('isNobleModuleLoaded', () => {
+	it('matches an exact Windows cache key', () => {
+		expect(
+			isNobleModuleLoaded('C:/Vault/.obsidian/plugins/cubicj-brewing/noble', {
+				'C:\\Vault\\.obsidian\\plugins\\cubicj-brewing\\noble': {},
+			}),
+		).toBe(true);
+	});
+
+	it('matches cache entries below the noble path', () => {
+		expect(
+			isNobleModuleLoaded('/vault/.obsidian/plugins/cubicj-brewing/noble', {
+				'/vault/.obsidian/plugins/cubicj-brewing/noble/lib/index.js': {},
+			}),
+		).toBe(true);
+	});
+
+	it('does not match unrelated cache entries', () => {
+		expect(
+			isNobleModuleLoaded('/vault/.obsidian/plugins/cubicj-brewing/noble', {
+				'/vault/.obsidian/plugins/cubicj-brewing/noble-old/index.js': {},
+				'/vault/other/index.js': {},
+			}),
+		).toBe(false);
+	});
+
+	it('matches paths case-insensitively', () => {
+		expect(
+			isNobleModuleLoaded('C:/VAULT/Plugins/Noble', {
+				'c:/vault/plugins/noble/INDEX.JS': {},
+			}),
+		).toBe(true);
+	});
+
+	it('returns false for empty or undefined caches without matching entries', () => {
+		expect(isNobleModuleLoaded('/definitely/not/loaded/noble', {})).toBe(false);
+		expect(isNobleModuleLoaded('/definitely/not/loaded/noble', undefined)).toBe(false);
 	});
 });
