@@ -15,7 +15,7 @@ export class DesktopRuntime {
 		const { BrewingView, VIEW_TYPE_BREWING } = await import('./views/BrewingView');
 		const { createNobleInstaller, isNobleModuleLoaded } = await import('./acaia/NobleInstaller');
 		const basePath = (this.plugin.app.vault.adapter as FileSystemAdapter).getBasePath();
-		const path = require('path') as typeof import('path');
+		const path = await import('path');
 		const noblePath = path.join(basePath, this.plugin.manifest.dir as string, 'noble');
 		this.plugin.nobleInstaller = createNobleInstaller(this.plugin, () => isNobleModuleLoaded(noblePath));
 		this.viewType = VIEW_TYPE_BREWING;

@@ -40,8 +40,9 @@ export class NobleTransport {
 			options.nobleFactory ??
 			(() => {
 				try {
-					const loaded: unknown = require(noblePath);
-					return loaded as Noble;
+					const electronRequire = (window as Window & { require?: (id: string) => unknown }).require;
+					if (!electronRequire) return null;
+					return electronRequire(noblePath) as Noble;
 				} catch {
 					return null;
 				}

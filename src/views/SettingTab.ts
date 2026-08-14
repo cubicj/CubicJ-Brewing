@@ -143,7 +143,7 @@ export class BrewingSettingTab extends PluginSettingTab {
 				for (const loc of getAvailableLocales()) {
 					dd.addOption(loc.code, loc.name);
 				}
-				dd.setValue(this.getControlValue('language') as string);
+				dd.setValue(this.plugin.getLocale());
 				dd.onChange((value) => this.setControlValue('language', value));
 			});
 
@@ -153,7 +153,7 @@ export class BrewingSettingTab extends PluginSettingTab {
 			.setName(t('settings.beanFolder'))
 			.setDesc(t('settings.beanFolderDesc'))
 			.addText((text) => {
-				text.setPlaceholder(t('dataManage.beans')).setValue(this.getControlValue('beanFolder') as string);
+				text.setPlaceholder(t('dataManage.beans')).setValue(this.plugin.getBeanFolder());
 				new FolderSuggest(this.app, text.inputEl, (folder) => {
 					void this.setControlValue('beanFolder', folder.path).catch((error: unknown) => {
 						console.error('[SettingTab] bean folder save failed:', error);

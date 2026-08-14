@@ -130,7 +130,7 @@ export class NobleInstaller {
 		let entries;
 		try {
 			if (Platform.isDesktop) {
-				const zlib = require('zlib') as typeof import('zlib');
+				const zlib = await import('zlib');
 				const bytes = zlib.gunzipSync(new Uint8Array(response.body));
 				entries = readTar(new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength), { root: 'noble/' });
 			} else {

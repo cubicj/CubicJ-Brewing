@@ -175,7 +175,8 @@ function openWeightPopover(
 	});
 
 	const onOutside = (e: PointerEvent) => {
-		if (!popover.contains(e.target as Node) && e.target !== anchor) close();
+		const target = e.target instanceof Node ? e.target : null;
+		if (!popover.contains(target) && target !== anchor) close();
 	};
 	window.setTimeout(() => document.addEventListener('pointerdown', onOutside), 0);
 
