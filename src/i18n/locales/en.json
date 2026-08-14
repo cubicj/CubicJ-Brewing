@@ -160,5 +160,28 @@
 
 	"common.confirm": "Confirm",
 	"common.cancel": "Cancel",
-	"common.edit": "Edit"
+	"common.edit": "Edit",
+
+	"noble.installTitle": "Install Bluetooth addon",
+	"noble.updateTitle": "Update Bluetooth addon",
+	"noble.installMessage": "Connecting to the scale needs a native Bluetooth addon (about 3 MB). It is downloaded from this plugin's GitHub release and verified before it is installed.",
+	"noble.updateMessage": "The installed Bluetooth addon ({{installed}}) does not match this plugin version. Reinstall it to update.",
+	"noble.install": "Install",
+	"noble.reinstall": "Reinstall",
+	"noble.phase.downloading": "Downloading...",
+	"noble.phase.verifying": "Verifying...",
+	"noble.phase.extracting": "Installing...",
+	"noble.done": "Bluetooth addon installed.",
+	"noble.error.network": "Download failed. Check your network connection.",
+	"noble.error.http": "The addon package was not found for this version.",
+	"noble.error.checksum": "The downloaded file failed verification. Try again.",
+	"noble.error.extract": "The downloaded file could not be unpacked.",
+	"noble.error.write": "The addon could not be written to the plugin folder.",
+	"noble.manualHint": "You can also install it manually with the release zip.",
+	"settings.noble": "Bluetooth addon",
+	"settings.nobleDesc": "Native addon for the live scale connection.",
+	"settings.nobleChecking": "Checking...",
+	"settings.nobleInstalled": "Installed ({{version}})",
+	"settings.nobleMissing": "Not installed",
+	"settings.nobleMismatch": "Update available ({{installed}} → {{expected}})"
 }
