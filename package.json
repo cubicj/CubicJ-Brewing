@@ -1,6 +1,6 @@
 {
   "name": "cubicj-brewing",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "private": true,
   "scripts": {
     "dev": "node esbuild.config.mjs watch",
