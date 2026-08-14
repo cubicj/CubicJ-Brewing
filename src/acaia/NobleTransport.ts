@@ -60,7 +60,9 @@ export class NobleTransport {
 		noble.removeAllListeners();
 		try {
 			noble.stopScanning();
-		} catch {}
+		} catch (error) {
+			void error;
+		}
 		this.noble = noble;
 		noble.on('stateChange', (state: string) => {
 			this.log(`noble stateChange: ${state}`);
@@ -113,7 +115,9 @@ export class NobleTransport {
 				noble.removeListener('discover', onDiscover);
 				try {
 					noble.stopScanning();
-				} catch {}
+				} catch (error) {
+					void error;
+				}
 			};
 			const timer = window.setTimeout(() => {
 				cleanup();
@@ -162,7 +166,9 @@ export class NobleTransport {
 		const timer = window.setTimeout(() => {
 			try {
 				peripheral.disconnect();
-			} catch {}
+			} catch (error) {
+				void error;
+			}
 		}, timeoutMs);
 		return peripheral.connectAsync().finally(() => window.clearTimeout(timer));
 	}
@@ -178,7 +184,9 @@ export class NobleTransport {
 		const timer = window.setTimeout(() => {
 			try {
 				peripheral.disconnect();
-			} catch {}
+			} catch (error) {
+				void error;
+			}
 		}, timeoutMs);
 		return peripheral
 			.discoverSomeServicesAndCharacteristicsAsync([], [WRITE_UUID, NOTIFY_UUID])
@@ -218,7 +226,9 @@ export class NobleTransport {
 		if (!this.noble) return;
 		try {
 			this.noble.stopScanning();
-		} catch {}
+		} catch (error) {
+			void error;
+		}
 	}
 
 	async cancelConnection(): Promise<void> {
@@ -239,7 +249,9 @@ export class NobleTransport {
 			this.peripheral.removeAllListeners('disconnect');
 			try {
 				this.peripheral.disconnect();
-			} catch {}
+			} catch (error) {
+				void error;
+			}
 			this.peripheral = null;
 		}
 	}

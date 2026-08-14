@@ -21,7 +21,7 @@ export default tseslint.config(
 			'@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
 			'@typescript-eslint/no-explicit-any': 'warn',
 			'@typescript-eslint/no-require-imports': 'off',
-			'no-empty': ['error', { allowEmptyCatch: true }],
+			'no-empty': 'error',
 		},
 	},
 	{
@@ -44,7 +44,6 @@ export default tseslint.config(
 			'@typescript-eslint/no-unsafe-call': 'warn',
 			'@typescript-eslint/no-unsafe-argument': 'warn',
 			'@typescript-eslint/no-unsafe-return': 'warn',
-			'obsidianmd/settings-tab/prefer-setting-definitions': 'off',
 			'obsidianmd/ui/sentence-case': [
 				'warn',
 				{
