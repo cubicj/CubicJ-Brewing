@@ -239,7 +239,7 @@ describe('PacketBuffer', () => {
 		const packets: Buffer[] = [];
 		buf.onPacket = (p) => packets.push(p);
 
-		(buf as any).buf = new Array(2049).fill(0x01);
+		(buf as unknown as { buf: number[] }).buf = new Array(2049).fill(0x01);
 
 		buf.push(Buffer.from([0xef, 0xdd, 0x05, 0x01, 0xaa, 0xaa, 0x00]));
 

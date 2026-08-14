@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
-import type { MarkdownPostProcessorContext } from 'obsidian';
+import type { App, MarkdownPostProcessorContext } from 'obsidian';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { installPolyfills, createContainer } from '../helpers/obsidian-dom-polyfill';
 import type { FilterRecord } from '../../src/brew/types';
+import type { BrewProfileStorage } from '../../src/services/BrewProfileStorage';
+import type { BrewRecordService } from '../../src/services/BrewRecordService';
 
 vi.mock('../../src/i18n/index', () => ({
 	t: (key: string) => key,
@@ -39,7 +41,12 @@ async function renderRecords(records: FilterRecord[]): Promise<HTMLElement> {
 	const recordService = {
 		getAll: vi.fn().mockResolvedValue({ ok: true, data: records }),
 	};
-	const block = new BrewDayCodeBlock({} as any, recordService as any, {} as any, emptyEquipment);
+	const block = new BrewDayCodeBlock(
+		{} as App,
+		recordService as unknown as BrewRecordService,
+		{} as BrewProfileStorage,
+		emptyEquipment,
+	);
 	let handler!: (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void;
 	block.register((_lang, registeredHandler) => {
 		handler = registeredHandler;
@@ -58,7 +65,12 @@ describe('BrewDayCodeBlock', () => {
 		const recordService = {
 			getAll: vi.fn(async () => ({ ok: true as const, data: records })),
 		};
-		const block = new BrewDayCodeBlock({} as any, recordService as any, {} as any, emptyEquipment);
+		const block = new BrewDayCodeBlock(
+			{} as App,
+			recordService as unknown as BrewRecordService,
+			{} as BrewProfileStorage,
+			emptyEquipment,
+		);
 		let handler!: (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void;
 		block.register((_lang, registeredHandler) => {
 			handler = registeredHandler;
@@ -88,13 +100,18 @@ describe('BrewDayCodeBlock', () => {
 		const recordService = {
 			getAll: vi.fn(() => pendingRecords),
 		};
-		const block = new BrewDayCodeBlock({} as any, recordService as any, {} as any, () => ({
-			grinders: [],
-			drippers: [],
-			filters: [],
-			baskets: [],
-			accessories: [],
-		}));
+		const block = new BrewDayCodeBlock(
+			{} as App,
+			recordService as unknown as BrewRecordService,
+			{} as BrewProfileStorage,
+			() => ({
+				grinders: [],
+				drippers: [],
+				filters: [],
+				baskets: [],
+				accessories: [],
+			}),
+		);
 		let handler!: (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void;
 		block.register((_lang, registeredHandler) => {
 			handler = registeredHandler;

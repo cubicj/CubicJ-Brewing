@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { t, initI18n } from '../../src/i18n/index';
+import { t, initI18n, type LocaleKeys } from '../../src/i18n/index';
 
 describe('i18n', () => {
 	beforeEach(() => {
@@ -40,7 +40,7 @@ describe('i18n', () => {
 	});
 
 	it('falls back to key string for unknown keys', () => {
-		expect(t('nonexistent.key' as any)).toBe('nonexistent.key');
+		expect(t('nonexistent.key' as LocaleKeys)).toBe('nonexistent.key');
 	});
 
 	it('falls back to English for unknown locale', () => {

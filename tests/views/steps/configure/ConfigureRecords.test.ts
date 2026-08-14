@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { BrewFlowSelection } from '../../../../src/brew/types';
+import type { BrewFlowSelection, EspressoRecord, FilterRecord } from '../../../../src/brew/types';
+import type { BrewRecordService } from '../../../../src/services/BrewRecordService';
 import {
 	buildLooseRecordQuery,
 	buildStrictRecordQuery,
@@ -66,11 +67,36 @@ describe('ConfigureRecords', () => {
 	});
 
 	it('getLooseMatchingRecords returns filter matches with an empty loose query', async () => {
-		const records = [{ id: '1' }, { id: '2' }];
+		const records: FilterRecord[] = [
+			{
+				id: '1',
+				timestamp: '2026-08-14T00:00:00Z',
+				bean: 'A',
+				roastDate: '2026-08-01',
+				roastDays: 13,
+				method: 'filter',
+				temp: 'hot',
+				grindSize: 2.5,
+				dose: 18,
+				waterTemp: 93,
+			},
+			{
+				id: '2',
+				timestamp: '2026-08-13T00:00:00Z',
+				bean: 'A',
+				roastDate: '2026-08-01',
+				roastDays: 12,
+				method: 'filter',
+				temp: 'hot',
+				grindSize: 2.5,
+				dose: 18,
+				waterTemp: 93,
+			},
+		];
 		const getMatchingRecords = vi.fn(async () => ({ ok: true, data: records }));
 		const recordService = {
 			getMatchingRecords,
-		} as any;
+		} as unknown as BrewRecordService;
 		const sel: BrewFlowSelection = {
 			method: 'filter',
 			temp: 'hot',
@@ -82,11 +108,38 @@ describe('ConfigureRecords', () => {
 	});
 
 	it('getLooseMatchingRecords returns espresso matches with the drink loose query', async () => {
-		const records = [{ id: '1' }, { id: '2' }];
+		const records: EspressoRecord[] = [
+			{
+				id: '1',
+				timestamp: '2026-08-14T00:00:00Z',
+				bean: 'A',
+				roastDate: '2026-08-01',
+				roastDays: 13,
+				method: 'espresso',
+				temp: 'hot',
+				grindSize: 2.5,
+				dose: 18,
+				drink: 'americano',
+				basket: '18g',
+			},
+			{
+				id: '2',
+				timestamp: '2026-08-13T00:00:00Z',
+				bean: 'A',
+				roastDate: '2026-08-01',
+				roastDays: 12,
+				method: 'espresso',
+				temp: 'hot',
+				grindSize: 2.5,
+				dose: 18,
+				drink: 'americano',
+				basket: '18g',
+			},
+		];
 		const getMatchingRecords = vi.fn(async () => ({ ok: true, data: records }));
 		const recordService = {
 			getMatchingRecords,
-		} as any;
+		} as unknown as BrewRecordService;
 		const sel: BrewFlowSelection = {
 			method: 'espresso',
 			temp: 'hot',

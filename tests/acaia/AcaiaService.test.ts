@@ -4,6 +4,18 @@ import { AcaiaState, Noble } from '../../src/acaia/types';
 
 vi.stubGlobal('window', globalThis);
 
+type PacketHandlingService = {
+	_state: AcaiaState;
+	handlePacket(packet: Buffer): void;
+	scaleTimerRunning: boolean;
+};
+
+type WriteQueueService = {
+	stopTimers(): void;
+	writeQueue: Buffer[];
+	processQueue(): Promise<void>;
+};
+
 function createMockWriteChar() {
 	return {
 		uuid: '49535343884143f4a8d4ecbe34729bb3',
@@ -345,7 +357,7 @@ describe('AcaiaService handlePacket routing', () => {
 		const peripheral = createMockPeripheral();
 		const noble = createMockNoble(peripheral);
 		const service = new AcaiaService({ nobleFactory: () => noble });
-		(service as any)._state = 'connected';
+		(service as unknown as PacketHandlingService)._state = 'connected';
 		return service;
 	}
 
@@ -356,7 +368,7 @@ describe('AcaiaService handlePacket routing', () => {
 
 		const innerPayload = [5, 0xe8, 0x03, 0, 0, 1, 0x00];
 		const packet = buildCompoundPacket(innerPayload);
-		(service as any).handlePacket(packet);
+		(service as unknown as PacketHandlingService).handlePacket(packet);
 
 		expect(weights).toHaveLength(1);
 		expect(weights[0].grams).toBeCloseTo(100.0);
@@ -372,7 +384,7 @@ describe('AcaiaService handlePacket routing', () => {
 
 		const innerPayload = [5, 0xe8, 0x03, 0, 0, 1, 0x03];
 		const packet = buildCompoundPacket(innerPayload);
-		(service as any).handlePacket(packet);
+		(service as unknown as PacketHandlingService).handlePacket(packet);
 
 		expect(weights[0].grams).toBeCloseTo(-100.0);
 		expect(weights[0].stable).toBe(false);
@@ -387,7 +399,7 @@ describe('AcaiaService handlePacket routing', () => {
 
 		const innerPayload = [7, 2, 30, 5];
 		const packet = buildCompoundPacket(innerPayload);
-		(service as any).handlePacket(packet);
+		(service as unknown as PacketHandlingService).handlePacket(packet);
 
 		expect(timers).toHaveLength(1);
 		expect(timers[0]).toBeCloseTo(2 * 60 + 30 + 0.5);
@@ -397,7 +409,7 @@ describe('AcaiaService handlePacket routing', () => {
 
 	it('emits battery and timer_start on settings state change', () => {
 		const service = createConnectedService();
-		(service as any).scaleTimerRunning = false;
+		(service as unknown as PacketHandlingService).scaleTimerRunning = false;
 
 		const batteries: number[] = [];
 		const buttons: { type: string }[] = [];
@@ -405,7 +417,7 @@ describe('AcaiaService handlePacket routing', () => {
 		service.on('button', (evt: { type: string }) => buttons.push(evt));
 
 		const packet = buildSettingsPacket(85, 1, 2, 1, 0);
-		(service as any).handlePacket(packet);
+		(service as unknown as PacketHandlingService).handlePacket(packet);
 
 		expect(batteries).toEqual([85]);
 		expect(buttons).toEqual([{ type: 'timer_start' }]);
@@ -415,13 +427,13 @@ describe('AcaiaService handlePacket routing', () => {
 
 	it('emits timer_stop on settings timer state change', () => {
 		const service = createConnectedService();
-		(service as any).scaleTimerRunning = true;
+		(service as unknown as PacketHandlingService).scaleTimerRunning = true;
 
 		const buttons: { type: string }[] = [];
 		service.on('button', (evt: { type: string }) => buttons.push(evt));
 
 		const packet = buildSettingsPacket(90, 0, 2, 1, 0);
-		(service as any).handlePacket(packet);
+		(service as unknown as PacketHandlingService).handlePacket(packet);
 
 		expect(buttons).toEqual([{ type: 'timer_stop' }]);
 
@@ -430,13 +442,13 @@ describe('AcaiaService handlePacket routing', () => {
 
 	it('does not emit button when timer state unchanged', () => {
 		const service = createConnectedService();
-		(service as any).scaleTimerRunning = false;
+		(service as unknown as PacketHandlingService).scaleTimerRunning = false;
 
 		const buttons: { type: string }[] = [];
 		service.on('button', (evt: { type: string }) => buttons.push(evt));
 
 		const packet = buildSettingsPacket(90, 0, 2, 1, 0);
-		(service as any).handlePacket(packet);
+		(service as unknown as PacketHandlingService).handlePacket(packet);
 
 		expect(buttons).toEqual([]);
 
@@ -449,7 +461,7 @@ describe('AcaiaService handlePacket routing', () => {
 		service.on('weight', (g: number) => weights.push(g));
 
 		const packet = Buffer.from([0xaa, 0xbb, 12, 7, 5, 0xe8, 0x03, 0, 0, 2, 0x00, 0, 0]);
-		(service as any).handlePacket(packet);
+		(service as unknown as PacketHandlingService).handlePacket(packet);
 
 		expect(weights).toEqual([]);
 
@@ -468,13 +480,13 @@ describe('AcaiaService write health', () => {
 		await service.connect();
 		expect(service.state).toBe('connected');
 
-		(service as any).stopTimers();
+		(service as unknown as WriteQueueService).stopTimers();
 
 		writeChar.writeAsync = vi.fn().mockRejectedValue(new Error('write failed'));
 
 		for (let i = 0; i < 6; i++) {
-			(service as any).writeQueue.push(Buffer.from([0x01]));
-			await (service as any).processQueue();
+			(service as unknown as WriteQueueService).writeQueue.push(Buffer.from([0x01]));
+			await (service as unknown as WriteQueueService).processQueue();
 		}
 
 		expect(service.state).not.toBe('connected');
@@ -491,7 +503,7 @@ describe('AcaiaService write health', () => {
 
 		await service.connect();
 
-		(service as any).stopTimers();
+		(service as unknown as WriteQueueService).stopTimers();
 
 		let callCount = 0;
 		writeChar.writeAsync = vi.fn(() => {
@@ -500,14 +512,14 @@ describe('AcaiaService write health', () => {
 			return Promise.resolve(undefined);
 		});
 
-		(service as any).writeQueue.push(
+		(service as unknown as WriteQueueService).writeQueue.push(
 			Buffer.from([0x01]),
 			Buffer.from([0x02]),
 			Buffer.from([0x03]),
 			Buffer.from([0x04]),
 			Buffer.from([0x05]),
 		);
-		await (service as any).processQueue();
+		await (service as unknown as WriteQueueService).processQueue();
 
 		expect(service.state).toBe('connected');
 

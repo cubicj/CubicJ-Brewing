@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { BrewFlowState } from '../../src/brew/BrewFlowState';
-import type { BeanInfo } from '../../src/brew/types';
+import type { BeanInfo, FilterRecord } from '../../src/brew/types';
 
 describe('BrewFlowState', () => {
 	it('starts in idle', () => {
@@ -356,7 +356,7 @@ describe('BrewFlowState', () => {
 		expect(record.method).toBe('filter');
 		expect(record.bean).toBe('첼로');
 		expect(record.grindSize).toBe(2.6);
-		expect((record as any).waterTemp).toBe(96);
+		expect((record as FilterRecord).waterTemp).toBe(96);
 	});
 });
 

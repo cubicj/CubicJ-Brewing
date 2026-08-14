@@ -395,8 +395,8 @@ describe('BrewRecordService', () => {
 		await svc.add(makeFilter());
 		const saved = JSON.parse(adapter.data);
 		expect(saved._invalid).toHaveLength(2);
-		expect(saved._invalid.map((r: any) => r.id)).toContain('old-bad');
-		expect(saved._invalid.map((r: any) => r.id)).toContain('new-bad');
+		expect(saved._invalid.map((r: { id: string }) => r.id)).toContain('old-bad');
+		expect(saved._invalid.map((r: { id: string }) => r.id)).toContain('new-bad');
 		warnSpy.mockRestore();
 	});
 
