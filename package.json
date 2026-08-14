@@ -29,7 +29,7 @@
     "typescript-eslint": "^8.56.1",
     "vitest": "^4.0.18"
   },
-  "dependencies": {
+  "optionalDependencies": {
     "@stoprocent/noble": "^2.3.16"
   }
 }
