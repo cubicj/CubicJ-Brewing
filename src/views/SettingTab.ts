@@ -70,13 +70,6 @@ export class BrewingSettingTab extends PluginSettingTab {
 				},
 			},
 			{
-				name: '',
-				searchable: false,
-				render: (setting) => {
-					setting.setHeading();
-				},
-			},
-			{
 				name: t('settings.beanFolder'),
 				desc: t('settings.beanFolderDesc'),
 				control: {
@@ -146,8 +139,6 @@ export class BrewingSettingTab extends PluginSettingTab {
 				dd.setValue(this.plugin.getLocale());
 				dd.onChange((value) => this.setControlValue('language', value));
 			});
-
-		new Setting(containerEl).setName("").setHeading();
 
 		new Setting(containerEl)
 			.setName(t('settings.beanFolder'))

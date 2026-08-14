@@ -206,8 +206,6 @@ export default class CubicJBrewingPlugin extends Plugin {
 			if (this.dataStore.firstInstall) await this.desktopRuntime?.activateView();
 		});
 
-		this.addSettingTab(new BrewingSettingTab(this.app, this));
-
 		// manifest.json: isDesktopOnly = false
 		// Mobile gets read-only features: bean/brew code blocks, record detail modals, brew history.
 		// Desktop adds BLE scale (AcaiaService), BrewingView sidebar, and live brew flow.
@@ -215,6 +213,8 @@ export default class CubicJBrewingPlugin extends Plugin {
 			this.desktopRuntime = new DesktopRuntime(this);
 			await this.desktopRuntime.init();
 		}
+
+		this.addSettingTab(new BrewingSettingTab(this.app, this));
 	}
 
 	onunload() {
