@@ -1,0 +1,16 @@
+name: PR Target Guard
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  target-dev:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: |
+          echo "Pull requests must target dev, not main. main only fast-forwards from dev."
+          exit 1
