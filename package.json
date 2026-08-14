@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "node esbuild.config.mjs watch",
-    "build": "npm run test && npm run check && node esbuild.config.mjs production",
+    "build": "node esbuild.config.mjs production",
+    "verify": "npm run test && npm run check && npm run build && node .github/scripts/verify-build.mjs",
     "check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
