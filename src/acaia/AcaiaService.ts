@@ -1,4 +1,4 @@
-import { EventEmitter } from 'events';
+import { Platform } from 'obsidian';
 import type { AcaiaEvents } from './types';
 import { AcaiaState, Noble, resolveModelName } from './types';
 import {
@@ -13,6 +13,13 @@ import {
 } from './protocol';
 import { NobleTransport } from './NobleTransport';
 import { decodePacket } from './packetDecoder';
+
+function getEventEmitter(): typeof import('events').EventEmitter {
+	if (Platform.isDesktop) return (require('events') as typeof import('events')).EventEmitter;
+	throw new Error();
+}
+
+const EventEmitter = getEventEmitter();
 
 export interface BleLogger {
 	log(message: string): void;

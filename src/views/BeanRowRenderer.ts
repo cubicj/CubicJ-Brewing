@@ -50,7 +50,7 @@ export function renderFinishedBeanRow(container: HTMLElement, bean: BeanInfo, de
 	const statusBtn = row.createEl('button', { text: t('bean.repurchase'), cls: 'cb-bean-btn cb-bean-repurchase-btn' });
 	statusBtn.addEventListener('click', (e) => {
 		e.stopPropagation();
-		statusBtn.style.display = 'none';
+		statusBtn.setCssProps({ display: 'none' });
 
 		const dateRow = row.createDiv({ cls: 'cb-bean-date-row' });
 		const input = dateRow.createEl('input', { type: 'date' });
@@ -77,7 +77,7 @@ export function renderFinishedBeanRow(container: HTMLElement, bean: BeanInfo, de
 		const cancelBtn = btns.createEl('button', { text: t('common.cancel'), cls: 'cb-bean-btn' });
 		cancelBtn.addEventListener('click', () => {
 			dateRow.remove();
-			statusBtn.style.display = '';
+			statusBtn.setCssProps({ display: '' });
 		});
 	});
 

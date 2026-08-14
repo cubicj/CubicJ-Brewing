@@ -1,3 +1,4 @@
+import { Platform } from 'obsidian';
 import type { BleLogger } from './acaia/AcaiaService';
 import type CubicJBrewingPlugin from './main';
 import { t } from './i18n/index';
@@ -9,6 +10,7 @@ export class DesktopRuntime {
 	constructor(private plugin: CubicJBrewingPlugin) {}
 
 	async init(): Promise<void> {
+		if (!Platform.isDesktop) return;
 		const { AcaiaService } = await import('./acaia/AcaiaService');
 		const { BrewingView, VIEW_TYPE_BREWING } = await import('./views/BrewingView');
 		const { createNobleInstaller, isNobleModuleLoaded } = await import('./acaia/NobleInstaller');

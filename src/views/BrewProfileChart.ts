@@ -76,8 +76,8 @@ export class BrewProfileChart {
 		this.scrollable = scrollable;
 		this.canvas = container.createEl('canvas', { cls: 'brew-profile-canvas' });
 		this.canvas.height = height * devicePixelRatio;
-		this.canvas.style.height = height + 'px';
-		if (!scrollable) this.canvas.style.width = '100%';
+		this.canvas.setCssProps({ height: height + 'px' });
+		if (!scrollable) this.canvas.setCssProps({ width: '100%' });
 		this.ctx = this.canvas.getContext('2d')!;
 
 		if (scrollable) this.attachScrollControls(container);
@@ -90,7 +90,7 @@ export class BrewProfileChart {
 	private attachScrollControls(container: HTMLElement): void {
 		this.scrollContainer = container;
 		container.tabIndex = 0;
-		container.style.outline = 'none';
+		container.setCssProps({ outline: 'none' });
 		this.attachWheel(container);
 		this.attachKeyboard(container);
 		this.attachDragScroll(container);

@@ -2,6 +2,16 @@
 export class Notice {
 	constructor(_message: string, _timeout?: number) {}
 }
+export class TFile {
+	static [Symbol.hasInstance](value: unknown): boolean {
+		return typeof value === 'object' && value !== null && 'extension' in value;
+	}
+}
+export class TFolder {
+	static [Symbol.hasInstance](value: unknown): boolean {
+		return typeof value === 'object' && value !== null && 'children' in value;
+	}
+}
 export const Platform = { isDesktop: true, isMobile: false };
 export class Modal {
 	app: any;

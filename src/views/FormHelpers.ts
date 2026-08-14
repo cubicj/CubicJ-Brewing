@@ -52,7 +52,7 @@ export function attachScaleAutoBtn(
 ): void {
 	const label = stepper.el.querySelector('label') as HTMLElement;
 	const btn = label.createEl('button', {
-		text: 'auto',
+		text: 'Auto',
 		cls: 'cubicj-stepper-scale-btn',
 		attr: { 'aria-label': t('bean.getScaleWeight') },
 	});

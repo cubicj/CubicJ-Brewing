@@ -62,7 +62,7 @@ export class SortableListController<T> {
 				let shift = 0;
 				if (dragIdx < currentIdx && i > dragIdx && i <= currentIdx) shift = -stride;
 				else if (dragIdx > currentIdx && i >= currentIdx && i < dragIdx) shift = stride;
-				rows[i].style.transform = shift ? `translateY(${shift}px)` : '';
+				rows[i].setCssProps({ transform: shift ? `translateY(${shift}px)` : '' });
 			}
 		};
 
@@ -72,8 +72,7 @@ export class SortableListController<T> {
 			if (cleanupTimer !== undefined) clearTimeout(cleanupTimer);
 			row.removeEventListener('transitionend', onTransitionEnd);
 			for (const currentRow of rows) {
-				currentRow.style.transition = '';
-				currentRow.style.transform = '';
+				currentRow.setCssProps({ transition: '', transform: '' });
 			}
 			row.removeClass('is-dragging');
 			this.active = false;
@@ -95,11 +94,11 @@ export class SortableListController<T> {
 				dragging = true;
 				row.addClass('is-dragging');
 				for (const currentRow of rows) {
-					if (currentRow !== row) currentRow.style.transition = 'transform 200ms ease';
+					if (currentRow !== row) currentRow.setCssProps({ transition: 'transform 200ms ease' });
 				}
 			}
 
-			row.style.transform = `translateY(${dy}px)`;
+			row.setCssProps({ transform: `translateY(${dy}px)` });
 			let newIdx = dragIdx + Math.round(dy / stride);
 			newIdx = Math.max(0, Math.min(rows.length - 1, newIdx));
 			if (newIdx !== hoverIdx) {
@@ -116,8 +115,7 @@ export class SortableListController<T> {
 			}
 
 			const finalY = (hoverIdx - dragIdx) * stride;
-			row.style.transition = 'transform 200ms ease';
-			row.style.transform = `translateY(${finalY}px)`;
+			row.setCssProps({ transition: 'transform 200ms ease', transform: `translateY(${finalY}px)` });
 
 			if (hoverIdx !== dragIdx) {
 				const [item] = items.splice(dragIdx, 1);

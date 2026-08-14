@@ -81,7 +81,7 @@ export function renderBrewRecordTable(
 			}
 			collapseExpand();
 			noteTd.addClass('is-expanded');
-			const expandTr = document.createElement('tr') as HTMLTableRowElement;
+			const expandTr = createEl('tr') as HTMLTableRowElement;
 			expandTr.addClass('brew-record-expand');
 			tr.after(expandTr);
 			const expandTd = expandTr.createEl('td');

@@ -157,7 +157,7 @@ export class BrewingView extends ItemView {
 			cls: 'brewing-toolbar-btn brewing-power-off-btn',
 		});
 		this.scalePowerOffBtn.addEventListener('click', () => this.powerOff());
-		this.scalePowerOffBtn.style.display = 'none';
+		this.scalePowerOffBtn.setCssProps({ display: 'none' });
 
 		const rightGroup = toolbar.createDiv({ cls: 'brewing-toolbar-right' });
 

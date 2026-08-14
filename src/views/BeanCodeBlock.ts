@@ -103,7 +103,7 @@ function openWeightPopover(
 	const scaleWeight = getScaleWeight?.();
 	if (scaleWeight != null) {
 		const autoBtn = inputRow.createEl('button', {
-			text: 'auto',
+			text: 'Auto',
 			cls: 'bwp-auto',
 			attr: { 'aria-label': t('bean.getScaleWeight') },
 		});

@@ -1,5 +1,13 @@
 import js from '@eslint/js';
+import obsidianmd from 'eslint-plugin-obsidianmd';
 import tseslint from 'typescript-eslint';
+
+const obsidianmdRecommendedRules = Object.fromEntries(
+	obsidianmd.configs.recommended
+		.flatMap((config) => Object.entries(config.rules ?? {}))
+		.filter(([rule]) => rule.startsWith('obsidianmd/')),
+);
+
 export default tseslint.config(
 	js.configs.recommended,
 	...tseslint.configs.recommended,
@@ -17,12 +25,26 @@ export default tseslint.config(
 		},
 	},
 	{
-		files: ['build/**/*.mjs'],
+		files: ['src/**/*.ts'],
 		languageOptions: {
-			globals: {
-				console: 'readonly',
-				process: 'readonly',
+			parserOptions: {
+				project: './tsconfig.json',
 			},
+		},
+		plugins: {
+			obsidianmd,
+		},
+		rules: {
+			...obsidianmdRecommendedRules,
+			'obsidianmd/prefer-window-timers': 'off',
+			'obsidianmd/settings-tab/prefer-setting-definitions': 'off',
+			'obsidianmd/ui/sentence-case': [
+				'warn',
+				{
+					brands: ['Acaia', 'Pearl S', 'Bluetooth', 'BLE', 'Obsidian', 'GitHub', 'CubicJ Brewing'],
+					enforceCamelCaseLower: true,
+				},
+			],
 		},
 	},
 	{

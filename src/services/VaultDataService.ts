@@ -1,4 +1,4 @@
-import type { App, TFile } from 'obsidian';
+import { type App, TFile } from 'obsidian';
 import type { BeanInfo, RecipeInfo, RecipeStep } from '../brew/types';
 import { calcRoastDays } from '../brew/constants';
 import { t } from '../i18n/index';
@@ -179,6 +179,6 @@ export class VaultDataService {
 
 	private getTFile(path: string): TFile | null {
 		const file = this.app.vault.getAbstractFileByPath(path);
-		return file && 'extension' in file ? (file as TFile) : null;
+		return file instanceof TFile ? file : null;
 	}
 }

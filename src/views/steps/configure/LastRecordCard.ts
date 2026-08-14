@@ -45,7 +45,7 @@ export function renderLastRecordCard(
 
 		if (!record) {
 			card.createDiv({ cls: 'brew-flow-last-record-meta', text: '-' });
-			navContainer.style.display = 'none';
+			navContainer.setCssProps({ display: 'none' });
 			return;
 		}
 		const parts: string[] = [];
@@ -72,10 +72,10 @@ export function renderLastRecordCard(
 	const updateNav = (index: number, total: number) => {
 		if (!navContainer) return;
 		if (total <= 1) {
-			navContainer.style.display = 'none';
+			navContainer.setCssProps({ display: 'none' });
 			return;
 		}
-		navContainer.style.display = '';
+		navContainer.setCssProps({ display: '' });
 		counterEl.textContent = `${index + 1} / ${total}`;
 		prevBtn.disabled = index <= 0;
 		nextBtn.disabled = index >= total - 1;

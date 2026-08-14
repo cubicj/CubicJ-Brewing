@@ -21,6 +21,7 @@
     "archiver": "^7.0.1",
     "esbuild": "^0.25.0",
     "eslint": "^10.0.3",
+    "eslint-plugin-obsidianmd": "^0.4.1",
     "jsdom": "^29.0.0",
     "obsidian": "^1.13.1",
     "typescript": "^5.0.0",

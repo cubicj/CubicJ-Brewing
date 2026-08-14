@@ -476,13 +476,13 @@ describe('DesktopRuntime', () => {
 		]);
 		expect(harness.registerView).toHaveBeenCalledWith('cubicj-brewing', expect.any(Function));
 		expect(harness.commands).toEqual([
-			{ id: 'open-view', name: 'Open Brewing View', callback: expect.any(Function) },
-			{ id: 'tare', name: 'Tare Scale', checkCallback: expect.any(Function) },
-			{ id: 'auto-fill', name: 'Auto-fill Weight', checkCallback: expect.any(Function) },
-			{ id: 'toggle-brewing', name: 'Proceed / Start / Stop / Save', checkCallback: expect.any(Function) },
-			{ id: 'toggle-timer', name: 'Start / Stop / Reset Timer', checkCallback: expect.any(Function) },
-			{ id: 'toggle-connect', name: 'Connect / Disconnect Scale', checkCallback: expect.any(Function) },
-			{ id: 'power-off-scale', name: 'Power Off Scale', checkCallback: expect.any(Function) },
+			{ id: 'open-view', name: 'Open brewing view', callback: expect.any(Function) },
+			{ id: 'tare', name: 'Tare scale', checkCallback: expect.any(Function) },
+			{ id: 'auto-fill', name: 'Auto-fill weight', checkCallback: expect.any(Function) },
+			{ id: 'toggle-brewing', name: 'Proceed / start / stop / save', checkCallback: expect.any(Function) },
+			{ id: 'toggle-timer', name: 'Start / stop / reset timer', checkCallback: expect.any(Function) },
+			{ id: 'toggle-connect', name: 'Connect / disconnect scale', checkCallback: expect.any(Function) },
+			{ id: 'power-off-scale', name: 'Power off scale', checkCallback: expect.any(Function) },
 		]);
 		expect(harness.addRibbonIcon).toHaveBeenCalledWith('coffee', 'CubicJ Brewing', expect.any(Function));
 		expect(harness.setScaleWeightGetter).toHaveBeenCalledOnce();

@@ -112,14 +112,14 @@ export class AccordionManager {
 				if (!wasOpen) {
 					body.classList.add('is-open');
 					const h = body.scrollHeight;
-					body.style.maxHeight = '0px';
+					body.setCssStyles({ maxHeight: '0px' });
 					requestAnimationFrame(() => {
-						body.style.maxHeight = h + 'px';
+						body.setCssStyles({ maxHeight: h + 'px' });
 					});
 					const ref = body;
 					const onOpenEnd = (e: TransitionEvent) => {
 						if (e.propertyName === 'max-height') {
-							ref.style.maxHeight = 'none';
+							ref.setCssStyles({ maxHeight: 'none' });
 							ref.removeEventListener('transitionend', onOpenEnd);
 							this.accordionEndListeners.delete(ref);
 						}
@@ -127,7 +127,7 @@ export class AccordionManager {
 					this.accordionEndListeners.set(body, onOpenEnd);
 					body.addEventListener('transitionend', onOpenEnd);
 				} else {
-					body.style.maxHeight = 'none';
+					body.setCssStyles({ maxHeight: 'none' });
 				}
 			} else {
 				if (wasOpen) {
@@ -136,18 +136,18 @@ export class AccordionManager {
 						body.removeEventListener('transitionend', prevOnEnd);
 					}
 
-					body.style.maxHeight = body.scrollHeight + 'px';
+					body.setCssStyles({ maxHeight: body.scrollHeight + 'px' });
 					void body.offsetHeight;
 					requestAnimationFrame(() => {
 						body.classList.remove('is-open');
-						body.style.maxHeight = '0px';
+						body.setCssStyles({ maxHeight: '0px' });
 					});
 					const ref = body;
 					const onEnd = (e: TransitionEvent) => {
 						if (e.propertyName === 'max-height') {
 							this.cleanupPanel(i);
 							ref.empty();
-							ref.style.maxHeight = '';
+							ref.setCssStyles({ maxHeight: '' });
 							ref.removeEventListener('transitionend', onEnd);
 							this.accordionEndListeners.delete(ref);
 						}
@@ -230,13 +230,13 @@ export class AccordionManager {
 		mutation();
 		const after = body.scrollHeight;
 		if (before === after) return;
-		body.style.height = before + 'px';
+		body.setCssProps({ height: before + 'px' });
 		void body.offsetHeight;
 		requestAnimationFrame(() => {
-			body.style.height = after + 'px';
+			body.setCssProps({ height: after + 'px' });
 			const onEnd = (e: TransitionEvent) => {
 				if (e.propertyName !== 'height') return;
-				body.style.height = '';
+				body.setCssProps({ height: '' });
 				body.removeEventListener('transitionend', onEnd);
 				this.accordionEndListeners.delete(body);
 			};
@@ -272,11 +272,11 @@ export class AccordionManager {
 	}
 
 	private renderCheckIcon(container: HTMLElement): void {
-		const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+		const svg = createSvg('svg');
 		svg.setAttribute('width', '14');
 		svg.setAttribute('height', '14');
 		svg.setAttribute('viewBox', '0 0 14 14');
-		const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+		const path = createSvg('path');
 		path.setAttribute('d', 'M3 7l3 3 5-5');
 		path.setAttribute('fill', 'none');
 		path.setAttribute('stroke', 'currentColor');

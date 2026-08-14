@@ -60,7 +60,7 @@ export class ScaleDisplayManager {
 		this.tareBtn.addEventListener('click', () => this.callbacks.onTare());
 
 		const connected = this.callbacks.isConnected();
-		this.scaleDataEl.style.display = connected ? '' : 'none';
+		this.scaleDataEl.setCssProps({ display: connected ? '' : 'none' });
 		this.tareBtn.disabled = !connected;
 		this.timerBtn.disabled = !connected;
 		if (connected) {
@@ -80,7 +80,7 @@ export class ScaleDisplayManager {
 		this.scaleStatusEl.removeClass('brewing-error');
 
 		this.scaleNameEl.textContent = '';
-		this.powerOffBtn.style.display = 'none';
+		this.powerOffBtn.setCssProps({ display: 'none' });
 
 		switch (state) {
 			case 'idle':
@@ -102,7 +102,7 @@ export class ScaleDisplayManager {
 				this.scaleStatusEl.textContent = t('scale.connected');
 				if (scaleName) this.scaleNameEl.textContent = `· ${scaleName}`;
 				this.connectBtn.textContent = t('scale.disconnect');
-				this.powerOffBtn.style.display = '';
+				this.powerOffBtn.setCssProps({ display: '' });
 				break;
 			case 'disconnected':
 				this.scaleStatusEl.textContent = t('scale.disconnected');
@@ -123,7 +123,7 @@ export class ScaleDisplayManager {
 
 	updateControls(state: AcaiaState, resetTimer: () => void): void {
 		const connected = state === 'connected';
-		this.scaleDataEl.style.display = connected ? '' : 'none';
+		this.scaleDataEl.setCssProps({ display: connected ? '' : 'none' });
 
 		if (this.tareBtn) this.tareBtn.disabled = !connected;
 		if (this.timerBtn) this.timerBtn.disabled = !connected;
@@ -139,7 +139,7 @@ export class ScaleDisplayManager {
 			if (state === 'disconnected') {
 				resetTimer();
 			}
-			this.scaleDataEl.style.display = 'none';
+			this.scaleDataEl.setCssProps({ display: 'none' });
 		}
 
 		if (state === 'idle') {
@@ -148,7 +148,7 @@ export class ScaleDisplayManager {
 			this.weightEl?.removeClass('brewing-dimmed');
 			this.timerEl?.removeClass('brewing-dimmed');
 			resetTimer();
-			this.scaleDataEl.style.display = 'none';
+			this.scaleDataEl.setCssProps({ display: 'none' });
 		}
 	}
 

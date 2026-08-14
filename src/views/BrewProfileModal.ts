@@ -69,11 +69,11 @@ export class BrewProfileModal extends Modal {
 			const sub = this.contentEl.createDiv({ cls: 'brew-profile-subtitle' });
 			const { date, time } = formatBrewDate(this.record.timestamp);
 			const dateStr = `20${date} | ${time}`;
-			sub.createEl('span', { cls: 'brew-profile-subtitle-label', text: t('modal.dateTime') });
-			sub.createEl('span', { text: dateStr });
-			sub.createEl('span', { cls: 'brew-profile-subtitle-sep', text: ' · ' });
-			sub.createEl('span', { cls: 'brew-profile-subtitle-label', text: t('modal.bean') });
-			sub.createEl('span', { text: this.record.bean });
+			sub.createSpan({ cls: 'brew-profile-subtitle-label', text: t('modal.dateTime') });
+			sub.createSpan({ text: dateStr });
+			sub.createSpan({ cls: 'brew-profile-subtitle-sep', text: ' · ' });
+			sub.createSpan({ cls: 'brew-profile-subtitle-label', text: t('modal.bean') });
+			sub.createSpan({ text: this.record.bean });
 		} else {
 			this.contentEl.createDiv({ text: this.subtitle, cls: 'brew-profile-subtitle' });
 		}

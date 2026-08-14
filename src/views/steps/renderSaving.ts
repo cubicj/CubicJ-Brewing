@@ -73,10 +73,9 @@ export function renderSaving(container: HTMLElement, ctx: StepRenderContext): vo
 		}
 		const body = noteEl.closest('.brew-accordion-body') as HTMLElement | null;
 		if (body?.classList.contains('is-open') && body.style.maxHeight !== '0px') {
-			body.style.transition = 'none';
-			body.style.maxHeight = body.scrollHeight + 'px';
+			body.setCssStyles({ transition: 'none', maxHeight: body.scrollHeight + 'px' });
 			void body.offsetHeight;
-			body.style.transition = '';
+			body.setCssProps({ transition: '' });
 		}
 	});
 	ro.observe(noteEl);

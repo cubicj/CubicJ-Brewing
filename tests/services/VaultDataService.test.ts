@@ -59,6 +59,6 @@ describe('VaultDataService', () => {
 		const result = await service.createBeanNote();
 
 		expect(result.ok).toBe(true);
-		expect(app.vault.create).toHaveBeenCalledWith('Beans/New Bean.md', expect.not.stringContaining('roast_days'));
+		expect(app.vault.create).toHaveBeenCalledWith('Beans/New bean.md', expect.not.stringContaining('roast_days'));
 	});
 });

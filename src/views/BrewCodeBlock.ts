@@ -1,4 +1,4 @@
-import { type App, type TFile, type MarkdownPostProcessorContext } from 'obsidian';
+import { type App, TFile, type MarkdownPostProcessorContext } from 'obsidian';
 import type { BrewRecordService } from '../services/BrewRecordService';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import type { EquipmentSettings } from '../brew/types';
@@ -76,8 +76,8 @@ export class BrewCodeBlock {
 
 	private resolveBeanName(sourcePath: string): string | null {
 		const file = this.app.vault.getAbstractFileByPath(sourcePath);
-		if (!file || !('extension' in file)) return null;
-		const cache = this.app.metadataCache.getFileCache(file as TFile);
+		if (!(file instanceof TFile)) return null;
+		const cache = this.app.metadataCache.getFileCache(file);
 		if (cache?.frontmatter?.type !== 'bean') return null;
 		return cache.frontmatter.name ?? file.name.replace(/\.md$/, '');
 	}

@@ -75,7 +75,7 @@ export function createStepper(
 	display.addEventListener('dblclick', () => {
 		if (editing) return;
 		editing = true;
-		const input = document.createElement('input');
+		const input = createEl('input');
 		input.type = 'number';
 		input.step = 'any';
 		input.value = String(value);

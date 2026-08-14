@@ -1,4 +1,4 @@
-import { AbstractInputSuggest, App, Notice, PluginSettingTab, Setting, type TFolder } from 'obsidian';
+import { AbstractInputSuggest, App, Notice, PluginSettingTab, Setting, TFolder } from 'obsidian';
 import type { NobleInstallStatus } from '../acaia/NobleInstaller';
 import type CubicJBrewingPlugin from '../main';
 import { t, getAvailableLocales } from '../i18n/index';
@@ -16,12 +16,12 @@ class FolderSuggest extends AbstractInputSuggest<TFolder> {
 		const folders: TFolder[] = [];
 		const seen = new Set<string>();
 		this.app.vault.getAllLoadedFiles().forEach((f) => {
-			if (!('children' in f)) return;
+			if (!(f instanceof TFolder)) return;
 			if (seen.has(f.path)) return;
 			seen.add(f.path);
 			if (f.path === '/') return;
 			if (f.path.toLowerCase().contains(lowerQuery)) {
-				folders.push(f as TFolder);
+				folders.push(f);
 			}
 		});
 		return folders.slice(0, 20);
@@ -73,7 +73,7 @@ export class BrewingSettingTab extends PluginSettingTab {
 				});
 			});
 
-		containerEl.createEl('h2', { text: t('settings.beanFolder') });
+		new Setting(containerEl).setName("").setHeading();
 
 		new Setting(containerEl)
 			.setName(t('settings.beanFolder'))

@@ -41,6 +41,14 @@ function applyPolyfills(el: HTMLElement): HTMLElement {
 		while (this.firstChild) this.removeChild(this.firstChild);
 	};
 
+	(el as any).setCssStyles = function (this: HTMLElement, styles: Partial<CSSStyleDeclaration>) {
+		Object.assign(this.style, styles);
+	};
+
+	(el as any).setCssProps = function (this: HTMLElement, props: Record<string, string>) {
+		for (const [property, value] of Object.entries(props)) this.style.setProperty(property, value);
+	};
+
 	return el;
 }
 
@@ -66,4 +74,7 @@ export function installPolyfills(): void {
 	if (!(HTMLElement.prototype as any).createDiv) {
 		applyPolyfills(HTMLElement.prototype);
 	}
+	(globalThis as any).createEl = (tag: string) => applyPolyfills(document.createElement(tag));
+	(globalThis as any).createSvg = (tag: string) =>
+		applyPolyfills(document.createElementNS('http://www.w3.org/2000/svg', tag) as unknown as HTMLElement);
 }
