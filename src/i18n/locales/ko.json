@@ -174,6 +174,7 @@
 	"noble.phase.verifying": "검증 중...",
 	"noble.phase.extracting": "설치 중...",
 	"noble.done": "블루투스 애드온이 설치되었습니다.",
+	"noble.error.locked": "블루투스 애드온이 현재 세션에서 사용 중입니다. Obsidian을 재시작한 뒤 다시 시도하세요.",
 	"noble.error.network": "다운로드에 실패했습니다. 네트워크 연결을 확인하세요.",
 	"noble.error.http": "이 버전의 애드온 패키지를 찾을 수 없습니다.",
 	"noble.error.checksum": "다운로드한 파일이 검증에 실패했습니다. 다시 시도하세요.",

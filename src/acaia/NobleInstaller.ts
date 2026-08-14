@@ -10,7 +10,7 @@ export type NobleInstallStatus =
 	| { kind: 'installed'; version: string }
 	| { kind: 'version-mismatch'; installed: string; expected: string };
 
-export type NobleInstallErrorCode = 'network' | 'http' | 'checksum' | 'extract' | 'write';
+export type NobleInstallErrorCode = 'locked' | 'network' | 'http' | 'checksum' | 'extract' | 'write';
 
 export class NobleInstallError extends Error {
 	constructor(
@@ -26,7 +26,6 @@ export interface InstallerFilePort {
 	read(path: string): Promise<string | null>;
 	mkdir(path: string): Promise<void>;
 	writeBinary(path: string, data: ArrayBuffer): Promise<void>;
-	rmdir(path: string): Promise<void>;
 }
 
 export interface InstallerHttpPort {
@@ -40,6 +39,7 @@ export interface NobleInstallerOptions {
 	pluginVersion: string;
 	expectedVersion?: string;
 	expectedSha256?: string;
+	isAddonLoaded?: () => boolean;
 }
 
 async function sha256Hex(buf: ArrayBuffer): Promise<string> {
@@ -51,6 +51,29 @@ async function sha256Hex(buf: ArrayBuffer): Promise<string> {
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
 	return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}
+
+export function isNobleModuleLoaded(noblePath: string, cache?: Record<string, unknown>): boolean {
+	let moduleCache = cache;
+	if (moduleCache === undefined) {
+		try {
+			moduleCache = typeof require === 'function' ? (require.cache as Record<string, unknown>) : undefined;
+		} catch {}
+		if (moduleCache === undefined) {
+			try {
+				moduleCache =
+					typeof window === 'undefined'
+						? undefined
+						: (window as typeof window & { require?: { cache?: Record<string, unknown> } }).require?.cache;
+			} catch {}
+		}
+	}
+	if (!moduleCache) return false;
+	const normalizedNoblePath = noblePath.replace(/\\/g, '/').toLowerCase();
+	return Object.keys(moduleCache).some((key) => {
+		const normalizedKey = key.replace(/\\/g, '/').toLowerCase();
+		return normalizedKey === normalizedNoblePath || normalizedKey.startsWith(`${normalizedNoblePath}/`);
+	});
 }
 
 export class NobleInstaller {
@@ -76,6 +99,9 @@ export class NobleInstaller {
 	}
 
 	async install(onPhase: (phase: NobleInstallPhase) => void): Promise<void> {
+		if (this.options.isAddonLoaded?.()) {
+			throw new NobleInstallError('locked', 'The Bluetooth addon is already loaded in this session.');
+		}
 		onPhase('downloading');
 		let response: { status: number; body: ArrayBuffer };
 		try {
@@ -105,15 +131,24 @@ export class NobleInstaller {
 		}
 
 		try {
-			if (await this.options.files.exists(this.nobleDir)) {
-				await this.options.files.rmdir(this.nobleDir);
+			if (!(await this.options.files.exists(this.nobleDir))) {
+				await this.options.files.mkdir(this.nobleDir);
 			}
-			await this.options.files.mkdir(this.nobleDir);
-			for (const entry of entries) {
-				const target = `${this.options.pluginDir}/${entry.path}`.replace(/\/$/, '');
+			const packagePath = `${this.nobleDir}/package.json`;
+			const targetedEntries = entries.map((entry) => ({
+				entry,
+				target: `${this.options.pluginDir}/${entry.path}`.replace(/\/$/, ''),
+			}));
+			const orderedEntries = [
+				...targetedEntries.filter(({ target }) => target !== packagePath),
+				...targetedEntries.filter(({ target }) => target === packagePath),
+			];
+			for (const { entry, target } of orderedEntries) {
 				if (target === this.nobleDir) continue;
 				if (entry.type === 'dir') {
-					await this.options.files.mkdir(target);
+					if (!(await this.options.files.exists(target))) {
+						await this.options.files.mkdir(target);
+					}
 				} else {
 					await this.options.files.writeBinary(target, toArrayBuffer(entry.data));
 				}
@@ -124,14 +159,16 @@ export class NobleInstaller {
 	}
 }
 
-export function createNobleInstaller(plugin: { app: App; manifest: PluginManifest }): NobleInstaller {
+export function createNobleInstaller(
+	plugin: { app: App; manifest: PluginManifest },
+	isAddonLoaded?: () => boolean,
+): NobleInstaller {
 	const adapter = plugin.app.vault.adapter;
 	const files: InstallerFilePort = {
 		exists: (p) => adapter.exists(p),
 		read: async (p) => ((await adapter.exists(p)) ? adapter.read(p) : null),
 		mkdir: (p) => adapter.mkdir(p),
 		writeBinary: (p, data) => adapter.writeBinary(p, data),
-		rmdir: (p) => adapter.rmdir(p, true),
 	};
 	const http: InstallerHttpPort = {
 		fetchBinary: async (url) => {
@@ -144,5 +181,6 @@ export function createNobleInstaller(plugin: { app: App; manifest: PluginManifes
 		http,
 		pluginDir: plugin.manifest.dir ?? '',
 		pluginVersion: plugin.manifest.version,
+		isAddonLoaded,
 	});
 }

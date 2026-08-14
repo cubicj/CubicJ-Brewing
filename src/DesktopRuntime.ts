@@ -11,8 +11,10 @@ export class DesktopRuntime {
 	async init(): Promise<void> {
 		const { AcaiaService } = await import('./acaia/AcaiaService');
 		const { BrewingView, VIEW_TYPE_BREWING } = await import('./views/BrewingView');
-		const { createNobleInstaller } = await import('./acaia/NobleInstaller');
-		this.plugin.nobleInstaller = createNobleInstaller(this.plugin);
+		const { createNobleInstaller, isNobleModuleLoaded } = await import('./acaia/NobleInstaller');
+		const basePath = (this.plugin.app.vault.adapter as any).getBasePath();
+		const noblePath = require('path').join(basePath, this.plugin.manifest.dir, 'noble');
+		this.plugin.nobleInstaller = createNobleInstaller(this.plugin, () => isNobleModuleLoaded(noblePath));
 		this.viewType = VIEW_TYPE_BREWING;
 
 		let logger: BleLogger | undefined;
@@ -21,8 +23,6 @@ export class DesktopRuntime {
 			logger = { log: (msg: string) => pl.log('BLE', msg) };
 		}
 
-		const basePath = (this.plugin.app.vault.adapter as any).getBasePath();
-		const noblePath = require('path').join(basePath, this.plugin.manifest.dir, 'noble');
 		this.plugin.acaiaService = new AcaiaService({ logger, noblePath });
 
 		this.plugin.beanBlock.setScaleWeightGetter(() => {

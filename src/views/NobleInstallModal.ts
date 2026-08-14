@@ -22,6 +22,7 @@ const PHASE_KEYS: Record<NobleInstallPhase, LocaleKeys> = {
 };
 
 const ERROR_KEYS: Record<NobleInstallErrorCode, LocaleKeys> = {
+	locked: 'noble.error.locked',
 	network: 'noble.error.network',
 	http: 'noble.error.http',
 	checksum: 'noble.error.checksum',
