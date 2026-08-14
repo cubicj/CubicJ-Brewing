@@ -59,6 +59,17 @@ BLE and the brewing sidebar are desktop-only (Windows); bean inventory, brew his
 
 > The `noble/` folder contains the native Bluetooth addon. If it's missing, record keeping still works — the plugin offers a one-click, checksum-verified addon download when you try to connect the scale, and from **Settings → Bluetooth addon**.
 
+## Privacy and network access
+
+The plugin works entirely offline. Brew records, beans, and recipes are plain Markdown files in your vault. There is no telemetry, no analytics, and no connection to any external service.
+
+The plugin performs exactly one kind of network request: downloading the native Bluetooth addon (`noble.tar.gz`, about 3 MB) from this plugin's own [GitHub releases](https://github.com/cubicj/CubicJ-Brewing/releases). The addon is required to talk to the scale over Bluetooth.
+
+- The download only happens when you ask for it — when you try to connect the scale without the addon installed, or from **Settings → Bluetooth addon**. Nothing is downloaded automatically.
+- The download is pinned to the installed plugin version and verified against a SHA-256 checksum built into the plugin before anything is installed.
+- The addon is stored inside the plugin's own folder (`.obsidian/plugins/cubicj-brewing/noble/`). The plugin does not read or write files outside your vault.
+- Without the addon, everything except the live scale connection keeps working.
+
 ## Documentation
 
 Full documentation lives in the **[wiki](https://github.com/cubicj/CubicJ-Brewing/wiki)**:
