@@ -537,7 +537,15 @@
 	border-radius: var(--radius-s);
 }
 .cubicj-stepper-scale-btn {
-	all: unset;
+	appearance: none;
+	background: transparent;
+	border: 0;
+	box-shadow: none;
+	font: inherit;
+	margin: 0;
+	min-height: 0;
+	outline: none;
+	padding: 0;
 	display: inline-flex;
 	align-items: center;
 	padding: 2px 6px;
@@ -1381,7 +1389,15 @@ body.is-mobile .brew-profile-chart-mode .brew-profile-footer {
 	flex-shrink: 0;
 }
 .bwp-auto {
-	all: unset;
+	appearance: none;
+	background: transparent;
+	border: 0;
+	box-shadow: none;
+	font: inherit;
+	margin: 0;
+	min-height: 0;
+	outline: none;
+	padding: 0;
 	padding: 2px 6px;
 	cursor: pointer;
 	border-radius: var(--radius-s);
@@ -1399,7 +1415,15 @@ body.is-mobile .brew-profile-chart-mode .brew-profile-footer {
 	gap: 4px;
 }
 .bwp-action {
-	all: unset;
+	appearance: none;
+	background: transparent;
+	border: 0;
+	box-shadow: none;
+	font: inherit;
+	margin: 0;
+	min-height: 0;
+	outline: none;
+	padding: 0;
 	flex: 1;
 	text-align: center;
 	padding: 5px 0;
@@ -1421,7 +1445,15 @@ body.is-mobile .brew-profile-chart-mode .brew-profile-footer {
 	color: var(--text-normal);
 }
 .bwp-depleted {
-	all: unset;
+	appearance: none;
+	background: transparent;
+	border: 0;
+	box-shadow: none;
+	font: inherit;
+	margin: 0;
+	min-height: 0;
+	outline: none;
+	padding: 0;
 	box-sizing: border-box;
 	width: 100%;
 	margin-top: 4px;

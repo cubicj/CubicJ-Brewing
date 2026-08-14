@@ -1,4 +1,4 @@
-import { Platform } from 'obsidian';
+import { Platform, type FileSystemAdapter } from 'obsidian';
 import type { BleLogger } from './acaia/AcaiaService';
 import type CubicJBrewingPlugin from './main';
 import { t } from './i18n/index';
@@ -14,8 +14,9 @@ export class DesktopRuntime {
 		const { AcaiaService } = await import('./acaia/AcaiaService');
 		const { BrewingView, VIEW_TYPE_BREWING } = await import('./views/BrewingView');
 		const { createNobleInstaller, isNobleModuleLoaded } = await import('./acaia/NobleInstaller');
-		const basePath = (this.plugin.app.vault.adapter as any).getBasePath();
-		const noblePath = require('path').join(basePath, this.plugin.manifest.dir, 'noble');
+		const basePath = (this.plugin.app.vault.adapter as FileSystemAdapter).getBasePath();
+		const path = require('path') as typeof import('path');
+		const noblePath = path.join(basePath, this.plugin.manifest.dir as string, 'noble');
 		this.plugin.nobleInstaller = createNobleInstaller(this.plugin, () => isNobleModuleLoaded(noblePath));
 		this.viewType = VIEW_TYPE_BREWING;
 
@@ -42,7 +43,7 @@ export class DesktopRuntime {
 		this.plugin.addCommand({
 			id: 'open-view',
 			name: t('command.openView'),
-			callback: () => this.activateView(),
+			callback: () => void this.activateView(),
 		});
 
 		this.plugin.addCommand({
@@ -57,7 +58,7 @@ export class DesktopRuntime {
 		});
 
 		const doAutoFill = () => {
-			const popoverBtn = document.querySelector('.bwp-auto') as HTMLButtonElement | null;
+			const popoverBtn = document.querySelector<HTMLButtonElement>('.bwp-auto');
 			if (popoverBtn) {
 				popoverBtn.click();
 				return;
@@ -105,7 +106,7 @@ export class DesktopRuntime {
 			checkCallback: (checking) => {
 				const view = getView();
 				if (!view) return false;
-				if (!checking) view.toggleConnect();
+				if (!checking) void view.toggleConnect();
 				return true;
 			},
 		});
@@ -122,7 +123,7 @@ export class DesktopRuntime {
 		});
 
 		this.plugin.addRibbonIcon('coffee', 'CubicJ Brewing', () => {
-			this.activateView();
+			void this.activateView();
 		});
 
 		this.beforeUnloadHandler = () => this.teardown(false);
@@ -137,7 +138,7 @@ export class DesktopRuntime {
 			await leaf?.setViewState({ type: this.viewType, active: true });
 		}
 		const target = this.plugin.app.workspace.getLeavesOfType(this.viewType)[0];
-		if (target) this.plugin.app.workspace.revealLeaf(target);
+		if (target) await this.plugin.app.workspace.revealLeaf(target);
 	}
 
 	destroy(): void {
@@ -150,6 +151,6 @@ export class DesktopRuntime {
 			this.beforeUnloadHandler = null;
 		}
 		this.plugin.acaiaService?.destroy();
-		this.plugin.pluginLogger?.stop();
+		void this.plugin.pluginLogger?.stop();
 	}
 }

@@ -66,7 +66,7 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 	if (ctx.brewingStarted) {
 		const controls = container.createDiv({ cls: 'brewing-controls' });
 		const stopBtn = controls.createEl('button', { text: t('brew.done'), cls: 'brewing-ctrl-btn brew-flow-stop-btn' });
-		stopBtn.addEventListener('click', async () => {
+		const stopBrewing = async () => {
 			try {
 				if (chart) chart.stopLive();
 				if (scaleConnected) {
@@ -87,6 +87,9 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 				console.error('[StepRenderers] brew stop failed:', err);
 				new Notice(t('brew.unexpectedError'));
 			}
+		};
+		stopBtn.addEventListener('click', () => {
+			void stopBrewing();
 		});
 	} else if (!hasProfile) {
 		const controls = container.createDiv({ cls: 'brewing-controls' });
@@ -94,7 +97,7 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 			text: t('brew.startBrewing'),
 			cls: 'brewing-ctrl-btn brew-flow-start-btn',
 		});
-		startBtn.addEventListener('click', async () => {
+		const startBrewing = async () => {
 			try {
 				ctx.brewingStarted = true;
 				if (scaleConnected) {
@@ -107,6 +110,9 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 				console.error('[StepRenderers] brew start failed:', err);
 				new Notice(t('brew.unexpectedError'));
 			}
+		};
+		startBtn.addEventListener('click', () => {
+			void startBrewing();
 		});
 	}
 }

@@ -27,14 +27,14 @@ export class BrewDayCodeBlock {
 	): void {
 		registerFn('brew-day', (_source, el, ctx) => {
 			this.registry.track(el);
-			this.renderAsync(el, ctx.sourcePath);
+			void this.renderAsync(el, ctx.sourcePath);
 		});
 	}
 
 	refreshAll(): void {
 		this.registry.refreshAll((el) => {
 			const path = el.dataset.sourcePath;
-			if (path) this.renderAsync(el, path);
+			if (path) void this.renderAsync(el, path);
 		});
 	}
 

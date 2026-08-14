@@ -2,6 +2,17 @@ import type { FileAdapter } from './FileAdapter';
 import type { BrewProfilePoint } from '../brew/types';
 import { type Result, ok, fail } from '../types/result';
 
+function isBrewProfilePoint(value: unknown): value is BrewProfilePoint {
+	return (
+		value !== null &&
+		typeof value === 'object' &&
+		't' in value &&
+		typeof value.t === 'number' &&
+		'w' in value &&
+		typeof value.w === 'number'
+	);
+}
+
 export class BrewProfileStorage {
 	constructor(
 		private baseDir: string,
@@ -42,11 +53,7 @@ export class BrewProfileStorage {
 			return fail('PROFILE_PARSE_FAILED', `Profile ${profilePath} corrupt`);
 		}
 		if (!Array.isArray(parsed)) return fail('PROFILE_SCHEMA_INVALID', `Profile ${profilePath} is not an array`);
-		return ok(
-			parsed.filter(
-				(p: any) => p && typeof p === 'object' && typeof p.t === 'number' && typeof p.w === 'number',
-			) as BrewProfilePoint[],
-		);
+		return ok(parsed.filter(isBrewProfilePoint));
 	}
 
 	async delete(profilePath: string): Promise<Result<void>> {

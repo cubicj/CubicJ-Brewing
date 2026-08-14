@@ -23,25 +23,27 @@ export function deleteBrewRecordFlow(
 	const checkbox = canRestore
 		? { label: t('form.restoreWeight', { dose: record.dose, bean: record.bean }), checked: true }
 		: undefined;
+	const confirmDelete = async (restoreWeight: boolean) => {
+		const delResult = await deps.recordService.removeWithProfile(record.id, record.profilePath, deps.profileStorage);
+		if (delResult.ok) {
+			if (restoreWeight && canRestore) {
+				const newWeight = Math.round((bean.weight! + record.dose) * 10) / 10;
+				await deps.vaultData!.setWeight(bean.path, newWeight);
+			}
+			onDeleted();
+		} else {
+			console.error(`[deleteBrewRecord] delete failed: [${delResult.error.code}] ${delResult.error.message}`);
+			new Notice(t('error.recordDelete'));
+		}
+	};
 	const modal = new ConfirmModal(
 		deps.app,
 		t('form.deleteConfirm'),
-		async (restoreWeight) => {
-			const delResult = await deps.recordService.removeWithProfile(
-				record.id,
-				record.profilePath,
-				deps.profileStorage,
-			);
-			if (delResult.ok) {
-				if (restoreWeight && canRestore) {
-					const newWeight = Math.round((bean.weight! + record.dose) * 10) / 10;
-					await deps.vaultData!.setWeight(bean.path, newWeight);
-				}
-				onDeleted();
-			} else {
-				console.error(`[deleteBrewRecord] delete failed: [${delResult.error.code}] ${delResult.error.message}`);
+		(restoreWeight) => {
+			void confirmDelete(restoreWeight).catch((error: unknown) => {
+				console.error('[deleteBrewRecord] delete failed:', error);
 				new Notice(t('error.recordDelete'));
-			}
+			});
 		},
 		checkbox,
 	);

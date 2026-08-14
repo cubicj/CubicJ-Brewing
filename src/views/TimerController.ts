@@ -15,7 +15,7 @@ export class TimerController {
 	private timerState: 'idle' | 'running' | 'stopped' = 'idle';
 	private timerStartedAt = 0;
 	private timerElapsedAtStop = 0;
-	private localTimerInterval: ReturnType<typeof setInterval> | null = null;
+	private localTimerInterval: number | null = null;
 
 	constructor(
 		private elements: TimerElements,
@@ -120,12 +120,12 @@ export class TimerController {
 
 	private startLocalTimer(): void {
 		this.stopLocalTimer();
-		this.localTimerInterval = setInterval(() => this.updateTimerDisplay(), 100);
+		this.localTimerInterval = window.setInterval(() => this.updateTimerDisplay(), 100);
 	}
 
 	private stopLocalTimer(): void {
 		if (this.localTimerInterval) {
-			clearInterval(this.localTimerInterval);
+			window.clearInterval(this.localTimerInterval);
 			this.localTimerInterval = null;
 		}
 	}

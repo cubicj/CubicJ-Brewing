@@ -9,6 +9,12 @@ export interface EquipmentManagePanelDeps {
 	saveEquipment: () => Promise<void>;
 }
 
+type StringEquipmentKey = Exclude<keyof EquipmentSettings, 'grinders'>;
+
+type EquipmentList =
+	| { label: string; items: GrinderConfig[]; key: 'grinders' }
+	| { label: string; items: string[]; key: StringEquipmentKey };
+
 export class EquipmentManagePanel {
 	private sortableControllers: SortableListController<unknown>[] = [];
 
@@ -39,7 +45,7 @@ export class EquipmentManagePanel {
 	private renderEquipSection(
 		container: HTMLElement,
 		categoryLabel: string,
-		lists: Array<{ label: string; items: string[] | GrinderConfig[]; key: keyof EquipmentSettings }>,
+		lists: EquipmentList[],
 	): void {
 		const section = container.createDiv({ cls: 'dm-equip-section' });
 		section.createDiv({ cls: 'dm-equip-category', text: categoryLabel });
@@ -47,7 +53,7 @@ export class EquipmentManagePanel {
 			if (list.key === 'grinders') {
 				this.renderGrinderList(section, list.label);
 			} else {
-				this.renderStringList(section, list.label, list.key as Exclude<keyof EquipmentSettings, 'grinders'>);
+				this.renderStringList(section, list.label, list.key);
 			}
 		}
 	}
@@ -55,7 +61,7 @@ export class EquipmentManagePanel {
 	private renderStringList(
 		container: HTMLElement,
 		label: string,
-		key: Exclude<keyof EquipmentSettings, 'grinders'>,
+		key: StringEquipmentKey,
 	): void {
 		const section = container.createDiv({ cls: 'dm-equip-list' });
 		const header = section.createDiv({ cls: 'dm-equip-list-header' });
@@ -64,7 +70,7 @@ export class EquipmentManagePanel {
 		setIcon(addBtn, 'plus');
 
 		const listEl = section.createDiv({ cls: 'dm-equip-items' });
-		const items = this.deps.equipment[key] as string[];
+		const items = this.deps.equipment[key];
 
 		const renderItems = () => {
 			listEl.empty();
@@ -76,7 +82,7 @@ export class EquipmentManagePanel {
 				const row = listEl.createDiv({ cls: 'dm-equip-row' });
 				row.createSpan({ text: items[i] });
 				const delBtn = row.createEl('button', { text: '\u2715', cls: 'dm-btn dm-equip-del-btn' });
-				delBtn.addEventListener('click', async () => {
+				const deleteItem = async () => {
 					try {
 						items.splice(i, 1);
 						await this.deps.saveEquipment();
@@ -85,6 +91,9 @@ export class EquipmentManagePanel {
 						console.error('[DataManageModal] equipment delete failed:', err);
 						new Notice(t('error.equipSave'));
 					}
+				};
+				delBtn.addEventListener('click', () => {
+					void deleteItem();
 				});
 			}
 		};
@@ -115,7 +124,7 @@ export class EquipmentManagePanel {
 
 			input.focus();
 
-			saveBtn.addEventListener('click', async () => {
+			const saveItem = async () => {
 				const value = input.value.trim();
 				if (!value || items.includes(value)) return;
 				try {
@@ -127,6 +136,9 @@ export class EquipmentManagePanel {
 					console.error('[DataManageModal] equipment add failed:', err);
 					new Notice(t('error.equipSave'));
 				}
+			};
+			saveBtn.addEventListener('click', () => {
+				void saveItem();
 			});
 			cancelBtn.addEventListener('click', () => formEl.remove());
 			input.addEventListener('keydown', (event) => {
@@ -169,29 +181,31 @@ export class EquipmentManagePanel {
 					const formEl = this.openGrinderForm(section, {
 						initial: grinder,
 						submitLabel: t('form.save'),
-						onSubmit: async (updated) => {
+						onSubmit: (updated) => {
 							const idx = grinders.indexOf(grinder);
 							if (idx === -1) {
 								formEl.remove();
 								renderItems();
 								return;
 							}
-							const saved = await this.submitGrinder(() => {
+							void this.submitGrinder(() => {
 								Object.assign(grinder, updated);
 								if (!updated.rpm) delete grinder.rpm;
+							}).then((saved) => {
+								if (!saved) return;
+								formEl.remove();
+								renderItems();
 							});
-							if (!saved) return;
-							formEl.remove();
-							renderItems();
 						},
 					});
 				});
 				const delBtn = row.createEl('button', { text: '✕', cls: 'dm-btn dm-equip-del-btn' });
-				delBtn.addEventListener('click', async () => {
-					const saved = await this.submitGrinder(() => {
+				delBtn.addEventListener('click', () => {
+					void this.submitGrinder(() => {
 						grinders.splice(i, 1);
+					}).then((saved) => {
+						if (saved) renderItems();
 					});
-					if (saved) renderItems();
 				});
 			}
 		};
@@ -210,13 +224,14 @@ export class EquipmentManagePanel {
 		addBtn.addEventListener('click', () => {
 			const formEl = this.openGrinderForm(section, {
 				submitLabel: t('bean.add'),
-				onSubmit: async (grinder) => {
-					const saved = await this.submitGrinder(() => {
+				onSubmit: (grinder) => {
+					void this.submitGrinder(() => {
 						grinders.push(grinder);
+					}).then((saved) => {
+						if (!saved) return;
+						formEl.remove();
+						renderItems();
 					});
-					if (!saved) return;
-					formEl.remove();
-					renderItems();
 				},
 			});
 		});

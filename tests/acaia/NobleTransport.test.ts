@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { NobleTransport } from '../../src/acaia/NobleTransport';
 import type { Noble, NobleCharacteristic, NoblePeripheral } from '../../src/acaia/types';
 
+vi.stubGlobal('window', globalThis);
+
 function createPeripheral(localName: string): NoblePeripheral & { disconnect: ReturnType<typeof vi.fn> } {
 	return {
 		uuid: `${localName}-uuid`,

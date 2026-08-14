@@ -1,5 +1,16 @@
-import { describe, it, expect } from 'vitest';
+import { afterAll, beforeAll, describe, it, expect } from 'vitest';
 import { FileLogger } from '../../src/utils/FileLogger';
+
+const windowDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'window');
+
+beforeAll(() => {
+	Object.defineProperty(globalThis, 'window', { configurable: true, value: globalThis });
+});
+
+afterAll(() => {
+	if (windowDescriptor) Object.defineProperty(globalThis, 'window', windowDescriptor);
+	else Reflect.deleteProperty(globalThis, 'window');
+});
 
 const makeAdapter = () => ({
 	data: new Map<string, string>(),

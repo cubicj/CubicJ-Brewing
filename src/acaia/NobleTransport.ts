@@ -40,7 +40,8 @@ export class NobleTransport {
 			options.nobleFactory ??
 			(() => {
 				try {
-					return require(noblePath);
+					const loaded: unknown = require(noblePath);
+					return loaded as Noble;
 				} catch {
 					return null;
 				}
@@ -88,12 +89,12 @@ export class NobleTransport {
 		return new Promise((resolve) => {
 			const onState = (state: string) => {
 				if (state === 'poweredOn') {
-					clearTimeout(timer);
+					window.clearTimeout(timer);
 					noble.removeListener('stateChange', onState);
 					resolve(true);
 				}
 			};
-			const timer = setTimeout(() => {
+			const timer = window.setTimeout(() => {
 				noble.removeListener('stateChange', onState);
 				resolve(false);
 			}, timeoutMs);
@@ -114,7 +115,7 @@ export class NobleTransport {
 					noble.stopScanning();
 				} catch {}
 			};
-			const timer = setTimeout(() => {
+			const timer = window.setTimeout(() => {
 				cleanup();
 				this.log(`scan timeout — ${discoverCount} peripherals seen, no scale`);
 				resolve(null);
@@ -124,7 +125,7 @@ export class NobleTransport {
 				const localName = peripheral.advertisement?.localName || '';
 				const address = peripheral.address || peripheral.id || '??';
 				if (SCALE_PREFIXES.includes(localName.substring(0, 5).toUpperCase())) {
-					clearTimeout(timer);
+					window.clearTimeout(timer);
 					cleanup();
 					if (generation !== this.generation) {
 						resolve(null);
@@ -143,7 +144,7 @@ export class NobleTransport {
 			} catch (error: unknown) {
 				const message = error instanceof Error ? error.message : String(error);
 				this.log(`startScanning error: ${message}`);
-				clearTimeout(timer);
+				window.clearTimeout(timer);
 				cleanup();
 				resolve(null);
 			}
@@ -158,12 +159,12 @@ export class NobleTransport {
 	connectPeripheral(timeoutMs: number): Promise<void> {
 		if (!this.peripheral) return Promise.reject(new Error('No peripheral selected'));
 		const peripheral = this.peripheral;
-		const timer = setTimeout(() => {
+		const timer = window.setTimeout(() => {
 			try {
 				peripheral.disconnect();
 			} catch {}
 		}, timeoutMs);
-		return peripheral.connectAsync().finally(() => clearTimeout(timer));
+		return peripheral.connectAsync().finally(() => window.clearTimeout(timer));
 	}
 
 	watchDisconnect(): void {
@@ -174,7 +175,7 @@ export class NobleTransport {
 		if (!this.peripheral) return Promise.reject(new Error('No peripheral selected'));
 		const peripheral = this.peripheral;
 		const generation = this.generation;
-		const timer = setTimeout(() => {
+		const timer = window.setTimeout(() => {
 			try {
 				peripheral.disconnect();
 			} catch {}
@@ -199,7 +200,7 @@ export class NobleTransport {
 					ready: this.writeChar !== null && this.notifyChar !== null,
 				};
 			})
-			.finally(() => clearTimeout(timer));
+			.finally(() => window.clearTimeout(timer));
 	}
 
 	async subscribe(timeoutMs: number): Promise<void> {
@@ -224,9 +225,7 @@ export class NobleTransport {
 		const peripheral = this.peripheral;
 		this.disconnectSync();
 		if (!peripheral) return;
-		try {
-			await peripheral.disconnectAsync();
-		} catch {}
+		await peripheral.disconnectAsync().catch(() => undefined);
 	}
 
 	disconnectSync(): void {
@@ -256,7 +255,7 @@ export class NobleTransport {
 		return Promise.race([
 			promise,
 			new Promise<never>((_, reject) =>
-				setTimeout(() => reject(new Error(`${label} timed out (${timeoutMs}ms)`)), timeoutMs),
+				window.setTimeout(() => reject(new Error(`${label} timed out (${timeoutMs}ms)`)), timeoutMs),
 			),
 		]);
 	}

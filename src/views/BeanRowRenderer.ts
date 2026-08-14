@@ -59,19 +59,21 @@ export function renderFinishedBeanRow(container: HTMLElement, bean: BeanInfo, de
 		const btns = dateRow.createDiv({ cls: 'cb-bean-date-btns' });
 
 		const confirmBtn = btns.createEl('button', { text: t('common.confirm'), cls: 'cb-bean-btn cb-bean-confirm-btn' });
-		confirmBtn.addEventListener('click', async () => {
-			if (!input.value) return;
-			const dateResult = await deps.vaultData.setRoastDate(bean.path, input.value);
-			if (!dateResult.ok) {
-				console.error(`[BeanRow] repurchase failed: [${dateResult.error.code}] ${dateResult.error.message}`);
-				return;
-			}
-			const statusResult = await deps.vaultData.setBeanStatus(bean.path, 'active');
-			if (!statusResult.ok) {
-				console.error(`[BeanRow] repurchase failed: [${statusResult.error.code}] ${statusResult.error.message}`);
-				return;
-			}
-			deps.onStatusChange();
+		confirmBtn.addEventListener('click', () => {
+			void (async () => {
+				if (!input.value) return;
+				const dateResult = await deps.vaultData.setRoastDate(bean.path, input.value);
+				if (!dateResult.ok) {
+					console.error(`[BeanRow] repurchase failed: [${dateResult.error.code}] ${dateResult.error.message}`);
+					return;
+				}
+				const statusResult = await deps.vaultData.setBeanStatus(bean.path, 'active');
+				if (!statusResult.ok) {
+					console.error(`[BeanRow] repurchase failed: [${statusResult.error.code}] ${statusResult.error.message}`);
+					return;
+				}
+				deps.onStatusChange();
+			})();
 		});
 
 		const cancelBtn = btns.createEl('button', { text: t('common.cancel'), cls: 'cb-bean-btn' });

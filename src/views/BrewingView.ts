@@ -1,7 +1,7 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import type CubicJBrewingPlugin from '../main';
 import { t } from '../i18n/index';
-import type { AcaiaState, ButtonEvent } from '../acaia/types';
+import type { AcaiaEvents, AcaiaState, ButtonEvent } from '../acaia/types';
 import { BrewFlowState } from '../brew/BrewFlowState';
 import { DataManageModal } from './DataManageModal';
 import { TimerController } from './TimerController';
@@ -15,7 +15,7 @@ export const VIEW_TYPE_BREWING = 'cubicj-brewing';
 
 export class BrewingView extends ItemView {
 	private plugin: CubicJBrewingPlugin;
-	private listeners: Array<{ event: string; fn: (...args: any[]) => void }> = [];
+	private listenerCleanups: Array<() => void> = [];
 	private cleanups: Array<() => void> = [];
 	private flowState = new BrewFlowState();
 	private brewingStarted = false;
@@ -55,8 +55,12 @@ export class BrewingView extends ItemView {
 
 		const svc = this.plugin.acaiaService!;
 		this.scaleDisplay = new ScaleDisplayManager(this.scaleConnectBtn, this.scalePowerOffBtn, {
-			onTimerClick: () => this.timerController.handleTimerClick(),
-			onTare: () => svc.tare(),
+			onTimerClick: () => {
+				void this.timerController.handleTimerClick();
+			},
+			onTare: () => {
+				void svc.tare();
+			},
 			isConnected: () => svc.state === 'connected',
 			getReconnectAttempt: () => svc.currentReconnectAttempt,
 		});
@@ -88,32 +92,29 @@ export class BrewingView extends ItemView {
 		this.accordion.destroy();
 		for (const fn of this.cleanups) fn();
 		this.cleanups = [];
-		const service = this.plugin.acaiaService!;
-		for (const { event, fn } of this.listeners) {
-			service.removeListener(event, fn);
-		}
-		this.listeners = [];
+		for (const cleanup of this.listenerCleanups) cleanup();
+		this.listenerCleanups = [];
 	}
 
 	tare(): void {
 		if (this.plugin.acaiaService?.state === 'connected') {
-			this.plugin.acaiaService.tare();
+			void this.plugin.acaiaService.tare();
 		}
 	}
 
 	autoFill(): void {
 		const container = this.containerEl.children[1] as HTMLElement;
-		const btns = container.querySelectorAll('.cubicj-stepper-scale-btn') as NodeListOf<HTMLButtonElement>;
+		const btns = container.querySelectorAll<HTMLButtonElement>('.cubicj-stepper-scale-btn');
 		if (btns.length > 0) btns[btns.length - 1].click();
 	}
 
 	toggleTimer(): void {
-		this.timerController.handleTimerClick();
+		void this.timerController.handleTimerClick();
 	}
 
 	powerOff(): void {
 		if (this.plugin.acaiaService?.state === 'connected') {
-			this.plugin.acaiaService.powerOff();
+			void this.plugin.acaiaService.powerOff();
 		}
 	}
 
@@ -138,10 +139,10 @@ export class BrewingView extends ItemView {
 		const isEspresso = this.flowState.selection.method === 'espresso';
 		if (isEspresso || this.brewingStarted) {
 			this.lastStepChangeTime = Date.now();
-			const stopBtn = panel.querySelector('.brew-flow-stop-btn') as HTMLButtonElement | null;
+			const stopBtn = panel.querySelector<HTMLButtonElement>('.brew-flow-stop-btn');
 			stopBtn?.click();
 		} else {
-			const startBtn = panel.querySelector('.brew-flow-start-btn') as HTMLButtonElement | null;
+			const startBtn = panel.querySelector<HTMLButtonElement>('.brew-flow-start-btn');
 			startBtn?.click();
 		}
 	}
@@ -150,7 +151,9 @@ export class BrewingView extends ItemView {
 		const toolbar = container.createDiv({ cls: 'brewing-toolbar' });
 
 		this.scaleConnectBtn = toolbar.createEl('button', { text: t('scale.connect'), cls: 'brewing-toolbar-btn' });
-		this.scaleConnectBtn.addEventListener('click', () => this.handleConnectClick());
+		this.scaleConnectBtn.addEventListener('click', () => {
+			void this.handleConnectClick();
+		});
 
 		this.scalePowerOffBtn = toolbar.createEl('button', {
 			text: t('toolbar.powerOff'),
@@ -260,9 +263,10 @@ export class BrewingView extends ItemView {
 		});
 	}
 
-	private listen(event: string, fn: (...args: any[]) => void): void {
-		this.plugin.acaiaService!.on(event, fn);
-		this.listeners.push({ event, fn });
+	private listen<K extends keyof AcaiaEvents>(event: K, fn: AcaiaEvents[K]): void {
+		const service = this.plugin.acaiaService!;
+		service.on(event, fn);
+		this.listenerCleanups.push(() => service.removeListener(event, fn));
 	}
 
 	async toggleConnect(): Promise<void> {
@@ -276,7 +280,7 @@ export class BrewingView extends ItemView {
 			await service.cancelConnect();
 		} else if (service.state === 'connected') {
 			this.log('disconnect');
-			await service.disconnect();
+			service.disconnect();
 		} else {
 			const installer = this.plugin.nobleInstaller;
 			if (installer) {

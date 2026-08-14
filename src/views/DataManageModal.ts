@@ -70,8 +70,8 @@ export class DataManageModal extends Modal {
 		if (this.activeTab === 'equip') this.equipmentPanel.dispose();
 		this.activeTab = id;
 
-		this.contentEl.querySelectorAll('.dm-tab-btn').forEach((btn) => {
-			(btn as HTMLElement).classList.toggle('is-active', (btn as HTMLElement).dataset.tab === id);
+		this.contentEl.querySelectorAll<HTMLElement>('.dm-tab-btn').forEach((btn) => {
+			btn.classList.toggle('is-active', btn.dataset.tab === id);
 		});
 
 		this.updateIndicator(true);

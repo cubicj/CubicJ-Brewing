@@ -39,14 +39,14 @@ class StaleConnectionError extends Error {
 
 export class AcaiaService extends EventEmitter {
 	on<K extends keyof AcaiaEvents>(event: K, listener: AcaiaEvents[K]): this;
-	on(event: string, listener: (...args: any[]) => void): this;
-	on(event: string, listener: (...args: any[]) => void): this {
+	on(event: string, listener: (...args: unknown[]) => void): this;
+	on(event: string, listener: (...args: unknown[]) => void): this {
 		return super.on(event, listener);
 	}
 
 	emit<K extends keyof AcaiaEvents>(event: K, ...args: Parameters<AcaiaEvents[K]>): boolean;
-	emit(event: string, ...args: any[]): boolean;
-	emit(event: string, ...args: any[]): boolean {
+	emit(event: string, ...args: unknown[]): boolean;
+	emit(event: string, ...args: unknown[]): boolean {
 		return super.emit(event, ...args);
 	}
 
@@ -56,7 +56,7 @@ export class AcaiaService extends EventEmitter {
 
 	private _state: AcaiaState = 'idle';
 	private transport: NobleTransport;
-	private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+	private heartbeatTimer: number | null = null;
 	private lastPacketTime = 0;
 	private packetBuffer = new PacketBuffer();
 	private writeQueue: Buffer[] = [];
@@ -73,7 +73,7 @@ export class AcaiaService extends EventEmitter {
 	private static readonly RECONNECT_BASE_MS = 1000;
 	private userDisconnected = false;
 	private reconnectAttempt = 0;
-	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+	private reconnectTimer: number | null = null;
 	private connectId = 0;
 	private _scaleName: string | null = null;
 	private logger?: BleLogger;
@@ -220,9 +220,7 @@ export class AcaiaService extends EventEmitter {
 	private async establishConnection(myId: number): Promise<void> {
 		if (this.transport.peripheralState === 'connected') {
 			this.log('peripheral already connected at BLE level, disconnecting first...');
-			try {
-				await this.transport.disconnectPeripheralAsync();
-			} catch {}
+			await this.transport.disconnectPeripheralAsync().catch(() => undefined);
 		}
 
 		this.log('connectAsync...');
@@ -248,10 +246,8 @@ export class AcaiaService extends EventEmitter {
 				if (attempt >= 1) throw discoverErr;
 				const msg = discoverErr instanceof Error ? discoverErr.message : String(discoverErr);
 				this.log(`discover failed (attempt ${attempt + 1}): ${msg} — retrying after reconnect`);
-				try {
-					await this.transport.disconnectPeripheralAsync();
-				} catch {}
-				await new Promise((r) => setTimeout(r, 500));
+				await this.transport.disconnectPeripheralAsync().catch(() => undefined);
+				await new Promise((r) => window.setTimeout(r, 500));
 				this.assertNotStale(myId);
 				this.log('reconnecting for discover retry...');
 				await this.transport.connectPeripheral(10000);
@@ -266,9 +262,7 @@ export class AcaiaService extends EventEmitter {
 				`chars missing — write=${characteristics.writeAvailable}, notify=${characteristics.notifyAvailable}`,
 			);
 			this.emitError('Required BLE characteristics not found');
-			try {
-				await this.transport.disconnectPeripheralAsync();
-			} catch {}
+			await this.transport.disconnectPeripheralAsync().catch(() => undefined);
 			this.cleanupConnection();
 			this.setState('idle');
 			throw new StaleConnectionError();
@@ -347,7 +341,7 @@ export class AcaiaService extends EventEmitter {
 				this.log(`powerOff write failed: ${e}`);
 			}
 		}
-		await new Promise((r) => setTimeout(r, 500));
+		await new Promise((r) => window.setTimeout(r, 500));
 		this.disconnect();
 	}
 
@@ -384,29 +378,33 @@ export class AcaiaService extends EventEmitter {
 	private startHeartbeat(): void {
 		this.log('startHeartbeat()');
 		this.lastPacketTime = Date.now();
-		this.heartbeatTimer = setInterval(async () => {
-			if (this._state !== 'connected') return;
-
-			const silence = Date.now() - this.lastPacketTime;
-			if (silence > AcaiaService.SILENCE_DEAD_MS) {
-				this.log(`silence DEAD — ${silence}ms, triggering disconnect`);
-				this.handleDisconnect();
-				return;
-			}
-			if (silence > AcaiaService.SILENCE_WARN_MS) {
-				this.log(`silence WARN — ${silence}ms`);
-				this.emit('error', new Error('BLE signal weak'));
-			}
-
-			await this.enqueueWrite(encodeIdentify());
-			await this.enqueueWrite(encodeHeartbeat());
-			await this.enqueueWrite(encodeGetSettings());
+		this.heartbeatTimer = window.setInterval(() => {
+			void this.runHeartbeatCycle();
 		}, 1000);
+	}
+
+	private async runHeartbeatCycle(): Promise<void> {
+		if (this._state !== 'connected') return;
+
+		const silence = Date.now() - this.lastPacketTime;
+		if (silence > AcaiaService.SILENCE_DEAD_MS) {
+			this.log(`silence DEAD — ${silence}ms, triggering disconnect`);
+			this.handleDisconnect();
+			return;
+		}
+		if (silence > AcaiaService.SILENCE_WARN_MS) {
+			this.log(`silence WARN — ${silence}ms`);
+			this.emit('error', new Error('BLE signal weak'));
+		}
+
+		await this.enqueueWrite(encodeIdentify());
+		await this.enqueueWrite(encodeHeartbeat());
+		await this.enqueueWrite(encodeGetSettings());
 	}
 
 	private stopTimers(): void {
 		if (this.heartbeatTimer) {
-			clearInterval(this.heartbeatTimer);
+			window.clearInterval(this.heartbeatTimer);
 			this.heartbeatTimer = null;
 		}
 	}
@@ -457,19 +455,19 @@ export class AcaiaService extends EventEmitter {
 		);
 		this.setState('reconnecting');
 
-		this.reconnectTimer = setTimeout(async () => {
+		this.reconnectTimer = window.setTimeout(() => {
 			this.reconnectTimer = null;
 			if (this.connectAborted || this.userDisconnected) {
 				this.log('reconnect timer fired but aborted/user-disconnected');
 				return;
 			}
-			await this.connect();
+			void this.connect();
 		}, delay);
 	}
 
 	private cancelReconnect(): void {
 		if (this.reconnectTimer) {
-			clearTimeout(this.reconnectTimer);
+			window.clearTimeout(this.reconnectTimer);
 			this.reconnectTimer = null;
 		}
 		this.reconnectAttempt = 0;
@@ -511,7 +509,7 @@ export class AcaiaService extends EventEmitter {
 				}
 				break;
 			}
-			await new Promise((r) => setTimeout(r, 50));
+			await new Promise((r) => window.setTimeout(r, 50));
 		}
 		this.writing = false;
 	}

@@ -50,7 +50,7 @@ export function encodeTimerControl(action: 'start' | 'stop' | 'reset'): Buffer {
 }
 
 export function encodeGetSettings(): Buffer {
-	return encode(MSG_TYPE.GET_SETTINGS, Array(16).fill(0));
+	return encode(MSG_TYPE.GET_SETTINGS, Array<number>(16).fill(0));
 }
 
 export function encodePowerOff(): Buffer {

@@ -30,14 +30,14 @@ export function renderEquipmentFields(
 
 	if (sel.method === 'filter') {
 		sel.filter = sel.filter ?? equipment.filters[0];
-		refs.filterSelect = createSelectField(form, t('equipment.filter'), equipment.filters, sel.filter!, (v) => {
+		refs.filterSelect = createSelectField(form, t('equipment.filter'), equipment.filters, sel.filter, (v) => {
 			sel.filter = v;
 			onEquipmentChange();
 		});
 
 		sel.dripper = sel.dripper ?? equipment.drippers[0];
 		if (equipment.drippers.length > 0) {
-			refs.dripperSelect = createSelectField(form, t('equipment.dripper'), equipment.drippers, sel.dripper!, (v) => {
+			refs.dripperSelect = createSelectField(form, t('equipment.dripper'), equipment.drippers, sel.dripper, (v) => {
 				sel.dripper = v;
 				onEquipmentChange();
 			});
@@ -46,7 +46,7 @@ export function renderEquipmentFields(
 
 	if (sel.method === 'espresso') {
 		sel.basket = sel.basket ?? equipment.baskets[0];
-		refs.basketSelect = createSelectField(form, t('equipment.basket'), equipment.baskets, sel.basket!, (v) => {
+		refs.basketSelect = createSelectField(form, t('equipment.basket'), equipment.baskets, sel.basket, (v) => {
 			sel.basket = v;
 			onEquipmentChange();
 		});

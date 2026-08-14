@@ -28,7 +28,7 @@ export class PluginDataStore {
 		if (lc && typeof lc === 'object' && !Array.isArray(lc)) {
 			this.logConfig = {
 				enabled: typeof lc.enabled === 'boolean' ? lc.enabled : false,
-				categories: Array.isArray(lc.categories) ? lc.categories : [],
+				categories: Array.isArray(lc.categories) ? (lc.categories as string[]) : [],
 			};
 		}
 		if (typeof data.beanFolder === 'string') {

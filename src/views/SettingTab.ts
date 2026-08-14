@@ -3,6 +3,12 @@ import type { NobleInstallStatus } from '../acaia/NobleInstaller';
 import type CubicJBrewingPlugin from '../main';
 import { t, getAvailableLocales } from '../i18n/index';
 
+interface AppWithCommands extends App {
+	commands: {
+		executeCommandById(id: string): boolean;
+	};
+}
+
 class FolderSuggest extends AbstractInputSuggest<TFolder> {
 	private onPick: (folder: TFolder) => void;
 
@@ -55,7 +61,7 @@ export class BrewingSettingTab extends PluginSettingTab {
 			.setDesc(t('settings.openViewDesc'))
 			.addButton((btn) =>
 				btn.setButtonText(t('settings.open')).onClick(() => {
-					(this.app as any).commands.executeCommandById('cubicj-brewing:open-view');
+					(this.app as AppWithCommands).commands.executeCommandById('cubicj-brewing:open-view');
 				}),
 			);
 
@@ -80,8 +86,10 @@ export class BrewingSettingTab extends PluginSettingTab {
 			.setDesc(t('settings.beanFolderDesc'))
 			.addText((text) => {
 				text.setPlaceholder('Beans').setValue(this.plugin.getBeanFolder());
-				new FolderSuggest(this.app, text.inputEl, async (folder) => {
-					await this.plugin.saveBeanFolder(folder.path);
+				new FolderSuggest(this.app, text.inputEl, (folder) => {
+					void this.plugin.saveBeanFolder(folder.path).catch((error: unknown) => {
+						console.error('[SettingTab] bean folder save failed:', error);
+					});
 				});
 				text.onChange(async (value) => {
 					await this.plugin.saveBeanFolder(value.trim());

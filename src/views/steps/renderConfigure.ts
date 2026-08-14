@@ -88,7 +88,9 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 		}
 	});
 
-	const handleEquipmentChange = () => queryAndApplyDials();
+	const handleEquipmentChange = () => {
+		void queryAndApplyDials().catch(() => undefined);
+	};
 	const handleGrinderChange = (grinder: GrinderConfig) => {
 		dialControls.rebuildGrinderSteppers(grinder);
 	};
@@ -223,5 +225,5 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 		if (capturedSetupKey) ctx.flowState.markConfigureInitialized(capturedSetupKey);
 		await fetchFreshStrictRecords();
 	};
-	initFromRecords().catch(() => {});
+	void initFromRecords().catch(() => undefined);
 }

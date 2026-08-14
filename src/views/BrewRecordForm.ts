@@ -213,7 +213,7 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 
 	const rightGroup = footer.createDiv({ cls: 'brew-profile-footer-right' });
 	const saveBtn = rightGroup.createEl('button', { text: t('form.save'), cls: 'mod-cta' });
-	saveBtn.addEventListener('click', async () => {
+	const saveRecord = async (): Promise<void> => {
 		try {
 			const method = currentMethod;
 			const temp = tempSelect.value as BrewTemp;
@@ -266,7 +266,8 @@ export function renderEditForm(container: HTMLElement, record: BrewRecord, deps:
 			console.error('[BrewRecordForm] save failed:', err);
 			new Notice(t('brew.saveFailed'));
 		}
-	});
+	};
+	saveBtn.addEventListener('click', () => void saveRecord());
 	const cancelBtn = rightGroup.createEl('button', { text: t('form.cancel') });
 	cancelBtn.addEventListener('click', () => deps.onCancel());
 }

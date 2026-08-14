@@ -17,6 +17,10 @@ const LEGACY_KEY_MAP: Record<string, string> = {
 	단계: 'steps',
 };
 
+function isUnknownArray(value: unknown): value is unknown[] {
+	return Array.isArray(value);
+}
+
 export class VaultDataService {
 	constructor(
 		private app: App,
@@ -38,7 +42,7 @@ export class VaultDataService {
 		const file = this.getTFile(path);
 		if (!file) return fail('VAULT_FILE_NOT_FOUND', `File not found: ${path}`);
 		try {
-			await this.app.fileManager.processFrontMatter(file, (fm) => {
+			await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
 				fm['roast_date'] = date;
 				delete fm['roast_days'];
 			});
@@ -52,7 +56,7 @@ export class VaultDataService {
 		const file = this.getTFile(path);
 		if (!file) return fail('VAULT_FILE_NOT_FOUND', `File not found: ${path}`);
 		try {
-			await this.app.fileManager.processFrontMatter(file, (fm) => {
+			await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
 				fm['weight'] = weight;
 			});
 			return ok(undefined);
@@ -65,7 +69,7 @@ export class VaultDataService {
 		const file = this.getTFile(path);
 		if (!file) return fail('VAULT_FILE_NOT_FOUND', `File not found: ${path}`);
 		try {
-			await this.app.fileManager.processFrontMatter(file, (fm) => {
+			await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
 				fm['status'] = status;
 			});
 			return ok(undefined);
@@ -83,16 +87,16 @@ export class VaultDataService {
 
 	private parseBeanNote(file: TFile): BeanInfo | null {
 		const cache = this.app.metadataCache.getFileCache(file);
-		const fm = cache?.frontmatter;
+		const fm = cache?.frontmatter as Record<string, unknown> | undefined;
 		if (fm?.type !== 'bean') return null;
 		const rawDate = fm['roast_date'];
-		const raw = Array.isArray(rawDate) ? rawDate[rawDate.length - 1] : rawDate;
+		const raw = isUnknownArray(rawDate) ? rawDate[rawDate.length - 1] : rawDate;
 		const roastDate = raw ? String(raw) : null;
 		return {
 			path: file.path,
 			name: file.basename,
-			roaster: fm['roaster'] ?? '',
-			status: fm['status'] ?? 'active',
+			roaster: (fm['roaster'] ?? '') as string,
+			status: (fm['status'] ?? 'active') as BeanInfo['status'],
 			roastDate,
 			weight: typeof fm['weight'] === 'number' ? fm['weight'] : null,
 		};
@@ -100,19 +104,19 @@ export class VaultDataService {
 
 	private parseRecipeNote(file: TFile): RecipeInfo | null {
 		const cache = this.app.metadataCache.getFileCache(file);
-		const fm = cache?.frontmatter;
+		const fm = cache?.frontmatter as Record<string, unknown> | undefined;
 		if (fm?.type !== 'recipe') return null;
-		const steps: RecipeStep[] = (fm['steps'] ?? []).map((s: Record<string, unknown>) => ({
-			time: String(s.time ?? ''),
-			target: s.target != null ? Number(s.target) : undefined,
-			note: s.note as string | undefined,
+		const steps: RecipeStep[] = ((fm['steps'] ?? []) as Record<string, unknown>[]).map((step) => ({
+			time: String(step.time ?? ''),
+			target: step.target != null ? Number(step.target) : undefined,
+			note: step.note as string | undefined,
 		}));
 		return {
 			path: file.path,
 			name: file.basename,
-			method: fm['method'] ?? '',
-			dose: fm['dose'] ?? '',
-			totalWater: fm['total_water'] ?? '',
+			method: (fm['method'] ?? '') as string,
+			dose: (fm['dose'] ?? '') as string,
+			totalWater: (fm['total_water'] ?? '') as string,
 			temperature: Number(fm['temperature'] ?? 0),
 			steps,
 		};
@@ -153,12 +157,12 @@ export class VaultDataService {
 		const failures: string[] = [];
 		for (const file of files) {
 			const cache = this.app.metadataCache.getFileCache(file);
-			const fm = cache?.frontmatter;
+			const fm = cache?.frontmatter as Record<string, unknown> | undefined;
 			if (!fm || (fm.type !== 'bean' && fm.type !== 'recipe')) continue;
 			const hasLegacy = Object.keys(fm).some((k) => k in LEGACY_KEY_MAP);
 			if (!hasLegacy) continue;
 			try {
-				await this.app.fileManager.processFrontMatter(file, (fmEdit) => {
+				await this.app.fileManager.processFrontMatter(file, (fmEdit: Record<string, unknown>) => {
 					for (const [oldKey, newKey] of Object.entries(LEGACY_KEY_MAP)) {
 						if (!(oldKey in fmEdit)) continue;
 						let value = fmEdit[oldKey];

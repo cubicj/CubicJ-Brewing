@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { AcaiaService } from '../../src/acaia/AcaiaService';
 import { AcaiaState, Noble } from '../../src/acaia/types';
 
+vi.stubGlobal('window', globalThis);
+
 function createMockWriteChar() {
 	return {
 		uuid: '49535343884143f4a8d4ecbe34729bb3',

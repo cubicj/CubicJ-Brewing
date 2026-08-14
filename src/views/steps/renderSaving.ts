@@ -71,7 +71,7 @@ export function renderSaving(container: HTMLElement, ctx: StepRenderContext): vo
 			roReady = true;
 			return;
 		}
-		const body = noteEl.closest('.brew-accordion-body') as HTMLElement | null;
+		const body = noteEl.closest<HTMLElement>('.brew-accordion-body');
 		if (body?.classList.contains('is-open') && body.style.maxHeight !== '0px') {
 			body.setCssStyles({ transition: 'none', maxHeight: body.scrollHeight + 'px' });
 			void body.offsetHeight;
@@ -84,7 +84,7 @@ export function renderSaving(container: HTMLElement, ctx: StepRenderContext): vo
 	const btnRow = container.createDiv({ cls: 'brewing-controls' });
 	const doneBtn = btnRow.createEl('button', { text: t('form.save'), cls: 'brewing-ctrl-btn brew-flow-save-btn' });
 
-	doneBtn.addEventListener('click', async () => {
+	const saveRecord = async () => {
 		doneBtn.disabled = true;
 		doneBtn.textContent = t('brew.saving');
 		try {
@@ -123,5 +123,8 @@ export function renderSaving(container: HTMLElement, ctx: StepRenderContext): vo
 			doneBtn.disabled = false;
 			doneBtn.textContent = t('form.save');
 		}
+	};
+	doneBtn.addEventListener('click', () => {
+		void saveRecord();
 	});
 }

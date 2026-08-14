@@ -81,7 +81,7 @@ export function renderBrewRecordTable(
 			}
 			collapseExpand();
 			noteTd.addClass('is-expanded');
-			const expandTr = createEl('tr') as HTMLTableRowElement;
+			const expandTr = createEl('tr');
 			expandTr.addClass('brew-record-expand');
 			tr.after(expandTr);
 			const expandTd = expandTr.createEl('td');
@@ -135,12 +135,17 @@ function renderNoteExpand(container: HTMLElement, record: BrewRecord, recordServ
 			renderView();
 		});
 		const saveBtn = actions.createEl('button', { text: t('form.save'), cls: 'mod-cta' });
-		saveBtn.addEventListener('click', async (e) => {
-			e.stopPropagation();
+		const saveNote = async (): Promise<void> => {
 			const newNote = textarea.value.trim() || undefined;
 			await recordService.update(record.id, { note: newNote });
+		};
+		saveBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			void saveNote().catch((error: unknown) => {
+				console.error('[BrewRecordTable] note update failed:', error);
+			});
 		});
-		requestAnimationFrame(() => textarea.focus());
+		window.requestAnimationFrame(() => textarea.focus());
 	};
 
 	renderView();

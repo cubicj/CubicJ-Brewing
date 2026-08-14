@@ -26,14 +26,14 @@ export class BrewCodeBlock {
 	): void {
 		registerFn('brews', (_source, el, ctx) => {
 			this.registry.track(el);
-			this.renderAsync(el, ctx.sourcePath);
+			void this.renderAsync(el, ctx.sourcePath);
 		});
 	}
 
 	refreshAll(): void {
 		this.registry.refreshAll((el) => {
 			const path = el.dataset.sourcePath;
-			if (path) this.renderAsync(el, path);
+			if (path) void this.renderAsync(el, path);
 		});
 	}
 
@@ -43,12 +43,12 @@ export class BrewCodeBlock {
 		let beanName = this.resolveBeanName(sourcePath);
 		if (!beanName) {
 			await new Promise<void>((resolve) => {
-				const timer = setTimeout(() => {
+				const timer = window.setTimeout(() => {
 					this.app.metadataCache.offref(ref);
 					resolve();
 				}, 3000);
 				const ref = this.app.metadataCache.on('resolved', () => {
-					clearTimeout(timer);
+					window.clearTimeout(timer);
 					this.app.metadataCache.offref(ref);
 					resolve();
 				});
@@ -79,6 +79,7 @@ export class BrewCodeBlock {
 		if (!(file instanceof TFile)) return null;
 		const cache = this.app.metadataCache.getFileCache(file);
 		if (cache?.frontmatter?.type !== 'bean') return null;
-		return cache.frontmatter.name ?? file.name.replace(/\.md$/, '');
+		const name: unknown = cache.frontmatter.name;
+		return typeof name === 'string' ? name : file.name.replace(/\.md$/, '');
 	}
 }

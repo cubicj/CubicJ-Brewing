@@ -108,7 +108,7 @@ export class BrewProfileChart {
 		container.addEventListener('wheel', this.scrollWheelHandler, {
 			capture: true,
 			passive: false,
-		} as AddEventListenerOptions);
+		});
 	}
 
 	private attachKeyboard(container: HTMLElement): void {
@@ -150,7 +150,7 @@ export class BrewProfileChart {
 
 	private scheduleCrosshairRender(): void {
 		if (this.crosshairRaf) return;
-		this.crosshairRaf = requestAnimationFrame(() => {
+		this.crosshairRaf = window.requestAnimationFrame(() => {
 			this.crosshairRaf = 0;
 			if (this.staticPoints) this.render(this.staticPoints);
 		});
@@ -193,7 +193,7 @@ export class BrewProfileChart {
 			this.canvas.removeEventListener('mouseleave', this.crosshairLeaveHandler);
 		}
 		if (this.crosshairRaf) {
-			cancelAnimationFrame(this.crosshairRaf);
+			window.cancelAnimationFrame(this.crosshairRaf);
 			this.crosshairRaf = 0;
 		}
 		if (this.scrollContainer && this.dragHandlers) {
@@ -256,14 +256,14 @@ export class BrewProfileChart {
 				lastLen = points.length;
 				this.render(points);
 			}
-			this.rafId = requestAnimationFrame(tick);
+			this.rafId = window.requestAnimationFrame(tick);
 		};
-		this.rafId = requestAnimationFrame(tick);
+		this.rafId = window.requestAnimationFrame(tick);
 	}
 
 	stopLive(): void {
 		if (this.rafId) {
-			cancelAnimationFrame(this.rafId);
+			window.cancelAnimationFrame(this.rafId);
 			this.rafId = 0;
 		}
 		this.detachWheel();

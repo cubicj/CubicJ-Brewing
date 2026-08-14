@@ -164,7 +164,7 @@ export class ScaleDisplayManager {
 	showError(message: string): void {
 		this.scaleStatusEl.textContent = message;
 		this.scaleStatusEl.addClass('brewing-error');
-		setTimeout(() => this.scaleStatusEl.removeClass('brewing-error'), 3000);
+		window.setTimeout(() => this.scaleStatusEl.removeClass('brewing-error'), 3000);
 	}
 
 	getWeightText(): string {

@@ -16,6 +16,24 @@ export interface StorageAdapter {
 	writeBackup?(content: string): Promise<void>;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isUnknownArray(value: unknown): value is unknown[] {
+	return Array.isArray(value);
+}
+
+function isBrewRecord(value: unknown): value is BrewRecord {
+	return (
+		isRecord(value) &&
+		typeof value.id === 'string' &&
+		typeof value.timestamp === 'string' &&
+		typeof value.bean === 'string' &&
+		(value.method === 'filter' || value.method === 'espresso')
+	);
+}
+
 export class BrewRecordService {
 	private records: BrewRecord[] | null = null;
 	private invalidRecords: unknown[] = [];
@@ -27,15 +45,8 @@ export class BrewRecordService {
 	private validateRecords(arr: unknown[]): BrewRecord[] {
 		const valid: BrewRecord[] = [];
 		for (const r of arr) {
-			if (
-				r &&
-				typeof r === 'object' &&
-				typeof (r as any).id === 'string' &&
-				typeof (r as any).timestamp === 'string' &&
-				typeof (r as any).bean === 'string' &&
-				((r as any).method === 'filter' || (r as any).method === 'espresso')
-			) {
-				valid.push(r as BrewRecord);
+			if (isBrewRecord(r)) {
+				valid.push(r);
 			} else {
 				console.warn('[BrewRecordService] skipped invalid brew record:', JSON.stringify(r));
 				this.invalidRecords.push(r);
@@ -60,16 +71,15 @@ export class BrewRecordService {
 			this.loadFailure = fail('RECORD_PARSE_FAILED', 'brew-records.json corrupt — backed up raw data');
 			return this.loadFailure;
 		}
-		if (Array.isArray(parsed)) {
+		if (isUnknownArray(parsed)) {
 			this.records = this.validateRecords(parsed);
 			return ok(this.records);
 		}
-		if (parsed && typeof parsed === 'object' && 'version' in parsed && 'records' in parsed) {
-			const envelope = parsed as { version: number; records: unknown };
-			if (Array.isArray(envelope.records)) {
-				this.records = this.validateRecords(envelope.records);
-				if (Array.isArray((parsed as any)._invalid)) {
-					this.invalidRecords.push(...(parsed as any)._invalid);
+		if (isRecord(parsed) && 'version' in parsed && 'records' in parsed) {
+			if (isUnknownArray(parsed.records)) {
+				this.records = this.validateRecords(parsed.records);
+				if (isUnknownArray(parsed._invalid)) {
+					this.invalidRecords.push(...parsed._invalid);
 				}
 				return ok(this.records);
 			}

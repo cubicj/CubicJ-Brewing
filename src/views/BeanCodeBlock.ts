@@ -45,13 +45,13 @@ export class BeanCodeBlock {
 
 		const header = el.createDiv({ cls: 'cb-bean-header' });
 		const newBtn = header.createEl('button', { text: t('bean.new'), cls: 'cb-bean-btn cb-bean-new-btn' });
-		newBtn.addEventListener('click', () => this.createNewBean());
+		newBtn.addEventListener('click', () => void this.createNewBean());
 
 		const { active, finished } = getSortedBeans(this.vaultData);
 
 		const deps = {
 			vaultData: this.vaultData,
-			onNameClick: (bean: BeanInfo) => this.app.workspace.openLinkText(bean.path, ''),
+			onNameClick: (bean: BeanInfo) => void this.app.workspace.openLinkText(bean.path, ''),
 			onStatusChange: () => this.refreshAll(),
 			onWeightClick: (anchor: HTMLElement, bean: BeanInfo) =>
 				openWeightPopover(anchor, bean, this.vaultData, () => this.refreshAll(), this.getScaleWeight),
@@ -124,28 +124,30 @@ function openWeightPopover(
 			text: def.label,
 			cls: `bwp-action${def.cls ? ` ${def.cls}` : ''}`,
 		});
-		btn.addEventListener('click', () => applyAction(def.calc));
+		btn.addEventListener('click', () => void applyAction(def.calc));
 	}
 
 	const depletedBtn = popover.createEl('button', {
 		text: t('bean.depleted'),
 		cls: 'bwp-depleted',
 	});
-	depletedBtn.addEventListener('click', async () => {
-		const statusResult = await vaultData.setBeanStatus(bean.path, 'finished');
-		if (!statusResult.ok) {
-			console.error(`[BeanCodeBlock] depleted failed: [${statusResult.error.code}] ${statusResult.error.message}`);
-			new Notice(t('error.beanUpdate'));
-			return;
-		}
-		const weightResult = await vaultData.setWeight(bean.path, null);
-		if (weightResult.ok) {
-			bean.weight = null;
-		} else {
-			console.error(`[BeanCodeBlock] weight clear failed: [${weightResult.error.code}] ${weightResult.error.message}`);
-		}
-		onSave();
-		close();
+	depletedBtn.addEventListener('click', () => {
+		void (async () => {
+			const statusResult = await vaultData.setBeanStatus(bean.path, 'finished');
+			if (!statusResult.ok) {
+				console.error(`[BeanCodeBlock] depleted failed: [${statusResult.error.code}] ${statusResult.error.message}`);
+				new Notice(t('error.beanUpdate'));
+				return;
+			}
+			const weightResult = await vaultData.setWeight(bean.path, null);
+			if (weightResult.ok) {
+				bean.weight = null;
+			} else {
+				console.error(`[BeanCodeBlock] weight clear failed: [${weightResult.error.code}] ${weightResult.error.message}`);
+			}
+			onSave();
+			close();
+		})();
 	});
 
 	const close = () => {
@@ -175,13 +177,13 @@ function openWeightPopover(
 	const onOutside = (e: PointerEvent) => {
 		if (!popover.contains(e.target as Node) && e.target !== anchor) close();
 	};
-	setTimeout(() => document.addEventListener('pointerdown', onOutside), 0);
+	window.setTimeout(() => document.addEventListener('pointerdown', onOutside), 0);
 
 	const rect = anchor.getBoundingClientRect();
 	popover.style.top = `${rect.top}px`;
 	popover.style.left = `${rect.right}px`;
 
-	requestAnimationFrame(() => {
+	window.requestAnimationFrame(() => {
 		const popRect = popover.getBoundingClientRect();
 		const vw = window.innerWidth;
 		const vh = window.innerHeight;

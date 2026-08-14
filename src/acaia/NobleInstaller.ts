@@ -58,14 +58,18 @@ export function isNobleModuleLoaded(noblePath: string, cache?: Record<string, un
 	if (moduleCache === undefined) {
 		try {
 			moduleCache = typeof require === 'function' ? (require.cache as Record<string, unknown>) : undefined;
-		} catch {}
+		} catch {
+			moduleCache = undefined;
+		}
 		if (moduleCache === undefined) {
 			try {
 				moduleCache =
 					typeof window === 'undefined'
 						? undefined
 						: (window as typeof window & { require?: { cache?: Record<string, unknown> } }).require?.cache;
-			} catch {}
+			} catch {
+				moduleCache = undefined;
+			}
 		}
 	}
 	if (!moduleCache) return false;
@@ -88,7 +92,9 @@ export class NobleInstaller {
 		if (raw === null) return { kind: 'not-installed' };
 		let version: string;
 		try {
-			version = String(JSON.parse(raw).version ?? '');
+			const parsed: unknown = JSON.parse(raw);
+			const value = typeof parsed === 'object' && parsed !== null && 'version' in parsed ? parsed.version : undefined;
+			version = String(value ?? '');
 		} catch {
 			return { kind: 'not-installed' };
 		}

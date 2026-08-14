@@ -54,7 +54,7 @@ export class SortableListController<T> {
 		let hoverIdx = dragIdx;
 		let dy = 0;
 		let cleaned = false;
-		let cleanupTimer: ReturnType<typeof setTimeout> | undefined;
+		let cleanupTimer: number | undefined;
 
 		const updateTransforms = (currentIdx: number) => {
 			for (let i = 0; i < rows.length; i++) {
@@ -69,7 +69,7 @@ export class SortableListController<T> {
 		const clearVisualState = (rerender: boolean) => {
 			if (cleaned) return;
 			cleaned = true;
-			if (cleanupTimer !== undefined) clearTimeout(cleanupTimer);
+			if (cleanupTimer !== undefined) window.clearTimeout(cleanupTimer);
 			row.removeEventListener('transitionend', onTransitionEnd);
 			for (const currentRow of rows) {
 				currentRow.setCssProps({ transition: '', transform: '' });
@@ -82,7 +82,7 @@ export class SortableListController<T> {
 
 		const removeDocumentListeners = () => {
 			document.removeEventListener('pointermove', onMove);
-			document.removeEventListener('pointerup', onUp);
+			document.removeEventListener('pointerup', onPointerUp);
 		};
 
 		const onTransitionEnd = () => clearVisualState(true);
@@ -130,7 +130,10 @@ export class SortableListController<T> {
 
 			if (this.disposed) return;
 			row.addEventListener('transitionend', onTransitionEnd, { once: true });
-			cleanupTimer = setTimeout(onTransitionEnd, 250);
+			cleanupTimer = window.setTimeout(onTransitionEnd, 250);
+		};
+		const onPointerUp = () => {
+			void onUp();
 		};
 
 		this.activeDrag = {
@@ -141,6 +144,6 @@ export class SortableListController<T> {
 		};
 
 		document.addEventListener('pointermove', onMove, { signal: this.abortController.signal });
-		document.addEventListener('pointerup', onUp, { signal: this.abortController.signal });
+		document.addEventListener('pointerup', onPointerUp, { signal: this.abortController.signal });
 	}
 }

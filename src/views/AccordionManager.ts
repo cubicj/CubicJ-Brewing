@@ -113,7 +113,7 @@ export class AccordionManager {
 					body.classList.add('is-open');
 					const h = body.scrollHeight;
 					body.setCssStyles({ maxHeight: '0px' });
-					requestAnimationFrame(() => {
+					window.requestAnimationFrame(() => {
 						body.setCssStyles({ maxHeight: h + 'px' });
 					});
 					const ref = body;
@@ -138,7 +138,7 @@ export class AccordionManager {
 
 					body.setCssStyles({ maxHeight: body.scrollHeight + 'px' });
 					void body.offsetHeight;
-					requestAnimationFrame(() => {
+					window.requestAnimationFrame(() => {
 						body.classList.remove('is-open');
 						body.setCssStyles({ maxHeight: '0px' });
 					});
@@ -177,7 +177,7 @@ export class AccordionManager {
 		const panel = this.panels[idx]?.panel;
 		if (!panel) return;
 		if (this.scrollAnimationFrame !== null) {
-			cancelAnimationFrame(this.scrollAnimationFrame);
+			window.cancelAnimationFrame(this.scrollAnimationFrame);
 			this.scrollAnimationFrame = null;
 		}
 		const top =
@@ -202,10 +202,10 @@ export class AccordionManager {
 			}
 			const eased = 1 - Math.pow(1 - progress, 3);
 			this.contentArea.scrollTop = start + distance * eased;
-			this.scrollAnimationFrame = requestAnimationFrame(animate);
+			this.scrollAnimationFrame = window.requestAnimationFrame(animate);
 		};
 
-		this.scrollAnimationFrame = requestAnimationFrame(animate);
+		this.scrollAnimationFrame = window.requestAnimationFrame(animate);
 	}
 
 	animateContentChange(step: FlowStep, mutation: () => void): void {
@@ -232,7 +232,7 @@ export class AccordionManager {
 		if (before === after) return;
 		body.setCssProps({ height: before + 'px' });
 		void body.offsetHeight;
-		requestAnimationFrame(() => {
+		window.requestAnimationFrame(() => {
 			body.setCssProps({ height: after + 'px' });
 			const onEnd = (e: TransitionEvent) => {
 				if (e.propertyName !== 'height') return;

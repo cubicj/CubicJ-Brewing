@@ -50,7 +50,7 @@ export class BrewProfileModal extends Modal {
 	}
 
 	async onOpen(): Promise<void> {
-		this.renderReadMode();
+		await this.renderReadMode();
 	}
 
 	onClose(): void {
@@ -159,10 +159,10 @@ export class BrewProfileModal extends Modal {
 			vaultData: this.mode.vaultData,
 			onSaved: (updated) => {
 				this.record = updated;
-				this.renderReadMode();
+				void this.renderReadMode();
 			},
 			onDeleted: () => this.close(),
-			onCancel: () => this.renderReadMode(),
+			onCancel: () => void this.renderReadMode(),
 		});
 	}
 
@@ -184,7 +184,7 @@ export class BrewProfileModal extends Modal {
 		this.modalEl.addEventListener('wheel', this.wheelHandler, {
 			capture: true,
 			passive: false,
-		} as AddEventListenerOptions);
+		});
 	}
 
 	private enterChartMode(): void {
@@ -199,7 +199,7 @@ export class BrewProfileModal extends Modal {
 		const backBtn = footer.createEl('button', { text: t('common.confirm'), cls: 'mod-cta' });
 		backBtn.addEventListener('click', () => {
 			this.modalEl.removeClass('brew-profile-chart-mode');
-			this.renderReadMode();
+			void this.renderReadMode();
 		});
 
 		const chartHeight = Math.round(window.innerHeight * 0.6);

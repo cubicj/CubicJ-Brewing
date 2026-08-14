@@ -203,7 +203,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 			if (this.dataStore.savedDataVersion < DATA_VERSION) {
 				await this.dataStore.saveDataVersion();
 			}
-			if (this.dataStore.firstInstall) this.desktopRuntime?.activateView();
+			if (this.dataStore.firstInstall) await this.desktopRuntime?.activateView();
 		});
 
 		this.addSettingTab(new BrewingSettingTab(this.app, this));
@@ -222,7 +222,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 		if (this.desktopRuntime) {
 			this.desktopRuntime.destroy();
 		} else {
-			this.pluginLogger?.stop();
+			void this.pluginLogger?.stop();
 		}
 	}
 
