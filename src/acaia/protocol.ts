@@ -1,4 +1,7 @@
+import type { Buffer } from './types';
 import { MSG_TYPE } from './types';
+
+declare const Buffer: typeof import('buffer').Buffer;
 
 // Acaia Pearl S BLE protocol — see Docs/analysis/ble-protocol.md
 // Packet: [0xEF 0xDD] [msgType] [payload...] [ck1] [ck2]

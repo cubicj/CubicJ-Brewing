@@ -1,4 +1,4 @@
-import type { Noble, NobleCharacteristic, NoblePeripheral } from './types';
+import type { Buffer, Noble, NobleCharacteristic, NoblePeripheral } from './types';
 import { NOTIFY_UUID, SCALE_PREFIXES, WRITE_UUID } from './types';
 
 export interface NobleTransportOptions {

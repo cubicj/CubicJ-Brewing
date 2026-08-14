@@ -179,7 +179,7 @@ export class BrewingSettingTab extends PluginSettingTab {
 			const nobleSetting = new Setting(containerEl)
 				.setName(t('settings.noble'))
 				.setDesc(t('settings.nobleChecking'));
-			this.renderNobleSetting(nobleSetting, installer, () => this.display());
+			this.renderNobleSetting(nobleSetting, installer, () => this.updateDefinitions());
 		}
 	}
 
@@ -206,7 +206,9 @@ export class BrewingSettingTab extends PluginSettingTab {
 	}
 
 	private updateDefinitions(): void {
-		(this as unknown as { update?: () => void }).update?.();
+		const settingTab = this as unknown as { update?: () => void; display(): void };
+		if (settingTab.update) settingTab.update();
+		else settingTab.display();
 	}
 
 	private renderNobleSetting(setting: Setting, installer: NobleInstaller, rerender: () => void): () => void {

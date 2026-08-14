@@ -3,6 +3,11 @@ import { Platform, requestUrl } from 'obsidian';
 import { readTar } from './tarReader';
 import { NOBLE_BUNDLE_SHA256, NOBLE_BUNDLE_VERSION, nobleBundleUrl } from './nobleBundle';
 
+declare const require: {
+	(id: string): unknown;
+	cache: Record<string, unknown>;
+};
+
 export type NobleInstallPhase = 'downloading' | 'verifying' | 'extracting';
 
 export type NobleInstallStatus =
@@ -57,7 +62,7 @@ export function isNobleModuleLoaded(noblePath: string, cache?: Record<string, un
 	let moduleCache = cache;
 	if (moduleCache === undefined) {
 		try {
-			moduleCache = typeof require === 'function' ? (require.cache as Record<string, unknown>) : undefined;
+			moduleCache = typeof require === 'function' ? require.cache : undefined;
 		} catch {
 			moduleCache = undefined;
 		}
@@ -94,7 +99,7 @@ export class NobleInstaller {
 		try {
 			const parsed: unknown = JSON.parse(raw);
 			const value = typeof parsed === 'object' && parsed !== null && 'version' in parsed ? parsed.version : undefined;
-			version = String(value ?? '');
+			version = typeof value === 'string' ? value : '';
 		} catch {
 			return { kind: 'not-installed' };
 		}

@@ -91,7 +91,7 @@ export class VaultDataService {
 		if (fm?.type !== 'bean') return null;
 		const rawDate = fm['roast_date'];
 		const raw = isUnknownArray(rawDate) ? rawDate[rawDate.length - 1] : rawDate;
-		const roastDate = raw ? String(raw) : null;
+		const roastDate = typeof raw === 'string' || typeof raw === 'number' ? String(raw) : null;
 		return {
 			path: file.path,
 			name: file.basename,
@@ -107,7 +107,7 @@ export class VaultDataService {
 		const fm = cache?.frontmatter as Record<string, unknown> | undefined;
 		if (fm?.type !== 'recipe') return null;
 		const steps: RecipeStep[] = ((fm['steps'] ?? []) as Record<string, unknown>[]).map((step) => ({
-			time: String(step.time ?? ''),
+			time: typeof step.time === 'string' || typeof step.time === 'number' ? String(step.time) : '',
 			target: step.target != null ? Number(step.target) : undefined,
 			note: step.note as string | undefined,
 		}));

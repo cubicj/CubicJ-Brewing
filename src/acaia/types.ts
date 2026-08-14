@@ -1,3 +1,5 @@
+export type Buffer = import('buffer').Buffer;
+
 export type AcaiaState = 'idle' | 'scanning' | 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
 
 export interface ButtonEvent {

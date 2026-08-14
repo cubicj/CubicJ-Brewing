@@ -1,4 +1,4 @@
-import type { ButtonEvent } from './types';
+import type { Buffer, ButtonEvent } from './types';
 import { BUTTON_CODE, BUTTON_PAYLOAD, EVENT_TYPE, MSG_TYPE } from './types';
 import { decodeSettings, decodeTimer, decodeWeight } from './protocol';
 import type { ScaleSettings } from './protocol';

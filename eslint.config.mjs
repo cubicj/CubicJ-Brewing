@@ -2,48 +2,32 @@ import js from '@eslint/js';
 import obsidianmd from 'eslint-plugin-obsidianmd';
 import tseslint from 'typescript-eslint';
 
-const obsidianmdRecommendedRules = Object.fromEntries(
-	obsidianmd.configs.recommended
-		.flatMap((config) => Object.entries(config.rules ?? {}))
-		.filter(([rule]) => rule.startsWith('obsidianmd/')),
+const scannerRulesDisabledForTests = Object.fromEntries(
+	obsidianmd.configs.recommended.flatMap((config) => Object.keys(config.rules ?? {})).map((rule) => [rule, 'off']),
+);
+
+const recommendedTestRules = Object.assign(
+	{},
+	js.configs.recommended.rules,
+	...tseslint.configs.recommended.map((config) => config.rules ?? {}),
 );
 
 export default tseslint.config(
-	js.configs.recommended,
-	...tseslint.configs.recommended,
 	{
-		languageOptions: {
-			parserOptions: {
-				project: false,
-			},
-		},
-		rules: {
-			'@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
-			'@typescript-eslint/no-explicit-any': 'warn',
-			'@typescript-eslint/no-require-imports': 'off',
-			'no-empty': 'error',
-		},
+		ignores: ['build/', 'node_modules/', 'Temp/', 'scripts/', 'esbuild.config.mjs'],
 	},
+	...obsidianmd.configs.recommended,
 	{
-		files: ['src/**/*.ts'],
+		files: ['**/*.{ts,cts,mts,tsx}'],
 		languageOptions: {
 			parserOptions: {
 				project: './tsconfig.json',
 			},
 		},
-		plugins: {
-			obsidianmd,
-		},
+	},
+	{
+		files: ['src/**/*.ts'],
 		rules: {
-			...obsidianmdRecommendedRules,
-			'@typescript-eslint/no-floating-promises': 'warn',
-			'@typescript-eslint/no-misused-promises': 'warn',
-			'@typescript-eslint/no-unnecessary-type-assertion': 'warn',
-			'@typescript-eslint/no-unsafe-member-access': 'warn',
-			'@typescript-eslint/no-unsafe-assignment': 'warn',
-			'@typescript-eslint/no-unsafe-call': 'warn',
-			'@typescript-eslint/no-unsafe-argument': 'warn',
-			'@typescript-eslint/no-unsafe-return': 'warn',
 			'obsidianmd/ui/sentence-case': [
 				'warn',
 				{
@@ -56,8 +40,12 @@ export default tseslint.config(
 	},
 	{
 		files: ['src/i18n/locales/en.json'],
-		plugins: {
-			obsidianmd,
+		languageOptions: {
+			parser: tseslint.parser,
+			parserOptions: {
+				extraFileExtensions: ['.json'],
+				project: false,
+			},
 		},
 		rules: {
 			'no-unused-expressions': 'off',
@@ -73,6 +61,16 @@ export default tseslint.config(
 		},
 	},
 	{
-		ignores: ['build/', 'node_modules/', 'Temp/', 'scripts/', 'esbuild.config.mjs'],
+		files: ['tests/**/*.ts'],
+		...tseslint.configs.disableTypeChecked,
+		rules: {
+			...tseslint.configs.disableTypeChecked.rules,
+			...scannerRulesDisabledForTests,
+			...recommendedTestRules,
+			'@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+			'@typescript-eslint/no-explicit-any': 'warn',
+			'@typescript-eslint/no-require-imports': 'off',
+			'no-empty': 'error',
+		},
 	},
 );

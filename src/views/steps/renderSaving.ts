@@ -118,7 +118,8 @@ export function renderSaving(container: HTMLElement, ctx: StepRenderContext): vo
 			new Notice(t('brew.saved'));
 			ctx.resetFlow();
 		} catch (err) {
-			ctx.plugin.pluginLogger?.log('FLOW', `record save failed: ${err}`);
+			const message = err instanceof Error ? err.message : String(err);
+			ctx.plugin.pluginLogger?.log('FLOW', `record save failed: ${message}`);
 			new Notice(t('brew.saveFailed'));
 			doneBtn.disabled = false;
 			doneBtn.textContent = t('form.save');
