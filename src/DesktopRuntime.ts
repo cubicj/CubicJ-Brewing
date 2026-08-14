@@ -2,6 +2,7 @@ import { Platform, type FileSystemAdapter } from 'obsidian';
 import type { BleLogger } from './acaia/AcaiaService';
 import type CubicJBrewingPlugin from './main';
 import { t } from './i18n/index';
+import { nodeRequire } from './nodeRequire';
 
 export class DesktopRuntime {
 	private beforeUnloadHandler: (() => void) | null = null;
@@ -15,7 +16,7 @@ export class DesktopRuntime {
 		const { BrewingView, VIEW_TYPE_BREWING } = await import('./views/BrewingView');
 		const { createNobleInstaller, isNobleModuleLoaded } = await import('./acaia/NobleInstaller');
 		const basePath = (this.plugin.app.vault.adapter as FileSystemAdapter).getBasePath();
-		const path = await import('path');
+		const path = nodeRequire('path') as typeof import('path');
 		const noblePath = path.join(basePath, this.plugin.manifest.dir as string, 'noble');
 		this.plugin.nobleInstaller = createNobleInstaller(this.plugin, () => isNobleModuleLoaded(noblePath));
 		this.viewType = VIEW_TYPE_BREWING;

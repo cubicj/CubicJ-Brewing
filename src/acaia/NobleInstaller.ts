@@ -1,5 +1,6 @@
 import type { App, PluginManifest } from 'obsidian';
 import { Platform, requestUrl } from 'obsidian';
+import { nodeRequire } from '../nodeRequire';
 import { readTar } from './tarReader';
 import { NOBLE_BUNDLE_SHA256, NOBLE_BUNDLE_VERSION, nobleBundleUrl } from './nobleBundle';
 
@@ -135,7 +136,7 @@ export class NobleInstaller {
 		let entries;
 		try {
 			if (Platform.isDesktop) {
-				const zlib = await import('zlib');
+				const zlib = nodeRequire('zlib') as typeof import('zlib');
 				const bytes = zlib.gunzipSync(new Uint8Array(response.body));
 				entries = readTar(new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength), { root: 'noble/' });
 			} else {

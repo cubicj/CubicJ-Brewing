@@ -1,5 +1,6 @@
 import type { Buffer, Noble, NobleCharacteristic, NoblePeripheral } from './types';
 import { NOTIFY_UUID, SCALE_PREFIXES, WRITE_UUID } from './types';
+import { nodeRequire } from '../nodeRequire';
 
 export interface NobleTransportOptions {
 	nobleFactory?: () => Noble | null;
@@ -40,9 +41,7 @@ export class NobleTransport {
 			options.nobleFactory ??
 			(() => {
 				try {
-					const electronRequire = (window as Window & { require?: (id: string) => unknown }).require;
-					if (!electronRequire) return null;
-					return electronRequire(noblePath) as Noble;
+					return nodeRequire(noblePath) as Noble;
 				} catch {
 					return null;
 				}
