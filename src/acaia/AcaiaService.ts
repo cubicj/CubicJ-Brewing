@@ -1,5 +1,4 @@
-import { Platform } from 'obsidian';
-import type { AcaiaEvents } from './types';
+import type { AcaiaEvents, Buffer } from './types';
 import { AcaiaState, Noble, resolveModelName } from './types';
 import {
 	encodeIdentify,
@@ -12,14 +11,8 @@ import {
 	PacketBuffer,
 } from './protocol';
 import { NobleTransport } from './NobleTransport';
+import { TypedEmitter } from './TypedEmitter';
 import { decodePacket } from './packetDecoder';
-
-function getEventEmitter(): typeof import('events').EventEmitter {
-	if (Platform.isDesktop) return (require('events') as typeof import('events')).EventEmitter;
-	throw new Error();
-}
-
-const EventEmitter = getEventEmitter();
 
 export interface BleLogger {
 	log(message: string): void;
@@ -37,23 +30,7 @@ class StaleConnectionError extends Error {
 	}
 }
 
-export class AcaiaService extends EventEmitter {
-	on<K extends keyof AcaiaEvents>(event: K, listener: AcaiaEvents[K]): this;
-	on(event: string, listener: (...args: unknown[]) => void): this;
-	on(event: string, listener: (...args: unknown[]) => void): this {
-		return super.on(event, listener);
-	}
-
-	emit<K extends keyof AcaiaEvents>(event: K, ...args: Parameters<AcaiaEvents[K]>): boolean;
-	emit(event: string, ...args: unknown[]): boolean;
-	emit(event: string, ...args: unknown[]): boolean {
-		return super.emit(event, ...args);
-	}
-
-	removeAllListeners(event?: string): this {
-		return super.removeAllListeners(event);
-	}
-
+export class AcaiaService extends TypedEmitter<AcaiaEvents> {
 	private _state: AcaiaState = 'idle';
 	private transport: NobleTransport;
 	private heartbeatTimer: number | null = null;
@@ -338,7 +315,8 @@ export class AcaiaService extends EventEmitter {
 				await this.transport.write(encodePowerOff());
 				this.log('powerOff command written (msgType=24)');
 			} catch (e) {
-				this.log(`powerOff write failed: ${e}`);
+				const message = e instanceof Error ? e.message : String(e);
+				this.log(`powerOff write failed: ${message}`);
 			}
 		}
 		await new Promise((r) => window.setTimeout(r, 500));
