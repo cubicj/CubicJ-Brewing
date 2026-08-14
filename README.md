@@ -57,7 +57,7 @@ BLE and the brewing sidebar are desktop-only (Windows); bean inventory, brew his
 3. Copy all contents into `<your-vault>/.obsidian/plugins/cubicj-brewing/`
 4. Restart Obsidian → Settings → Community plugins → Enable "CubicJ Brewing"
 
-> The `noble/` folder contains the native BLE addon — do not omit it.
+> The `noble/` folder contains the native Bluetooth addon. If it's missing, record keeping still works — the plugin offers a one-click, checksum-verified addon download when you try to connect the scale, and from **Settings → Bluetooth addon**.
 
 ## Documentation
 

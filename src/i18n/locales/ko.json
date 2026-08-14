@@ -160,5 +160,30 @@
 
 	"common.confirm": "확인",
 	"common.cancel": "취소",
-	"common.edit": "수정"
+	"common.edit": "수정",
+
+	"noble.installTitle": "블루투스 애드온 설치",
+	"noble.updateTitle": "블루투스 애드온 업데이트",
+	"noble.reinstallTitle": "블루투스 애드온 다시 설치",
+	"noble.installMessage": "저울 연결에는 네이티브 블루투스 애드온(약 3MB)이 필요합니다. 이 플러그인의 GitHub 릴리즈에서 다운로드한 뒤 검증을 거쳐 설치됩니다.",
+	"noble.updateMessage": "설치된 블루투스 애드온({{installed}})이 현재 플러그인 버전과 맞지 않습니다. 다시 설치해 업데이트하세요.",
+	"noble.reinstallMessage": "이 플러그인의 GitHub 릴리즈에서 블루투스 애드온(약 3MB)을 다시 다운로드해 설치합니다.",
+	"noble.install": "설치",
+	"noble.reinstall": "다시 설치",
+	"noble.phase.downloading": "다운로드 중...",
+	"noble.phase.verifying": "검증 중...",
+	"noble.phase.extracting": "설치 중...",
+	"noble.done": "블루투스 애드온이 설치되었습니다.",
+	"noble.error.network": "다운로드에 실패했습니다. 네트워크 연결을 확인하세요.",
+	"noble.error.http": "이 버전의 애드온 패키지를 찾을 수 없습니다.",
+	"noble.error.checksum": "다운로드한 파일이 검증에 실패했습니다. 다시 시도하세요.",
+	"noble.error.extract": "다운로드한 파일을 풀 수 없습니다.",
+	"noble.error.write": "애드온을 플러그인 폴더에 쓸 수 없습니다.",
+	"noble.manualHint": "릴리즈 zip으로 직접 설치할 수도 있습니다.",
+	"settings.noble": "블루투스 애드온",
+	"settings.nobleDesc": "실시간 저울 연결에 필요한 네이티브 애드온입니다.",
+	"settings.nobleChecking": "확인 중...",
+	"settings.nobleInstalled": "설치됨 ({{version}})",
+	"settings.nobleMissing": "설치되지 않음",
+	"settings.nobleMismatch": "업데이트 가능 ({{installed}} → {{expected}})"
 }

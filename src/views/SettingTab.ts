@@ -1,4 +1,5 @@
 import { AbstractInputSuggest, App, Notice, PluginSettingTab, Setting, type TFolder } from 'obsidian';
+import type { NobleInstallStatus } from '../acaia/NobleInstaller';
 import type CubicJBrewingPlugin from '../main';
 import { t, getAvailableLocales } from '../i18n/index';
 
@@ -108,5 +109,52 @@ export class BrewingSettingTab extends PluginSettingTab {
 					);
 				}),
 			);
+
+		const installer = this.plugin.nobleInstaller;
+		if (installer) {
+			const nobleSetting = new Setting(containerEl)
+				.setName(t('settings.noble'))
+				.setDesc(t('settings.nobleChecking'));
+			const renderStatus = (status: NobleInstallStatus) => {
+				const desc =
+					status.kind === 'installed'
+						? t('settings.nobleInstalled', { version: status.version })
+						: status.kind === 'version-mismatch'
+							? t('settings.nobleMismatch', { installed: status.installed, expected: status.expected })
+							: t('settings.nobleMissing');
+				nobleSetting.setDesc(desc);
+				nobleSetting.addButton((btn) =>
+					btn
+						.setButtonText(status.kind === 'not-installed' ? t('noble.install') : t('noble.reinstall'))
+						.onClick(async () => {
+							const { NobleInstallModal } = await import('./NobleInstallModal');
+							const wikiUrl =
+								this.plugin.getLocale() === 'ko'
+									? 'https://github.com/cubicj/CubicJ-Brewing/wiki/Installation-(Korean)'
+									: 'https://github.com/cubicj/CubicJ-Brewing/wiki/Installation';
+							new NobleInstallModal(this.app, {
+								variant:
+									status.kind === 'not-installed'
+										? 'install'
+										: status.kind === 'installed'
+											? 'reinstall'
+											: 'update',
+								installed: status.kind === 'version-mismatch' ? status.installed : undefined,
+								installer,
+								wikiUrl,
+								onDone: (installed) => {
+									if (installed) this.display();
+								},
+							}).open();
+						}),
+				);
+			};
+			void installer
+				.status()
+				.then(renderStatus)
+				.catch(() => {
+					renderStatus({ kind: 'not-installed' });
+				});
+		}
 	}
 }

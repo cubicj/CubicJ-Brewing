@@ -1461,3 +1461,33 @@ body.is-mobile .brew-profile-chart-mode .brew-profile-footer {
 	margin: 0;
 	flex-shrink: 0;
 }
+
+.cubicj-noble-message {
+	margin-bottom: 12px;
+	color: var(--text-normal);
+}
+
+.cubicj-noble-status {
+	min-height: 20px;
+	margin-bottom: 8px;
+	color: var(--text-muted);
+	font-size: 13px;
+}
+
+.cubicj-noble-error {
+	margin-bottom: 8px;
+	color: var(--text-error);
+	font-size: 13px;
+}
+
+.modal .cubicj-noble-footer {
+	display: flex;
+	flex-wrap: nowrap;
+	justify-content: flex-end;
+	gap: 8px;
+}
+
+.modal .cubicj-noble-footer button {
+	height: auto;
+	min-height: 0;
+}

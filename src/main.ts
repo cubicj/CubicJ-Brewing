@@ -1,5 +1,6 @@
 import { Platform, Plugin } from 'obsidian';
 import type { AcaiaService } from './acaia/AcaiaService';
+import type { NobleInstaller } from './acaia/NobleInstaller';
 import { DesktopRuntime } from './DesktopRuntime';
 import { PluginLogger } from './utils/PluginLogger';
 import { BrewRecordService, type StorageAdapter } from './services/BrewRecordService';
@@ -19,6 +20,7 @@ const DATA_DIR = 'cubicj-brewing';
 
 export default class CubicJBrewingPlugin extends Plugin {
 	acaiaService: AcaiaService | null = null;
+	nobleInstaller: NobleInstaller | null = null;
 	recordService!: BrewRecordService;
 	profileStorage!: BrewProfileStorage;
 	vaultData!: VaultDataService;

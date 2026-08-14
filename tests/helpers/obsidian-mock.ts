@@ -54,3 +54,6 @@ export class AbstractInputSuggest<T> {
 	close() {}
 }
 export function setIcon(_el: any, _icon: string) {}
+export function requestUrl(_options: any): Promise<any> {
+	return Promise.reject(new Error('requestUrl not mocked'));
+}

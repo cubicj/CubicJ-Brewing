@@ -9,6 +9,7 @@ import { ScaleDisplayManager } from './ScaleDisplayManager';
 import { type FlowStep, renderStep, getStepSummary, type StepRenderContext } from './StepRenderers';
 import { AccordionManager } from './AccordionManager';
 import { BrewProfileRecorder } from './BrewProfileRecorder';
+import { NobleInstallModal } from './NobleInstallModal';
 
 export const VIEW_TYPE_BREWING = 'cubicj-brewing';
 
@@ -19,6 +20,7 @@ export class BrewingView extends ItemView {
 	private flowState = new BrewFlowState();
 	private brewingStarted = false;
 	private lastStepChangeTime = 0;
+	private nobleConnectGateInFlight = false;
 
 	private scaleConnectBtn!: HTMLButtonElement;
 	private scalePowerOffBtn!: HTMLButtonElement;
@@ -276,6 +278,37 @@ export class BrewingView extends ItemView {
 			this.log('disconnect');
 			await service.disconnect();
 		} else {
+			const installer = this.plugin.nobleInstaller;
+			if (installer) {
+				if (this.nobleConnectGateInFlight) return;
+				this.nobleConnectGateInFlight = true;
+				try {
+					const status = await installer.status();
+					if (status.kind !== 'installed') {
+						const wikiUrl =
+							this.plugin.getLocale() === 'ko'
+								? 'https://github.com/cubicj/CubicJ-Brewing/wiki/Installation-(Korean)'
+								: 'https://github.com/cubicj/CubicJ-Brewing/wiki/Installation';
+						new NobleInstallModal(this.app, {
+							variant: status.kind === 'not-installed' ? 'install' : 'update',
+							installed: status.kind === 'version-mismatch' ? status.installed : undefined,
+							installer,
+							wikiUrl,
+							onDone: (installed) => {
+								this.nobleConnectGateInFlight = false;
+								if (installed) {
+									this.log('connect after noble install');
+									void service.connect();
+								}
+							},
+						}).open();
+						return;
+					}
+				} catch (error) {
+					this.log(`noble status error: ${error instanceof Error ? error.message : String(error)}`);
+				}
+				this.nobleConnectGateInFlight = false;
+			}
 			this.log('connect');
 			await service.connect();
 		}
