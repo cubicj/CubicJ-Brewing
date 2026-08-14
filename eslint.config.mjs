@@ -67,6 +67,6 @@ export default tseslint.config(
 		},
 	},
 	{
-		ignores: ['main.js', 'node_modules/', 'Temp/', 'scripts/', 'esbuild.config.mjs'],
+		ignores: ['build/', 'node_modules/', 'Temp/', 'scripts/', 'esbuild.config.mjs'],
 	},
 );

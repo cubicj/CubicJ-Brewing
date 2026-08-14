@@ -22,13 +22,13 @@ const context = await esbuild.context({
 	logLevel: 'info',
 	sourcemap: prod ? false : 'inline',
 	treeShaking: true,
-	outfile: 'main.js',
+	outfile: 'build/main.js',
 	minify: prod,
 });
 
 if (prod) {
 	await context.rebuild();
-	writeFileSync('styles.css', readFileSync('fonts.css', 'utf8') + readFileSync('styles.base.css', 'utf8'));
+	writeFileSync('build/styles.css', readFileSync('src/styles/fonts.css', 'utf8') + readFileSync('src/styles/base.css', 'utf8'));
 	process.exit(0);
 } else {
 	await context.watch();
