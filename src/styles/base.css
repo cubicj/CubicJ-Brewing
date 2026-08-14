@@ -83,7 +83,7 @@
 }
 
 .cubicj-brewing-view .brewing-timer {
-	font-family: 'MatrixSansPrint4x6', 'MatrixSansPrint', monospace !important;
+	font-family: 'MatrixSansPrint4x6', 'MatrixSansPrint', monospace;
 	font-feature-settings: 'zero' 1;
 	font-size: 3.8em;
 	font-variant-numeric: tabular-nums;
@@ -114,7 +114,7 @@
 }
 
 .cubicj-brewing-view .brewing-weight {
-	font-family: 'MatrixSansPrint', monospace !important;
+	font-family: 'MatrixSansPrint', monospace;
 	font-feature-settings: 'zero' 1;
 	font-size: 4.4em;
 	font-variant-numeric: tabular-nums;
@@ -545,7 +545,6 @@
 	margin: 0;
 	min-height: 0;
 	outline: none;
-	padding: 0;
 	display: inline-flex;
 	align-items: center;
 	padding: 2px 6px;
@@ -671,7 +670,6 @@
 	color: var(--text-on-accent);
 }
 
-.cm-embed-block:has(.block-language-beans),
 .cm-embed-block.cm-lang-beans {
 	--embed-block-shadow-hover: none;
 }
@@ -679,8 +677,6 @@
 .block-language-beans > button,
 .block-language-beans .copy-code-button,
 .block-language-beans .code-block-flair,
-.cm-embed-block:has(.block-language-beans) > .edit-block-button,
-.cm-embed-block:has(.block-language-beans):hover > .edit-block-button,
 .cm-embed-block.cm-lang-beans .edit-block-button {
 	display: none;
 }
@@ -836,8 +832,6 @@ body.is-mobile .cb-bean-weight {
 }
 
 /* Brew Records Code Block */
-.cm-embed-block:has(.block-language-brews),
-.cm-embed-block:has(.block-language-brew-day),
 .cm-embed-block.cm-lang-brews,
 .cm-embed-block.cm-lang-brew-day {
 	--embed-block-shadow-hover: none;
@@ -848,13 +842,9 @@ body.is-mobile .cb-bean-weight {
 .block-language-brew-day .copy-code-button,
 .block-language-brews .code-block-flair,
 .block-language-brew-day .code-block-flair,
-.cm-embed-block:has(.block-language-brews) > .edit-block-button,
-.cm-embed-block:has(.block-language-brew-day) > .edit-block-button,
-.cm-embed-block:has(.block-language-brews):hover > .edit-block-button,
-.cm-embed-block:has(.block-language-brew-day):hover > .edit-block-button,
 .cm-embed-block.cm-lang-brews .edit-block-button,
 .cm-embed-block.cm-lang-brew-day .edit-block-button {
-	display: none !important;
+	display: none;
 }
 
 .block-language-brews .brew-records-empty,
@@ -1132,7 +1122,7 @@ body.is-mobile .modal.brew-profile-modal {
 	max-height: 85vh;
 }
 body.is-mobile .brew-profile-modal .modal-content {
-	display: flex !important;
+	display: flex;
 	flex-direction: column;
 	height: 100%;
 }
@@ -1285,7 +1275,7 @@ body.is-mobile .brew-profile-chart-mode .brew-profile-footer {
 .dm-equip-grinder-meta {
 	color: var(--text-muted);
 	font-size: 0.85em;
-	flex: none !important;
+	flex: none;
 }
 .dm-equip-row.is-dragging {
 	position: relative;
@@ -1397,7 +1387,6 @@ body.is-mobile .brew-profile-chart-mode .brew-profile-footer {
 	margin: 0;
 	min-height: 0;
 	outline: none;
-	padding: 0;
 	padding: 2px 6px;
 	cursor: pointer;
 	border-radius: var(--radius-s);
@@ -1416,14 +1405,12 @@ body.is-mobile .brew-profile-chart-mode .brew-profile-footer {
 }
 .bwp-action {
 	appearance: none;
-	background: transparent;
 	border: 0;
 	box-shadow: none;
 	font: inherit;
 	margin: 0;
 	min-height: 0;
 	outline: none;
-	padding: 0;
 	flex: 1;
 	text-align: center;
 	padding: 5px 0;
@@ -1447,13 +1434,11 @@ body.is-mobile .brew-profile-chart-mode .brew-profile-footer {
 .bwp-depleted {
 	appearance: none;
 	background: transparent;
-	border: 0;
 	box-shadow: none;
 	font: inherit;
 	margin: 0;
 	min-height: 0;
 	outline: none;
-	padding: 0;
 	box-sizing: border-box;
 	width: 100%;
 	margin-top: 4px;
