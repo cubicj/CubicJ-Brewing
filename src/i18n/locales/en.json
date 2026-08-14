@@ -32,7 +32,7 @@
 	"error.recordDelete": "Failed to delete record",
 	"error.beanUpdate": "Failed to update bean",
 
-	"bean.new": "+ New bean",
+	"bean.new": "+ new bean",
 	"bean.defaultName": "New bean",
 	"bean.activeBeans": "Active beans",
 	"bean.pastBeans": "Past beans",

@@ -41,7 +41,26 @@ export default tseslint.config(
 			'obsidianmd/ui/sentence-case': [
 				'warn',
 				{
-					brands: ['Acaia', 'Pearl S', 'Bluetooth', 'BLE', 'Obsidian', 'GitHub', 'CubicJ Brewing'],
+					brands: ['Acaia', 'Pearl S', 'Bluetooth', 'BLE', 'Obsidian', 'GitHub', 'CubicJ Brewing', '°C'],
+					acronyms: ['RPM', 'MB', 'UI', '°C'],
+					enforceCamelCaseLower: true,
+				},
+			],
+		},
+	},
+	{
+		files: ['src/i18n/locales/en.json'],
+		plugins: {
+			obsidianmd,
+		},
+		rules: {
+			'no-unused-expressions': 'off',
+			'@typescript-eslint/no-unused-expressions': 'off',
+			'obsidianmd/ui/sentence-case-json': [
+				'warn',
+				{
+					brands: ['Acaia', 'Pearl S', 'Bluetooth', 'BLE', 'Obsidian', 'GitHub', 'CubicJ Brewing', '°C'],
+					acronyms: ['RPM', 'MB', 'UI', '°C'],
 					enforceCamelCaseLower: true,
 				},
 			],
