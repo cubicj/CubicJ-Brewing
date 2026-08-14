@@ -11,6 +11,8 @@ export class DesktopRuntime {
 	async init(): Promise<void> {
 		const { AcaiaService } = await import('./acaia/AcaiaService');
 		const { BrewingView, VIEW_TYPE_BREWING } = await import('./views/BrewingView');
+		const { createNobleInstaller } = await import('./acaia/NobleInstaller');
+		this.plugin.nobleInstaller = createNobleInstaller(this.plugin);
 		this.viewType = VIEW_TYPE_BREWING;
 
 		let logger: BleLogger | undefined;
