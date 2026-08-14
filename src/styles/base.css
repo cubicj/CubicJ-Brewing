@@ -83,7 +83,7 @@
 }
 
 .cubicj-brewing-view .brewing-timer {
-	font-family: 'MatrixSansPrint4x6', 'MatrixSansPrint', monospace;
+	font-family: 'MatrixSansPrint4x6', 'MatrixSansPrint', monospace !important;
 	font-feature-settings: 'zero' 1;
 	font-size: 3.8em;
 	font-variant-numeric: tabular-nums;
@@ -114,7 +114,7 @@
 }
 
 .cubicj-brewing-view .brewing-weight {
-	font-family: 'MatrixSansPrint', monospace;
+	font-family: 'MatrixSansPrint', monospace !important;
 	font-feature-settings: 'zero' 1;
 	font-size: 4.4em;
 	font-variant-numeric: tabular-nums;
