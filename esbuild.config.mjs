@@ -1,7 +1,7 @@
 import esbuild from 'esbuild';
 import process from 'process';
 import builtins from 'module';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 
 if (existsSync('.env')) {
 	for (const line of readFileSync('.env', 'utf8').split('\n')) {
@@ -28,6 +28,7 @@ const context = await esbuild.context({
 
 if (prod) {
 	await context.rebuild();
+	writeFileSync('styles.css', readFileSync('fonts.css', 'utf8') + readFileSync('styles.base.css', 'utf8'));
 	process.exit(0);
 } else {
 	await context.watch();
