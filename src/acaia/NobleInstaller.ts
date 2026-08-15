@@ -69,10 +69,9 @@ export function isNobleModuleLoaded(noblePath: string, cache?: Record<string, un
 		}
 		if (moduleCache === undefined) {
 			try {
-				moduleCache =
-					typeof window === 'undefined'
-						? undefined
-						: (window as typeof window & { require?: { cache?: Record<string, unknown> } }).require?.cache;
+				const w: (Window & { require?: { cache?: Record<string, unknown> } }) | undefined =
+					typeof window === 'undefined' ? undefined : window;
+				moduleCache = w?.require?.cache;
 			} catch {
 				moduleCache = undefined;
 			}

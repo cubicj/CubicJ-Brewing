@@ -87,7 +87,7 @@ export class VaultDataService {
 
 	private parseBeanNote(file: TFile): BeanInfo | null {
 		const cache = this.app.metadataCache.getFileCache(file);
-		const fm = cache?.frontmatter as Record<string, unknown> | undefined;
+		const fm: Record<string, unknown> | undefined = cache?.frontmatter;
 		if (fm?.type !== 'bean') return null;
 		const rawDate = fm['roast_date'];
 		const raw = isUnknownArray(rawDate) ? rawDate[rawDate.length - 1] : rawDate;
@@ -104,7 +104,7 @@ export class VaultDataService {
 
 	private parseRecipeNote(file: TFile): RecipeInfo | null {
 		const cache = this.app.metadataCache.getFileCache(file);
-		const fm = cache?.frontmatter as Record<string, unknown> | undefined;
+		const fm: Record<string, unknown> | undefined = cache?.frontmatter;
 		if (fm?.type !== 'recipe') return null;
 		const steps: RecipeStep[] = ((fm['steps'] ?? []) as Record<string, unknown>[]).map((step) => ({
 			time: typeof step.time === 'string' || typeof step.time === 'number' ? String(step.time) : '',
@@ -157,7 +157,7 @@ export class VaultDataService {
 		const failures: string[] = [];
 		for (const file of files) {
 			const cache = this.app.metadataCache.getFileCache(file);
-			const fm = cache?.frontmatter as Record<string, unknown> | undefined;
+			const fm: Record<string, unknown> | undefined = cache?.frontmatter;
 			if (!fm || (fm.type !== 'bean' && fm.type !== 'recipe')) continue;
 			const hasLegacy = Object.keys(fm).some((k) => k in LEGACY_KEY_MAP);
 			if (!hasLegacy) continue;
