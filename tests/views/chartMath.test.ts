@@ -112,9 +112,9 @@ describe('flowRateAt', () => {
 		expect(flowRateAt(trend, 20)).toBeCloseTo(10);
 	});
 
-	it('returns negative slope on decreasing data', () => {
+	it('clamps negative slope to 0 on decreasing data', () => {
 		const falling = [pt(0, 100), pt(10, 0)];
-		expect(flowRateAt(falling, 5)).toBeCloseTo(-10);
+		expect(flowRateAt(falling, 5)).toBe(0);
 	});
 
 	it('returns undefined for fewer than 2 points', () => {

@@ -45,5 +45,5 @@ export function flowRateAt(trend: BrewProfilePoint[], t: number, halfWindow = 1)
 	const t0 = Math.max(trend[0].t, t - halfWindow);
 	const t1 = Math.min(trend[trend.length - 1].t, t + halfWindow);
 	if (t1 <= t0) return undefined;
-	return (interpolateWeight(trend, t1) - interpolateWeight(trend, t0)) / (t1 - t0);
+	return Math.max(0, (interpolateWeight(trend, t1) - interpolateWeight(trend, t0)) / (t1 - t0));
 }
