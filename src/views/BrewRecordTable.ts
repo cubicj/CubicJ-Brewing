@@ -16,6 +16,7 @@ export interface BrewRecordTableOptions {
 	vaultData?: BeanWeightService;
 	headerText?: string;
 	emptyText?: string;
+	onHeaderClick?: (evt: MouseEvent) => void;
 }
 
 export function renderBrewRecordTable(
@@ -27,7 +28,11 @@ export function renderBrewRecordTable(
 	el.empty();
 	el.addClass('brew-records');
 
-	el.createEl('h3', { text: options.headerText ?? t('record.header'), cls: 'brew-records-header' });
+	const header = el.createEl('h3', { text: options.headerText ?? t('record.header'), cls: 'brew-records-header' });
+	if (options.onHeaderClick) {
+		header.addClass('brew-records-header-link');
+		header.addEventListener('click', options.onHeaderClick);
+	}
 
 	if (records.length === 0) {
 		el.createDiv({ text: options.emptyText ?? t('record.empty'), cls: 'brew-records-empty' });

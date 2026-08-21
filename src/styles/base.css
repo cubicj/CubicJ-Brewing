@@ -989,6 +989,13 @@ body.is-mobile .cb-bean-weight {
 	margin: 0 0 8px;
 	font-size: var(--font-ui-medium);
 }
+.block-language-brew-day .brew-records-header-link {
+	color: var(--text-accent);
+	cursor: pointer;
+}
+.block-language-brew-day .brew-records-header-link:hover {
+	text-decoration: underline;
+}
 body.is-mobile .block-language-brews .brew-record-note,
 body.is-mobile .block-language-brew-day .brew-record-note,
 body.is-mobile .block-language-brew-day th:nth-child(3),

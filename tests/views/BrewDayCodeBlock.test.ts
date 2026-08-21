@@ -5,6 +5,7 @@ import { installPolyfills, createContainer } from '../helpers/obsidian-dom-polyf
 import type { FilterRecord } from '../../src/brew/types';
 import type { BrewProfileStorage } from '../../src/services/BrewProfileStorage';
 import type { BrewRecordService } from '../../src/services/BrewRecordService';
+import type { BeanWeightService } from '../../src/services/BeanWeightService';
 
 vi.mock('../../src/i18n/index', () => ({
 	t: (key: string) => key,
@@ -37,15 +38,19 @@ const emptyEquipment = () => ({
 	accessories: [],
 });
 
-async function renderRecords(records: FilterRecord[]): Promise<HTMLElement> {
+async function renderRecords(
+	records: FilterRecord[],
+	deps: { app?: App; vaultData?: BeanWeightService } = {},
+): Promise<HTMLElement> {
 	const recordService = {
 		getAll: vi.fn().mockResolvedValue({ ok: true, data: records }),
 	};
 	const block = new BrewDayCodeBlock(
-		{} as App,
+		deps.app ?? ({} as App),
 		recordService as unknown as BrewRecordService,
 		{} as BrewProfileStorage,
 		emptyEquipment,
+		deps.vaultData,
 	);
 	let handler!: (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void;
 	block.register((_lang, registeredHandler) => {
@@ -60,6 +65,25 @@ async function renderRecords(records: FilterRecord[]): Promise<HTMLElement> {
 }
 
 describe('BrewDayCodeBlock', () => {
+	const makeBeanDeps = () => {
+		const openFile = vi.fn();
+		const getLeaf = vi.fn(() => ({ openFile }));
+		const beanFile = { path: 'Beans/A Bean.md', extension: 'md' };
+		const app = {
+			vault: {
+				getAbstractFileByPath: vi.fn((path: string) => (path === 'Beans/A Bean.md' ? beanFile : null)),
+			},
+			workspace: { getLeaf },
+		} as unknown as App;
+		const vaultData = {
+			getAllBeans: () => [
+				{ path: 'Beans/A Bean.md', name: 'A Bean', roaster: '', status: 'active', roastDate: null, weight: null },
+			],
+			setWeight: vi.fn(),
+		} as unknown as BeanWeightService;
+		return { app, vaultData, openFile, getLeaf, beanFile };
+	};
+
 	it('refreshes detached blocks and keeps them tracked', async () => {
 		let records = [makeFilter({ bean: 'Old Bean' })];
 		const recordService = {
@@ -148,5 +172,43 @@ describe('BrewDayCodeBlock', () => {
 		el.querySelector<HTMLElement>('.brew-record-note')?.click();
 
 		expect(el.querySelector<HTMLTableCellElement>('.brew-record-expand td')?.colSpan).toBe(5);
+	});
+
+	it('opens the bean note when the group header is clicked', async () => {
+		const deps = makeBeanDeps();
+		const el = await renderRecords([makeFilter()], { app: deps.app, vaultData: deps.vaultData });
+		const header = el.querySelector<HTMLElement>('.brew-records-header');
+
+		expect(header?.classList.contains('brew-records-header-link')).toBe(true);
+		header?.click();
+
+		expect(deps.getLeaf).toHaveBeenCalledWith(false);
+		expect(deps.openFile).toHaveBeenCalledWith(deps.beanFile);
+	});
+
+	it('opens the bean note in a new tab on mod-click', async () => {
+		const deps = makeBeanDeps();
+		const el = await renderRecords([makeFilter()], { app: deps.app, vaultData: deps.vaultData });
+
+		el.querySelector<HTMLElement>('.brew-records-header')?.dispatchEvent(
+			new MouseEvent('click', { ctrlKey: true, bubbles: true }),
+		);
+
+		expect(deps.getLeaf).toHaveBeenCalledWith('tab');
+		expect(deps.openFile).toHaveBeenCalledWith(deps.beanFile);
+	});
+
+	it('renders a plain header when no bean note matches', async () => {
+		const deps = makeBeanDeps();
+		const el = await renderRecords([makeFilter({ bean: 'Unknown Bean' })], {
+			app: deps.app,
+			vaultData: deps.vaultData,
+		});
+		const header = el.querySelector<HTMLElement>('.brew-records-header');
+
+		expect(header?.classList.contains('brew-records-header-link')).toBe(false);
+		header?.click();
+
+		expect(deps.openFile).not.toHaveBeenCalled();
 	});
 });

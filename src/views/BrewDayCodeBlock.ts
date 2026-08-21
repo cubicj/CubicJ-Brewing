@@ -1,4 +1,4 @@
-import type { App, MarkdownPostProcessorContext } from 'obsidian';
+import { Keymap, TFile, type App, type MarkdownPostProcessorContext } from 'obsidian';
 import type { EquipmentSettings } from '../brew/types';
 import { t } from '../i18n/index';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
@@ -60,7 +60,9 @@ export class BrewDayCodeBlock {
 			return;
 		}
 
+		const beans = this.vaultData?.getAllBeans() ?? [];
 		for (const group of groups) {
+			const beanPath = beans.find((bean) => bean.name === group.bean)?.path;
 			const section = el.createDiv({ cls: 'brew-day-record-group' });
 			renderBrewRecordTable(section, group.records, group.bean, {
 				app: this.app,
@@ -69,7 +71,14 @@ export class BrewDayCodeBlock {
 				getEquipment: this.getEquipment,
 				vaultData: this.vaultData,
 				headerText: group.bean,
+				onHeaderClick: beanPath === undefined ? undefined : (evt) => this.openBeanNote(beanPath, evt),
 			});
 		}
+	}
+
+	private openBeanNote(path: string, evt: MouseEvent): void {
+		const file = this.app.vault.getAbstractFileByPath(path);
+		if (!(file instanceof TFile)) return;
+		void this.app.workspace.getLeaf(Keymap.isModEvent(evt)).openFile(file);
 	}
 }

@@ -67,3 +67,8 @@ export function setIcon(_el: any, _icon: string) {}
 export function requestUrl(_options: any): Promise<any> {
 	return Promise.reject(new Error('requestUrl not mocked'));
 }
+export const Keymap = {
+	isModEvent(evt: any): string | boolean {
+		return evt && (evt.ctrlKey || evt.metaKey) ? 'tab' : false;
+	},
+};
