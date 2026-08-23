@@ -182,6 +182,31 @@ describe('PluginDataStore settings state', () => {
 		expect(store.legacyEquipment).toBeNull();
 	});
 
+	it('loads beanHubNote and defaults it to an empty string', async () => {
+		const loaded = new PluginDataStore(makePort({ beanHubNote: 'Coffee/Beans.md' }).port);
+		await loaded.load();
+		expect(loaded.beanHubNote).toBe('Coffee/Beans.md');
+
+		const empty = new PluginDataStore(makePort({}).port);
+		await empty.load();
+		expect(empty.beanHubNote).toBe('');
+
+		const wrongType = new PluginDataStore(makePort({ beanHubNote: 42 }).port);
+		await wrongType.load();
+		expect(wrongType.beanHubNote).toBe('');
+	});
+
+	it('saveBeanHubNote patches the stored data', async () => {
+		const { port, getData } = makePort({ beanFolder: 'Beans' });
+		const store = new PluginDataStore(port);
+		await store.load();
+
+		await store.saveBeanHubNote('Coffee/Beans.md');
+
+		expect(store.beanHubNote).toBe('Coffee/Beans.md');
+		expect(getData()).toEqual({ beanFolder: 'Beans', beanHubNote: 'Coffee/Beans.md' });
+	});
+
 	it('defaults malformed log config fields independently', async () => {
 		const { port } = makePort({
 			logConfig: { enabled: 'yes', categories: 'BLE' },

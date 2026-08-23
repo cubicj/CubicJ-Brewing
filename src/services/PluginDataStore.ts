@@ -12,6 +12,7 @@ export class PluginDataStore {
 	legacyEquipment: EquipmentSettings | null = null;
 	logConfig: LogConfig = { enabled: false, categories: [] };
 	beanFolder = '';
+	beanHubNote = '';
 	locale = 'en';
 	firstInstall = false;
 	savedDataVersion = 0;
@@ -34,6 +35,9 @@ export class PluginDataStore {
 		if (typeof data.beanFolder === 'string') {
 			this.beanFolder = data.beanFolder;
 		}
+		if (typeof data.beanHubNote === 'string') {
+			this.beanHubNote = data.beanHubNote;
+		}
 		if (typeof data.locale === 'string') {
 			this.locale = data.locale;
 		}
@@ -55,6 +59,11 @@ export class PluginDataStore {
 	async saveBeanFolder(folder: string): Promise<void> {
 		this.beanFolder = folder;
 		await this.patchData({ beanFolder: folder });
+	}
+
+	async saveBeanHubNote(path: string): Promise<void> {
+		this.beanHubNote = path;
+		await this.patchData({ beanHubNote: path });
 	}
 
 	async saveLocale(locale: string): Promise<void> {

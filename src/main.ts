@@ -245,6 +245,14 @@ export default class CubicJBrewingPlugin extends Plugin {
 		await this.dataStore.patchData({ beanFolder: folder });
 	}
 
+	getBeanHubNote(): string {
+		return this.dataStore.beanHubNote;
+	}
+
+	async saveBeanHubNote(path: string): Promise<void> {
+		await this.dataStore.saveBeanHubNote(path);
+	}
+
 	getLocale(): string {
 		return this.dataStore.locale;
 	}
