@@ -1,4 +1,4 @@
-import { Modal } from 'obsidian';
+import { Modal, Scope } from 'obsidian';
 import type CubicJBrewingPlugin from '../main';
 import { t } from '../i18n/index';
 import { BeanManagePanel } from './dataManage/BeanManagePanel';
@@ -22,6 +22,11 @@ export class DataManageModal extends Modal {
 
 	constructor(plugin: CubicJBrewingPlugin) {
 		super(plugin.app);
+		this.scope = new Scope(plugin.app.scope);
+		this.scope.register([], 'Escape', () => {
+			this.close();
+			return false;
+		});
 		this.beanPanel = new BeanManagePanel({
 			app: plugin.app,
 			vaultData: plugin.vaultData,
