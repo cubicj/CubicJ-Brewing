@@ -16,6 +16,7 @@ export class PluginDataStore {
 	locale = 'en';
 	firstInstall = false;
 	savedDataVersion = 0;
+	private writeQueue: Promise<void> = Promise.resolve();
 
 	constructor(private port: PluginDataPort) {}
 
@@ -43,16 +44,25 @@ export class PluginDataStore {
 		}
 	}
 
-	async patchData(patch: Record<string, unknown>): Promise<void> {
-		const data = ((await this.port.loadData()) ?? {}) as Record<string, unknown>;
-		Object.assign(data, patch);
-		await this.port.saveData(data);
+	private enqueueWrite(mutate: (data: Record<string, unknown>) => void): Promise<void> {
+		const run = async () => {
+			const data = ((await this.port.loadData()) ?? {}) as Record<string, unknown>;
+			mutate(data);
+			await this.port.saveData(data);
+		};
+		const next = this.writeQueue.then(run, run);
+		this.writeQueue = next.catch(() => undefined);
+		return next;
+	}
+
+	patchData(patch: Record<string, unknown>): Promise<void> {
+		return this.enqueueWrite((data) => Object.assign(data, patch));
 	}
 
 	async clearLegacyEquipment(): Promise<void> {
-		const data = ((await this.port.loadData()) ?? {}) as Record<string, unknown>;
-		delete data.equipment;
-		await this.port.saveData(data);
+		await this.enqueueWrite((data) => {
+			delete data.equipment;
+		});
 		this.legacyEquipment = null;
 	}
 

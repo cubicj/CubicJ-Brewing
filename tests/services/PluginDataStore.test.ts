@@ -242,3 +242,102 @@ describe('PluginDataStore persistence', () => {
 		expect(saveData).toHaveBeenCalledTimes(4);
 	});
 });
+
+describe('PluginDataStore write serialization', () => {
+	it('applies overlapping patchData calls in call order', async () => {
+		let data: Record<string, unknown> = { keep: true };
+		const pending: Array<() => void> = [];
+		const port: PluginDataPort = {
+			loadData: () =>
+				new Promise((resolve) => {
+					pending.push(() => resolve({ ...data }));
+				}),
+			saveData: async (next: unknown) => {
+				data = next as Record<string, unknown>;
+			},
+		};
+		const store = new PluginDataStore(port);
+
+		const first = store.saveBeanHubNote('A.md');
+		const second = store.saveBeanHubNote('AB.md');
+
+		await Promise.resolve();
+		expect(pending).toHaveLength(1);
+		pending.shift()!();
+		await first;
+		await Promise.resolve();
+		expect(pending).toHaveLength(1);
+		pending.shift()!();
+		await second;
+
+		expect(data).toEqual({ keep: true, beanHubNote: 'AB.md' });
+	});
+
+	it('rejects a failed write without wedging the next write', async () => {
+		let data: Record<string, unknown> = { keep: true };
+		let saveCount = 0;
+		const error = new Error('save failed');
+		const port: PluginDataPort = {
+			loadData: async () => ({ ...data }),
+			saveData: async (next: unknown) => {
+				saveCount += 1;
+				if (saveCount === 1) {
+					throw error;
+				}
+				data = next as Record<string, unknown>;
+			},
+		};
+		const store = new PluginDataStore(port);
+
+		const failed = store.patchData({ failed: true });
+		const recovered = store.patchData({ recovered: true });
+
+		await expect(failed).rejects.toBe(error);
+		await expect(recovered).resolves.toBeUndefined();
+
+		expect(saveCount).toBe(2);
+		expect(data).toEqual({ keep: true, recovered: true });
+	});
+
+	it('serializes clearLegacyEquipment and patchData in either call order', async () => {
+		const runScenario = async (clearFirst: boolean) => {
+			let data: Record<string, unknown> = { equipment: { grinders: [] }, keep: true };
+			const pending: Array<() => void> = [];
+			const saved: Record<string, unknown>[] = [];
+			const port: PluginDataPort = {
+				loadData: () =>
+					new Promise((resolve) => {
+						pending.push(() => resolve({ ...data }));
+					}),
+				saveData: async (next: unknown) => {
+					data = next as Record<string, unknown>;
+					saved.push({ ...data });
+				},
+			};
+			const store = new PluginDataStore(port);
+
+			const first = clearFirst
+				? store.clearLegacyEquipment()
+				: store.patchData({ beanFolder: 'Beans' });
+			const second = clearFirst
+				? store.patchData({ beanFolder: 'Beans' })
+				: store.clearLegacyEquipment();
+
+			await Promise.resolve();
+			expect(pending).toHaveLength(1);
+			pending.shift()!();
+			await first;
+			expect(saved).toHaveLength(1);
+			await Promise.resolve();
+			expect(pending).toHaveLength(1);
+			pending.shift()!();
+			await second;
+
+			expect(saved).toHaveLength(2);
+			expect(data).toEqual({ keep: true, beanFolder: 'Beans' });
+		};
+
+		await runScenario(true);
+		await runScenario(false);
+	});
+});
