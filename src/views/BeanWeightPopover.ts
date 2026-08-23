@@ -7,6 +7,12 @@ export interface WeightPopoverOptions {
 	inModal?: boolean;
 }
 
+export interface WeightPopoverHandle {
+	close(): void;
+}
+
+let activeWeightPopover: WeightPopoverHandle | null = null;
+
 export function openWeightPopover(
 	anchor: HTMLElement,
 	bean: BeanInfo,
@@ -14,11 +20,33 @@ export function openWeightPopover(
 	onSave: () => void,
 	getScaleWeight: (() => number | null) | null,
 	options: WeightPopoverOptions = {},
-): void {
-	document.querySelector('.bean-weight-popover')?.remove();
+): WeightPopoverHandle {
+	activeWeightPopover?.close();
 
 	const popover = document.body.createDiv({ cls: 'bean-weight-popover' });
 	if (options.inModal) popover.addClass('is-in-modal');
+	let closed = false;
+	let listenerTimer: number | null = null;
+
+	function onOutside(e: PointerEvent): void {
+		const target = e.target instanceof Node ? e.target : null;
+		if (!popover.contains(target) && target !== anchor) close();
+	}
+
+	function close(): void {
+		if (closed) return;
+		closed = true;
+		popover.remove();
+		if (listenerTimer !== null) {
+			window.clearTimeout(listenerTimer);
+			listenerTimer = null;
+		}
+		document.removeEventListener('pointerdown', onOutside);
+		if (activeWeightPopover === handle) activeWeightPopover = null;
+	}
+
+	const handle: WeightPopoverHandle = { close };
+	activeWeightPopover = handle;
 
 	const currentRow = popover.createDiv({ cls: 'bwp-current' });
 	currentRow.createSpan({ text: t('bean.remainingLabel') });
@@ -82,11 +110,6 @@ export function openWeightPopover(
 		})();
 	});
 
-	const close = () => {
-		popover.remove();
-		document.removeEventListener('pointerdown', onOutside);
-	};
-
 	const applyAction = async (calc: (val: number, cur: number) => number) => {
 		const val = parseFloat(input.value);
 		if (isNaN(val) || val < 0) return;
@@ -106,17 +129,17 @@ export function openWeightPopover(
 		if (e.key === 'Escape') close();
 	});
 
-	const onOutside = (e: PointerEvent) => {
-		const target = e.target instanceof Node ? e.target : null;
-		if (!popover.contains(target) && target !== anchor) close();
-	};
-	window.setTimeout(() => document.addEventListener('pointerdown', onOutside), 0);
+	listenerTimer = window.setTimeout(() => {
+		listenerTimer = null;
+		if (!closed) document.addEventListener('pointerdown', onOutside);
+	}, 0);
 
 	const rect = anchor.getBoundingClientRect();
 	popover.style.top = `${rect.top}px`;
 	popover.style.left = `${rect.right}px`;
 
 	window.requestAnimationFrame(() => {
+		if (closed) return;
 		const popRect = popover.getBoundingClientRect();
 		const vw = window.innerWidth;
 		const vh = window.innerHeight;
@@ -134,4 +157,6 @@ export function openWeightPopover(
 		popover.classList.add('is-positioned');
 		input.focus();
 	});
+
+	return handle;
 }

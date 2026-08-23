@@ -64,12 +64,14 @@ export class DataManageModal extends Modal {
 	}
 
 	onClose(): void {
+		this.beanPanel.dispose();
 		this.equipmentPanel.dispose();
 		this.contentEl.empty();
 	}
 
 	private switchTab(id: TabId): void {
 		if (id === this.activeTab) return;
+		if (this.activeTab === 'bean') this.beanPanel.dispose();
 		if (this.activeTab === 'equip') this.equipmentPanel.dispose();
 		this.activeTab = id;
 

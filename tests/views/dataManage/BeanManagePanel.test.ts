@@ -10,6 +10,7 @@ vi.mock('../../../src/i18n/index', () => ({ t: (key: string) => key, initI18n: v
 
 beforeAll(() => installPolyfills());
 afterEach(() => {
+	vi.restoreAllMocks();
 	document.body.innerHTML = '';
 });
 
@@ -102,20 +103,74 @@ describe('BeanManagePanel', () => {
 	it('opens the weight popover in modal mode when the weight is clicked', () => {
 		const container = createContainer();
 		document.body.appendChild(container);
-		new BeanManagePanel(makeDeps({ vaultData: vaultData([bean('Active', 'active')]) })).render(container);
+		const panel = new BeanManagePanel(makeDeps({ vaultData: vaultData([bean('Active', 'active')]) }));
+		panel.render(container);
 
 		container.querySelector<HTMLElement>('.cb-bean-weight')!.click();
 
 		const popover = document.querySelector('.bean-weight-popover');
 		expect(popover).not.toBeNull();
 		expect(popover!.classList.contains('is-in-modal')).toBe(true);
+		panel.dispose();
+	});
+
+	it('dispose removes an open weight popover and its document listener', async () => {
+		const container = createContainer();
+		document.body.appendChild(container);
+		const panel = new BeanManagePanel(makeDeps({ vaultData: vaultData([bean('Active', 'active')]) }));
+		const addListener = vi.spyOn(document, 'addEventListener');
+		const removeListener = vi.spyOn(document, 'removeEventListener');
+		panel.render(container);
+		container.querySelector<HTMLElement>('.cb-bean-weight')!.click();
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(addListener).toHaveBeenCalledWith('pointerdown', expect.any(Function));
+
+		panel.dispose();
+
+		expect(document.querySelector('.bean-weight-popover')).toBeNull();
+		expect(removeListener).toHaveBeenCalledWith('pointerdown', expect.any(Function));
+	});
+
+	it('render closes an open weight popover', () => {
+		const container = createContainer();
+		document.body.appendChild(container);
+		const panel = new BeanManagePanel(makeDeps({ vaultData: vaultData([bean('Active', 'active')]) }));
+		panel.render(container);
+		container.querySelector<HTMLElement>('.cb-bean-weight')!.click();
+
+		panel.render(container);
+
+		expect(document.querySelector('.bean-weight-popover')).toBeNull();
+	});
+
+	it('forwards the scale weight getter to the popover', () => {
+		const container = createContainer();
+		document.body.appendChild(container);
+		const withScale = new BeanManagePanel(
+			makeDeps({ vaultData: vaultData([bean('Active', 'active')]), getScaleWeight: () => 18.4 }),
+		);
+		withScale.render(container);
+		container.querySelector<HTMLElement>('.cb-bean-weight')!.click();
+
+		expect(document.querySelector('.bean-weight-popover .bwp-auto')).not.toBeNull();
+
+		withScale.dispose();
+		const withoutScale = new BeanManagePanel(
+			makeDeps({ vaultData: vaultData([bean('Active', 'active')]), getScaleWeight: () => null }),
+		);
+		withoutScale.render(container);
+		container.querySelector<HTMLElement>('.cb-bean-weight')!.click();
+
+		expect(document.querySelector('.bean-weight-popover .bwp-auto')).toBeNull();
+		withoutScale.dispose();
 	});
 
 	it('re-renders and refreshes code blocks after a weight save', async () => {
 		const container = createContainer();
 		document.body.appendChild(container);
 		const deps = makeDeps({ vaultData: vaultData([bean('Active', 'active')]) });
-		new BeanManagePanel(deps).render(container);
+		const panel = new BeanManagePanel(deps);
+		panel.render(container);
 		container.querySelector<HTMLElement>('.cb-bean-weight')!.click();
 
 		const popover = document.querySelector<HTMLElement>('.bean-weight-popover')!;
@@ -127,5 +182,6 @@ describe('BeanManagePanel', () => {
 
 		expect(deps.refreshCodeBlocks).toHaveBeenCalledTimes(1);
 		expect(container.querySelector('.cb-bean-weight-value')?.textContent).toBe('80g');
+		panel.dispose();
 	});
 });

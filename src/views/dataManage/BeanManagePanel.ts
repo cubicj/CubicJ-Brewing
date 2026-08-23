@@ -3,7 +3,7 @@ import type { BeanInfo } from '../../brew/types';
 import { t } from '../../i18n/index';
 import type { VaultDataService } from '../../services/VaultDataService';
 import { renderActiveBeanRow, renderFinishedBeanRow } from '../BeanRowRenderer';
-import { openWeightPopover } from '../BeanWeightPopover';
+import { openWeightPopover, type WeightPopoverHandle } from '../BeanWeightPopover';
 import { createNewBean, getSortedBeans } from '../beanHelpers';
 
 export interface BeanManagePanelDeps {
@@ -17,9 +17,12 @@ export interface BeanManagePanelDeps {
 }
 
 export class BeanManagePanel {
+	private weightPopoverHandle: WeightPopoverHandle | null = null;
+
 	constructor(private deps: BeanManagePanelDeps) {}
 
 	render(container: HTMLElement): void {
+		this.closeWeightPopover();
 		container.empty();
 		const headerEl = container.createDiv({ cls: 'cb-bean-header' });
 
@@ -47,8 +50,17 @@ export class BeanManagePanel {
 				this.deps.openLink(bean.path);
 			},
 			onStatusChange: onChange,
-			onWeightClick: (anchor: HTMLElement, bean: BeanInfo) =>
-				openWeightPopover(anchor, bean, this.deps.vaultData, onChange, this.deps.getScaleWeight, { inModal: true }),
+			onWeightClick: (anchor: HTMLElement, bean: BeanInfo) => {
+				this.closeWeightPopover();
+				this.weightPopoverHandle = openWeightPopover(
+					anchor,
+					bean,
+					this.deps.vaultData,
+					onChange,
+					this.deps.getScaleWeight,
+					{ inModal: true },
+				);
+			},
 		};
 
 		if (active.length > 0) {
@@ -66,6 +78,15 @@ export class BeanManagePanel {
 		if (active.length === 0 && finished.length === 0) {
 			container.createDiv({ cls: 'dm-empty', text: t('bean.emptyState') });
 		}
+	}
+
+	dispose(): void {
+		this.closeWeightPopover();
+	}
+
+	private closeWeightPopover(): void {
+		this.weightPopoverHandle?.close();
+		this.weightPopoverHandle = null;
 	}
 
 	private async handleCreateNewBean(): Promise<void> {

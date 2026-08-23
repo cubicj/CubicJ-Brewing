@@ -2,13 +2,17 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { BeanInfo } from '../../src/brew/types';
 import type { VaultDataService } from '../../src/services/VaultDataService';
-import { openWeightPopover } from '../../src/views/BeanWeightPopover';
+import { openWeightPopover, type WeightPopoverHandle } from '../../src/views/BeanWeightPopover';
 import { createContainer, installPolyfills } from '../helpers/obsidian-dom-polyfill';
 
 vi.mock('../../src/i18n/index', () => ({ t: (key: string) => key, initI18n: vi.fn() }));
 
 beforeAll(() => installPolyfills());
+const openHandles: WeightPopoverHandle[] = [];
 afterEach(() => {
+	for (const handle of openHandles.splice(0)) handle?.close();
+	vi.useRealTimers();
+	vi.restoreAllMocks();
 	document.body.innerHTML = '';
 });
 
@@ -27,10 +31,11 @@ function open(b: BeanInfo, vd: VaultDataService, getScale: (() => number | null)
 	const anchor = createContainer();
 	document.body.appendChild(anchor);
 	const onSave = vi.fn();
-	openWeightPopover(anchor, b, vd, onSave, getScale, options);
+	const handle = openWeightPopover(anchor, b, vd, onSave, getScale, options);
+	openHandles.push(handle);
 	const popover = document.querySelector<HTMLElement>('.bean-weight-popover');
 	if (!popover) throw new Error('popover not rendered');
-	return { popover, onSave };
+	return { popover, onSave, handle };
 }
 
 function clickAction(popover: HTMLElement, label: string) {
@@ -111,5 +116,18 @@ describe('openWeightPopover', () => {
 	it('adds is-in-modal when opened with inModal', () => {
 		const { popover } = open(bean(0), vaultData(), null, { inModal: true });
 		expect(popover.classList.contains('is-in-modal')).toBe(true);
+	});
+
+	it('cancels deferred listener registration and closes idempotently', () => {
+		vi.useFakeTimers();
+		const addListener = vi.spyOn(document, 'addEventListener');
+		const { handle } = open(bean(0), vaultData());
+
+		handle.close();
+		expect(document.querySelector('.bean-weight-popover')).toBeNull();
+		expect(() => handle.close()).not.toThrow();
+
+		vi.runAllTimers();
+		expect(addListener).not.toHaveBeenCalledWith('pointerdown', expect.any(Function));
 	});
 });
