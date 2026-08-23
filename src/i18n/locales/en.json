@@ -33,6 +33,7 @@
 	"error.beanUpdate": "Failed to update bean",
 
 	"bean.new": "+ new bean",
+	"bean.openHub": "Open bean hub",
 	"bean.defaultName": "New bean",
 	"bean.activeBeans": "Active beans",
 	"bean.pastBeans": "Past beans",

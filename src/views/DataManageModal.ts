@@ -27,6 +27,9 @@ export class DataManageModal extends Modal {
 			vaultData: plugin.vaultData,
 			close: () => this.close(),
 			openLink: (path) => void plugin.app.workspace.openLinkText(path, ''),
+			getHubNotePath: () => plugin.getBeanHubNote(),
+			getScaleWeight: () => plugin.getScaleWeight?.() ?? null,
+			refreshCodeBlocks: () => plugin.beanBlock.refreshAll(),
 		});
 		this.equipmentPanel = new EquipmentManagePanel({
 			equipment: plugin.equipment,

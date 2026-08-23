@@ -3,6 +3,7 @@ import type { BeanInfo } from '../../brew/types';
 import { t } from '../../i18n/index';
 import type { VaultDataService } from '../../services/VaultDataService';
 import { renderActiveBeanRow, renderFinishedBeanRow } from '../BeanRowRenderer';
+import { openWeightPopover } from '../BeanWeightPopover';
 import { createNewBean, getSortedBeans } from '../beanHelpers';
 
 export interface BeanManagePanelDeps {
@@ -10,6 +11,9 @@ export interface BeanManagePanelDeps {
 	vaultData: VaultDataService;
 	close: () => void;
 	openLink: (path: string) => void;
+	getHubNotePath: () => string;
+	getScaleWeight: () => number | null;
+	refreshCodeBlocks: () => void;
 }
 
 export class BeanManagePanel {
@@ -18,17 +22,33 @@ export class BeanManagePanel {
 	render(container: HTMLElement): void {
 		container.empty();
 		const headerEl = container.createDiv({ cls: 'cb-bean-header' });
+
+		const hubPath = this.deps.getHubNotePath();
+		if (hubPath && this.deps.app.vault.getFileByPath(hubPath)) {
+			const hubBtn = headerEl.createEl('button', { text: t('bean.openHub'), cls: 'cb-bean-btn cb-bean-hub-btn' });
+			hubBtn.addEventListener('click', () => {
+				this.deps.close();
+				this.deps.openLink(hubPath);
+			});
+		}
+
 		const newBtn = headerEl.createEl('button', { text: t('bean.new'), cls: 'cb-bean-btn cb-bean-new-btn' });
 		newBtn.addEventListener('click', () => void this.handleCreateNewBean());
 
 		const { active, finished } = getSortedBeans(this.deps.vaultData);
+		const onChange = () => {
+			this.render(container);
+			this.deps.refreshCodeBlocks();
+		};
 		const rowDeps = {
 			vaultData: this.deps.vaultData,
 			onNameClick: (bean: BeanInfo) => {
 				this.deps.close();
 				this.deps.openLink(bean.path);
 			},
-			onStatusChange: () => this.render(container),
+			onStatusChange: onChange,
+			onWeightClick: (anchor: HTMLElement, bean: BeanInfo) =>
+				openWeightPopover(anchor, bean, this.deps.vaultData, onChange, this.deps.getScaleWeight, { inModal: true }),
 		};
 
 		if (active.length > 0) {
