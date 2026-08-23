@@ -1350,6 +1350,9 @@ body.is-mobile .brew-profile-chart-mode .brew-profile-footer {
 	opacity: 1;
 	pointer-events: auto;
 }
+.bean-weight-popover.is-in-modal {
+	z-index: var(--layer-menu);
+}
 .bwp-current {
 	display: flex;
 	justify-content: space-between;
