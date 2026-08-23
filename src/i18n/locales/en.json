@@ -73,6 +73,8 @@
 	"settings.open": "Open",
 	"settings.beanFolder": "Bean folder",
 	"settings.beanFolderDesc": "Path for creating new bean notes.",
+	"settings.beanHubNote": "Bean hub note",
+	"settings.beanHubNoteDesc": "Note that holds the beans code block. Type a note title or path.",
 	"settings.language": "Language",
 	"settings.languageDesc": "Plugin UI language.",
 	"settings.restartRequired": "Restart Obsidian to apply language change.",

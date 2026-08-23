@@ -1,4 +1,4 @@
-import { AbstractInputSuggest, App, Notice, PluginSettingTab, Setting, TFolder } from 'obsidian';
+import { AbstractInputSuggest, App, Notice, PluginSettingTab, Setting, TFile, TFolder } from 'obsidian';
 import type { SettingDefinitionItem } from 'obsidian';
 import type { NobleInstaller, NobleInstallStatus } from '../acaia/NobleInstaller';
 import type CubicJBrewingPlugin from '../main';
@@ -45,6 +45,34 @@ class FolderSuggest extends AbstractInputSuggest<TFolder> {
 	}
 }
 
+class FileSuggest extends AbstractInputSuggest<TFile> {
+	private onPick: (file: TFile) => void;
+
+	constructor(app: App, inputEl: HTMLInputElement, onPick: (file: TFile) => void) {
+		super(app, inputEl);
+		this.onPick = onPick;
+	}
+
+	getSuggestions(query: string): TFile[] {
+		const lowerQuery = query.toLowerCase();
+		return this.app.vault
+			.getMarkdownFiles()
+			.filter((f) => f.basename.toLowerCase().contains(lowerQuery) || f.path.toLowerCase().contains(lowerQuery))
+			.slice(0, 20);
+	}
+
+	renderSuggestion(file: TFile, el: HTMLElement): void {
+		el.createDiv({ cls: 'suggestion-content', text: file.basename });
+		el.createDiv({ cls: 'suggestion-note', text: file.path });
+	}
+
+	selectSuggestion(file: TFile): void {
+		this.setValue(file.path);
+		this.onPick(file);
+		this.close();
+	}
+}
+
 export class BrewingSettingTab extends PluginSettingTab {
 	constructor(
 		app: App,
@@ -79,6 +107,16 @@ export class BrewingSettingTab extends PluginSettingTab {
 				},
 			},
 			{
+				name: t('settings.beanHubNote'),
+				desc: t('settings.beanHubNoteDesc'),
+				control: {
+					type: 'file',
+					key: 'beanHubNote',
+					placeholder: 'Coffee/Beans.md',
+					filter: (file) => file.extension === 'md',
+				},
+			},
+			{
 				name: t('settings.github'),
 				desc: t('settings.githubDesc'),
 				render: (setting) => this.addLinkButton(setting, 'https://github.com/cubicj/CubicJ-Brewing'),
@@ -105,6 +143,7 @@ export class BrewingSettingTab extends PluginSettingTab {
 	getControlValue(key: string): unknown {
 		if (key === 'language') return this.plugin.getLocale();
 		if (key === 'beanFolder') return this.plugin.getBeanFolder();
+		if (key === 'beanHubNote') return this.plugin.getBeanHubNote();
 		return undefined;
 	}
 
@@ -116,6 +155,10 @@ export class BrewingSettingTab extends PluginSettingTab {
 		}
 		if (key === 'beanFolder' && typeof value === 'string') {
 			await this.plugin.saveBeanFolder(value.trim());
+			return;
+		}
+		if (key === 'beanHubNote' && typeof value === 'string') {
+			await this.plugin.saveBeanHubNote(this.resolveNotePath(value.trim()));
 			return;
 		}
 	}
@@ -152,6 +195,25 @@ export class BrewingSettingTab extends PluginSettingTab {
 				});
 				text.onChange(async (value) => {
 					await this.setControlValue('beanFolder', value);
+				});
+			});
+
+		new Setting(containerEl)
+			.setName(t('settings.beanHubNote'))
+			.setDesc(t('settings.beanHubNoteDesc'))
+			.addText((text) => {
+				text.setPlaceholder('Coffee/Beans.md').setValue(this.plugin.getBeanHubNote());
+				new FileSuggest(this.app, text.inputEl, (file) => {
+					void this.setControlValue('beanHubNote', file.path).catch((error: unknown) => {
+						console.error('[SettingTab] bean hub note save failed:', error);
+					});
+				});
+				text.onChange(async (value) => {
+					await this.setControlValue('beanHubNote', value);
+				});
+				text.inputEl.addEventListener('blur', () => {
+					const stored = this.plugin.getBeanHubNote();
+					if (stored && stored !== text.inputEl.value) text.setValue(stored);
 				});
 			});
 
@@ -194,6 +256,13 @@ export class BrewingSettingTab extends PluginSettingTab {
 		return this.plugin.getLocale() === 'ko'
 			? 'https://github.com/cubicj/CubicJ-Brewing/wiki/Home-(Korean)'
 			: 'https://github.com/cubicj/CubicJ-Brewing/wiki';
+	}
+
+	private resolveNotePath(input: string): string {
+		if (!input) return '';
+		if (this.app.vault.getFileByPath(input)) return input;
+		const resolved = this.app.metadataCache.getFirstLinkpathDest(input, '');
+		return resolved ? resolved.path : input;
 	}
 
 	private updateDefinitions(): void {

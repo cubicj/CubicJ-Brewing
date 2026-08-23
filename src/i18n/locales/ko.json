@@ -73,6 +73,8 @@
 	"settings.open": "열기",
 	"settings.beanFolder": "원두 폴더",
 	"settings.beanFolderDesc": "새 원두 노트 생성 경로",
+	"settings.beanHubNote": "원두 관리 노트",
+	"settings.beanHubNoteDesc": "beans 코드블럭이 있는 노트. 노트 제목이나 경로를 입력하세요.",
 	"settings.language": "언어",
 	"settings.languageDesc": "플러그인 UI 언어",
 	"settings.restartRequired": "언어 변경을 위해 옵시디언을 재시작하세요.",
