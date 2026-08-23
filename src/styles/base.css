@@ -690,6 +690,7 @@
 .cb-bean-header {
 	display: flex;
 	justify-content: flex-end;
+	gap: 8px;
 	padding-bottom: 8px;
 }
 .cb-bean-section-title {
@@ -758,13 +759,15 @@
 	font-weight: var(--font-semibold);
 	color: var(--text-normal);
 }
-.block-language-beans .cb-bean-weight {
+.block-language-beans .cb-bean-weight,
+.cubicj-data-manage-modal .cb-bean-weight {
 	cursor: pointer;
 	border-radius: var(--radius-s);
 	padding: 1px 4px;
 	margin: -1px -4px;
 }
-.block-language-beans .cb-bean-weight:hover {
+.block-language-beans .cb-bean-weight:hover,
+.cubicj-data-manage-modal .cb-bean-weight:hover {
 	background: var(--background-modifier-border);
 }
 body.is-mobile .cb-bean-row {
