@@ -29,10 +29,12 @@ export class DesktopRuntime {
 
 		this.plugin.acaiaService = new AcaiaService({ logger, noblePath });
 
-		this.plugin.beanBlock.setScaleWeightGetter(() => {
+		const getScaleWeight = (): number | null => {
 			if (this.plugin.acaiaService?.state !== 'connected') return null;
 			return this.plugin.acaiaService.lastWeight;
-		});
+		};
+		this.plugin.getScaleWeight = getScaleWeight;
+		this.plugin.beanBlock.setScaleWeightGetter(getScaleWeight);
 
 		this.plugin.registerView(VIEW_TYPE_BREWING, (leaf) => new BrewingView(leaf, this.plugin));
 

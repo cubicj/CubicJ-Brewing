@@ -26,6 +26,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 	vaultData!: VaultDataService;
 	pluginLogger: PluginLogger | null = null;
 	beanBlock!: BeanCodeBlock;
+	getScaleWeight: (() => number | null) | null = null;
 	private fileAdapter!: FileAdapter;
 	private equipmentStorage!: EquipmentStorage;
 	private equipmentState: EquipmentSettings = {
