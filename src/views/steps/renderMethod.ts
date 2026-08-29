@@ -18,6 +18,7 @@ export function renderMethod(container: HTMLElement, ctx: StepRenderContext): vo
 		sel.drink = selectedDrink ?? undefined;
 	};
 
+	container.createEl('h4', { text: t('form.method') });
 	const methodItems = [
 		{ value: 'filter' as BrewMethod, label: getMethodLabel('filter') },
 		{ value: 'espresso' as BrewMethod, label: getMethodLabel('espresso') },
