@@ -617,3 +617,78 @@ describe('back navigation transitions', () => {
 		expect(s.selection.bean).toBeUndefined();
 	});
 });
+
+const quickFixBean = {
+	path: 'Beans/b.md',
+	name: 'B',
+	roaster: '',
+	status: 'active' as const,
+	roastDate: null,
+	weight: null,
+};
+
+describe('cancelBrewingRun manual-result clearing', () => {
+	it('clears manual time and yield entered during a cancelled run', () => {
+		const s = new BrewFlowState();
+		s.startBrew();
+		s.selectMethod('filter', 'hot');
+		s.selectBean(quickFixBean);
+		s.startBrewing();
+		s.beginBrewingRun();
+		s.updateVariables({ time: 42, yield: 210 });
+		s.cancelBrewingRun();
+		expect(s.selection.time).toBeUndefined();
+		expect(s.selection.yield).toBeUndefined();
+		expect(s.brewingStarted).toBe(false);
+		expect(s.step).toBe('brewing');
+	});
+});
+
+describe('beginBrewingRun return value', () => {
+	it('returns true on the first call and false on re-entry', () => {
+		const s = new BrewFlowState();
+		s.startBrew();
+		s.selectMethod('filter', 'hot');
+		s.selectBean(quickFixBean);
+		s.startBrewing();
+		expect(s.beginBrewingRun()).toBe(true);
+		expect(s.beginBrewingRun()).toBe(false);
+	});
+
+	it('returns false outside the brewing step', () => {
+		const s = new BrewFlowState();
+		s.startBrew();
+		expect(s.beginBrewingRun()).toBe(false);
+	});
+});
+
+describe('rewindToMethod', () => {
+	it('clears equipment and dials immediately while retaining the bean', () => {
+		const s = new BrewFlowState();
+		s.startBrew();
+		s.selectMethod('filter', 'hot');
+		s.selectBean(quickFixBean);
+		s.updateVariables({ grindSize: 20, dose: 15, waterTemp: 92, grinder: 'G1', dripper: 'V60' });
+		s.rewindToMethod();
+		expect(s.step).toBe('method');
+		expect(s.selection.bean).toEqual(quickFixBean);
+		expect(s.selection.grindSize).toBeUndefined();
+		expect(s.selection.dose).toBeUndefined();
+		expect(s.selection.waterTemp).toBeUndefined();
+		expect(s.selection.grinder).toBeUndefined();
+		expect(s.selection.dripper).toBeUndefined();
+	});
+
+	it('is a no-op outside the setup phase', () => {
+		const s = new BrewFlowState();
+		s.startBrew();
+		s.selectMethod('filter', 'hot');
+		s.selectBean(quickFixBean);
+		s.updateVariables({ grindSize: 20, dose: 15 });
+		s.startBrewing();
+		s.beginBrewingRun();
+		s.rewindToMethod();
+		expect(s.step).toBe('brewing');
+		expect(s.selection.grindSize).toBe(20);
+	});
+});

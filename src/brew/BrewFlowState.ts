@@ -120,14 +120,17 @@ export class BrewFlowState {
 		this.step = 'brewing';
 	}
 
-	beginBrewingRun(): void {
-		if (this.step !== 'brewing' || this.brewingStarted) return;
+	beginBrewingRun(): boolean {
+		if (this.step !== 'brewing' || this.brewingStarted) return false;
 		this.brewingStarted = true;
+		return true;
 	}
 
 	cancelBrewingRun(): void {
 		if (this.step !== 'brewing') return;
 		this.brewingStarted = false;
+		this.selection.time = undefined;
+		this.selection.yield = undefined;
 	}
 
 	finishBrewing(time?: number, yieldGrams?: number): void {
@@ -143,6 +146,12 @@ export class BrewFlowState {
 		this.selection.time = undefined;
 		this.selection.yield = undefined;
 		this.step = 'brewing';
+	}
+
+	rewindToMethod(): void {
+		if (this.phase !== 'setup') return;
+		this.clearEquipment();
+		if (FLOW_ORDER.indexOf(this.step) > FLOW_ORDER.indexOf('method')) this.step = 'method';
 	}
 
 	goToStep(step: BrewFlowStep): void {
