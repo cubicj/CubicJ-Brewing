@@ -105,7 +105,6 @@ function makeHarness(
 		resetToIdle: vi.fn(),
 	};
 	const container = createContainer();
-	let ctx!: StepRenderContext;
 	const renderContent = vi.fn(() => {
 		container.empty();
 		renderBrewing(container, ctx);
@@ -123,7 +122,7 @@ function makeHarness(
 		if (flowState.brewingStarted) flowState.cancelBrewingRun();
 		void runCoordinator.startRun();
 	}
-	ctx = {
+	const ctx = {
 		flowState,
 		plugin: {
 			acaiaService: { state: connected ? 'connected' : 'disconnected' },
