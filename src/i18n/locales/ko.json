@@ -21,6 +21,7 @@
 	"brew.expand": "확대",
 	"brew.done": "완료",
 	"brew.startBrewing": "브루잉 시작",
+	"brew.redoBrew": "다시 추출",
 	"brew.saving": "저장 중...",
 	"brew.saved": "저장 완료",
 	"brew.saveFailed": "저장 실패",

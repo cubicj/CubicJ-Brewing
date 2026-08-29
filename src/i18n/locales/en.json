@@ -21,6 +21,7 @@
 	"brew.expand": "Expand",
 	"brew.done": "Done",
 	"brew.startBrewing": "Start brewing",
+	"brew.redoBrew": "Redo brew",
 	"brew.saving": "Saving...",
 	"brew.saved": "Saved",
 	"brew.saveFailed": "Save failed",

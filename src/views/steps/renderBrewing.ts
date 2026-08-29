@@ -2,11 +2,16 @@ import { Notice } from 'obsidian';
 import { estimateYield } from '../../brew/yieldEstimator';
 import { BrewProfileChart } from '../BrewProfileChart';
 import { BrewProfileModal } from '../BrewProfileModal';
+import { createStepper } from '../Stepper';
 import { t } from '../../i18n/index';
 import type { StepRenderContext } from '../StepRenderers';
 
 export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): void {
 	container.addClass('brew-flow-active-brew');
+	if (ctx.flowState.phase === 'review') {
+		renderReview(container, ctx);
+		return;
+	}
 	const isEspresso = ctx.flowState.selection.method === 'espresso';
 	const scaleConnected = ctx.plugin.acaiaService?.state === 'connected';
 
@@ -19,8 +24,7 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 		});
 		doneBtn.addEventListener('click', () => {
 			ctx.flowState.finishBrewing(undefined, undefined);
-			ctx.accordion.expand('saving');
-			ctx.accordion.update();
+			ctx.renderContent();
 		});
 		return;
 	}
@@ -38,31 +42,15 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 		}
 	}
 
-	let chart: BrewProfileChart | null = null;
-	const hasProfile = ctx.recorder.getPoints().length > 0;
-
-	if (ctx.flowState.brewingStarted && scaleConnected) {
-		const chartContainer = container.createDiv({ cls: 'brew-profile-container' });
-		const liveChart = new BrewProfileChart(chartContainer);
-		chart = liveChart;
-		ctx.registerCleanup(() => liveChart.destroy());
-		liveChart.startLive(ctx.recorder);
-	} else if (!ctx.flowState.brewingStarted && hasProfile) {
-		const chartWrapper = container.createDiv({ cls: 'brew-profile-wrapper' });
-		const expandBtn = chartWrapper.createEl('button', { text: '⛶', cls: 'brew-profile-expand-btn' });
-		expandBtn.setAttribute('aria-label', t('brew.expand'));
-		expandBtn.addEventListener('click', () => {
-			const pts = ctx.recorder.getPoints();
-			const bean = ctx.flowState.selection.bean?.name ?? '';
-			new BrewProfileModal(ctx.plugin.app, bean, { type: 'expand', points: pts }).open();
-		});
-		const chartContainer = chartWrapper.createDiv({ cls: 'brew-profile-container' });
-		const staticChart = new BrewProfileChart(chartContainer);
-		ctx.registerCleanup(() => staticChart.destroy());
-		staticChart.renderStatic(ctx.recorder.getPoints());
-	}
-
 	if (ctx.flowState.brewingStarted) {
+		let chart: BrewProfileChart | null = null;
+		if (scaleConnected) {
+			const chartContainer = container.createDiv({ cls: 'brew-profile-container' });
+			const liveChart = new BrewProfileChart(chartContainer);
+			chart = liveChart;
+			ctx.registerCleanup(() => liveChart.destroy());
+			liveChart.startLive(ctx.recorder);
+		}
 		const controls = container.createDiv({ cls: 'brewing-controls' });
 		const stopBtn = controls.createEl('button', { text: t('brew.done'), cls: 'brewing-ctrl-btn brew-flow-stop-btn' });
 		const stopBrewing = async () => {
@@ -79,8 +67,7 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 				} else {
 					ctx.flowState.finishBrewing(undefined, undefined);
 				}
-				ctx.accordion.expand('saving');
-				ctx.accordion.update();
+				ctx.renderContent();
 			} catch (err) {
 				console.error('[StepRenderers] brew stop failed:', err);
 				new Notice(t('brew.unexpectedError'));
@@ -89,7 +76,27 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 		stopBtn.addEventListener('click', () => {
 			void stopBrewing();
 		});
-	} else if (!hasProfile) {
+		const cancelBtn = controls.createEl('button', {
+			text: t('common.cancel'),
+			cls: 'brewing-ctrl-btn brew-flow-cancel-btn',
+		});
+		const cancelBrewing = async () => {
+			try {
+				if (chart) chart.stopLive();
+				ctx.recorder.reset();
+				ctx.flowState.cancelBrewingRun();
+				if (scaleConnected) await ctx.timerController.cancelRun();
+				else ctx.timerController.resetToIdle();
+				ctx.renderContent();
+			} catch (err) {
+				console.error('[StepRenderers] brew cancel failed:', err);
+				new Notice(t('brew.unexpectedError'));
+			}
+		};
+		cancelBtn.addEventListener('click', () => {
+			void cancelBrewing();
+		});
+	} else {
 		const controls = container.createDiv({ cls: 'brewing-controls' });
 		const startBtn = controls.createEl('button', {
 			text: t('brew.startBrewing'),
@@ -113,4 +120,60 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 			void startBrewing();
 		});
 	}
+}
+
+function renderReview(container: HTMLElement, ctx: StepRenderContext): void {
+	const sel = ctx.flowState.selection;
+	const points = ctx.recorder.getPoints();
+
+	if (points.length > 0) {
+		const chartWrapper = container.createDiv({ cls: 'brew-profile-wrapper' });
+		const expandBtn = chartWrapper.createEl('button', { text: '⛶', cls: 'brew-profile-expand-btn' });
+		expandBtn.setAttribute('aria-label', t('brew.expand'));
+		expandBtn.addEventListener('click', () => {
+			const pts = ctx.recorder.getPoints();
+			const bean = sel.bean?.name ?? '';
+			new BrewProfileModal(ctx.plugin.app, bean, { type: 'expand', points: pts }).open();
+		});
+		const chartContainer = chartWrapper.createDiv({ cls: 'brew-profile-container' });
+		const staticChart = new BrewProfileChart(chartContainer);
+		ctx.registerCleanup(() => staticChart.destroy());
+		staticChart.renderStatic(points);
+	} else {
+		const manualForm = container.createDiv({ cls: 'brew-flow-form' });
+		createStepper(manualForm, {
+			label: t('modal.time'),
+			initial: sel.time ?? 0,
+			min: 0,
+			max: 600,
+			step: 1,
+			format: (v) => t('modal.seconds', { n: v }),
+			pxPerStep: 6,
+			onChange: (v) => {
+				ctx.flowState.updateVariables({ time: v || undefined });
+				ctx.accordion.updateSummaries();
+			},
+		});
+		createStepper(manualForm, {
+			label: t('modal.extractionYield'),
+			initial: sel.yield ?? 0,
+			min: 0,
+			max: 1000,
+			step: 0.1,
+			format: (v) => `${v.toFixed(1)}g`,
+			pxPerStep: 12,
+			onChange: (v) => {
+				ctx.flowState.updateVariables({ yield: v || undefined });
+				ctx.accordion.updateSummaries();
+			},
+		});
+	}
+
+	const controls = container.createDiv({ cls: 'brewing-controls' });
+	const redoBtn = controls.createEl('button', { text: t('brew.redoBrew'), cls: 'brewing-ctrl-btn brew-flow-redo-btn' });
+	redoBtn.addEventListener('click', () => {
+		ctx.flowState.redoBrewing();
+		ctx.recorder.reset();
+		ctx.renderContent();
+	});
 }
