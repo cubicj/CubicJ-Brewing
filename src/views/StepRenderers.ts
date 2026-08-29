@@ -90,7 +90,7 @@ export function getStepSummary(step: FlowStep, sel: BrewFlowSelection): string {
 			const fmt = (v: number) => parseFloat(v.toFixed(2));
 			const parts: string[] = [`${t('summary.grindSize')} ${fmt(sel.grindSize)}`];
 			if (sel.rpm != null) parts.push(`RPM ${Math.round(sel.rpm)}`);
-			parts.push(`${t('summary.dose')} ${fmt(sel.dose!)}g`);
+			parts.push(`${t('summary.dose')} ${fmt(sel.dose)}g`);
 			if (sel.method === 'filter' && sel.waterTemp) parts.push(`${sel.waterTemp}°C`);
 			return parts.join(' · ');
 		}
