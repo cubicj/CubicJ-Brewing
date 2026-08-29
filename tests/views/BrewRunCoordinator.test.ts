@@ -28,6 +28,7 @@ interface TimerMock {
 	handleScaleButton: ReturnType<typeof vi.fn>;
 	freeze: ReturnType<typeof vi.fn>;
 	cancelRun: ReturnType<typeof vi.fn>;
+	isIdle: ReturnType<typeof vi.fn>;
 	resetToIdle: ReturnType<typeof vi.fn>;
 	getElapsedSeconds: ReturnType<typeof vi.fn>;
 }
@@ -38,6 +39,7 @@ function makeTimer(elapsed = 90): TimerMock {
 		handleScaleButton: vi.fn(),
 		freeze: vi.fn(async () => {}),
 		cancelRun: vi.fn(async () => {}),
+		isIdle: vi.fn(() => true),
 		resetToIdle: vi.fn(),
 		getElapsedSeconds: vi.fn(() => elapsed),
 	};
@@ -310,12 +312,28 @@ describe('finishRun', () => {
 });
 
 describe('external control absorption', () => {
-	it('physical timer_start while armed begins the run without a BLE timer round-trip', async () => {
+	it('does not absorb a timer_start as a run while the service is not connected', async () => {
+		const flow = makeFlow();
+		const timer = makeTimer();
+		const { coordinator, recorder } = makeCoordinator(flow, timer, 'connecting');
+		const beginBrewingRun = vi.spyOn(flow, 'beginBrewingRun');
+		const recorderStart = vi.spyOn(recorder, 'start');
+		coordinator.handleScaleButton({ type: 'timer_start' });
+		await vi.waitFor(() => expect(timer.handleScaleButton).toHaveBeenCalledWith({ type: 'timer_start' }));
+		expect(beginBrewingRun).not.toHaveBeenCalled();
+		expect(recorderStart).not.toHaveBeenCalled();
+	});
+
+	it('still absorbs timer_start as a run start while connected and armed', async () => {
 		const flow = makeFlow();
 		const timer = makeTimer();
 		const { coordinator, recorder, renderContent } = makeCoordinator(flow, timer);
+		const beginBrewingRun = vi.spyOn(flow, 'beginBrewingRun');
+		const recorderStart = vi.spyOn(recorder, 'start');
 		coordinator.handleScaleButton({ type: 'timer_start' });
 		await vi.waitFor(() => expect(flow.brewingStarted).toBe(true));
+		expect(beginBrewingRun).toHaveBeenCalledTimes(1);
+		expect(recorderStart).toHaveBeenCalledTimes(1);
 		expect(flow.brewingStarted).toBe(true);
 		expect(recorder.isRecording).toBe(true);
 		expect(timer.handleScaleButton).toHaveBeenCalledWith({ type: 'timer_start' });
@@ -323,28 +341,19 @@ describe('external control absorption', () => {
 		expect(renderContent).toHaveBeenCalledWith('brewing');
 	});
 
-	it('physical timer_stop while running finishes the run', async () => {
+	it('routes running + timer_stop to finishRun and timer_reset to plain pass-through', async () => {
 		const flow = makeFlow();
 		const timer = makeTimer(95);
 		const { coordinator } = makeCoordinator(flow, timer);
+		const cancelBrewingRun = vi.spyOn(flow, 'cancelBrewingRun');
 		await coordinator.startRun();
+		coordinator.handleScaleButton({ type: 'timer_reset' });
+		await vi.waitFor(() => expect(timer.handleScaleButton).toHaveBeenCalledWith({ type: 'timer_reset' }));
+		expect(cancelBrewingRun).not.toHaveBeenCalled();
+		expect(flow.brewingStarted).toBe(true);
 		coordinator.handleScaleButton({ type: 'timer_stop' });
 		await vi.waitFor(() => expect(flow.step).toBe('saving'));
 		expect(flow.selection.time).toBe(95);
-	});
-
-	it('physical timer_reset while running cancels the run', async () => {
-		const flow = makeFlow();
-		const timer = makeTimer();
-		const { coordinator, recorder } = makeCoordinator(flow, timer);
-		await coordinator.startRun();
-		recorder.record(10);
-		coordinator.handleScaleButton({ type: 'timer_reset' });
-		await vi.waitFor(() => expect(timer.handleScaleButton).toHaveBeenCalledWith({ type: 'timer_reset' }));
-		expect(flow.step).toBe('brewing');
-		expect(flow.brewingStarted).toBe(false);
-		expect(recorder.getPoints()).toHaveLength(0);
-		expect(timer.handleScaleButton).toHaveBeenCalledWith({ type: 'timer_reset' });
 	});
 
 	it('passes buttons through outside the brewing step', async () => {
@@ -412,6 +421,75 @@ describe('external control absorption', () => {
 	});
 });
 
+describe('redo and save ownership', () => {
+	it('redoRun resets recorder and flow, bumps generation, idles a filter timer, rerenders', () => {
+		const flow = makeFlow();
+		flow.finishBrewing(90, 225);
+		const timer = makeTimer();
+		const { coordinator, recorder, renderContent } = makeCoordinator(flow, timer);
+		const recorderReset = vi.spyOn(recorder, 'reset');
+		const redoBrewing = vi.spyOn(flow, 'redoBrewing');
+		const generation = coordinator.getGeneration();
+		const ok = coordinator.redoRun();
+		expect(ok).toBe(true);
+		expect(coordinator.getGeneration()).toBe(generation + 1);
+		expect(recorderReset).toHaveBeenCalledTimes(1);
+		expect(redoBrewing).toHaveBeenCalledTimes(1);
+		expect(timer.resetToIdle).toHaveBeenCalledTimes(1);
+		expect(renderContent).toHaveBeenCalledTimes(1);
+	});
+
+	it('redoRun leaves the espresso timer untouched', () => {
+		const flow = new BrewFlowState();
+		flow.startBrew();
+		flow.selectMethod('espresso', 'hot', 'shot');
+		flow.selectBean(bean);
+		flow.updateVariables({ grindSize: 20, dose: 15, basket: 'B18' });
+		flow.startBrewing();
+		flow.finishBrewing(30, 36);
+		const timer = makeTimer();
+		const { coordinator } = makeCoordinator(flow, timer);
+		expect(coordinator.redoRun()).toBe(true);
+		expect(timer.resetToIdle).not.toHaveBeenCalled();
+	});
+
+	it('redoRun refuses outside review and while a save is pending', () => {
+		const flow = makeFlow();
+		const timer = makeTimer();
+		const { coordinator, recorder } = makeCoordinator(flow, timer);
+		const recorderReset = vi.spyOn(recorder, 'reset');
+		expect(coordinator.redoRun()).toBe(false);
+		flow.finishBrewing(90, 225);
+		expect(coordinator.beginSave()).toBe(true);
+		expect(coordinator.isSavePending()).toBe(true);
+		expect(coordinator.beginSave()).toBe(false);
+		expect(coordinator.redoRun()).toBe(false);
+		expect(recorderReset).not.toHaveBeenCalled();
+		coordinator.endSave();
+		expect(coordinator.isSavePending()).toBe(false);
+		expect(coordinator.redoRun()).toBe(true);
+	});
+
+	it('redoRun invalidates an in-flight start continuation via the generation bump', async () => {
+		const flow = makeFlow();
+		const timer = makeTimer();
+		const start = makeDeferred();
+		timer.handleTimerClick.mockImplementationOnce(() => start.promise);
+		const { coordinator, recorder } = makeCoordinator(flow, timer);
+		const pending = coordinator.startRun();
+		await vi.waitFor(() => expect(timer.handleTimerClick).toHaveBeenCalledTimes(1));
+		flow.finishBrewing(90, 225);
+		timer.resetToIdle.mockClear();
+		expect(coordinator.redoRun()).toBe(true);
+		start.resolve();
+		await expect(pending).resolves.toBe(false);
+		expect(flow.step).toBe('brewing');
+		expect(flow.brewingStarted).toBe(false);
+		expect(recorder.isRecording).toBe(false);
+		expect(timer.resetToIdle).toHaveBeenCalledTimes(1);
+	});
+});
+
 describe('resetAll generation token', () => {
 	it('advances reset cleanup after a bounded timer callback never settles', async () => {
 		vi.useFakeTimers();
@@ -432,7 +510,7 @@ describe('resetAll generation token', () => {
 			await rejection;
 			coordinator.resetAll();
 			await vi.advanceTimersByTimeAsync(0);
-			expect(callbacks.resetTimer).toHaveBeenCalledTimes(2);
+			expect(callbacks.resetTimer).toHaveBeenCalledTimes(1);
 			expect(timer.getElapsedSeconds()).toBe(0);
 			expect(timerBtn.textContent).toBe('\u23FB');
 		} finally {
@@ -589,9 +667,20 @@ describe('resetAll generation token', () => {
 		await expect(pending).resolves.toBe(true);
 	});
 
-	it('resets recorder and timer through the connected cancel path', async () => {
+	it('resetAll leaves the scale untouched when the local timer is idle', async () => {
 		const flow = makeFlow();
 		const timer = makeTimer();
+		timer.isIdle.mockReturnValue(true);
+		const { coordinator } = makeCoordinator(flow, timer);
+		coordinator.resetAll();
+		await vi.waitFor(() => expect(timer.resetToIdle).toHaveBeenCalled());
+		expect(timer.cancelRun).not.toHaveBeenCalled();
+	});
+
+	it('resetAll cancels via the scale when the local timer is engaged and connected', async () => {
+		const flow = makeFlow();
+		const timer = makeTimer();
+		timer.isIdle.mockReturnValue(false);
 		const { coordinator, recorder } = makeCoordinator(flow, timer);
 		await coordinator.startRun();
 		recorder.record(10);

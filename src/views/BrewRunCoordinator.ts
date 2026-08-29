@@ -18,6 +18,7 @@ export class BrewRunCoordinator {
 	private terminalTransition = false;
 	private ops: Promise<void> = Promise.resolve();
 	private timerOperationClaim = 0;
+	private savePending = false;
 
 	constructor(
 		private flowState: BrewFlowState,
@@ -36,6 +37,39 @@ export class BrewRunCoordinator {
 
 	isScaleModeRun(): boolean {
 		return this.hasActiveRun() && this.runMode === 'scale';
+	}
+
+	beginSave(): boolean {
+		if (this.savePending) return false;
+		this.savePending = true;
+		return true;
+	}
+
+	endSave(): void {
+		this.savePending = false;
+	}
+
+	isSavePending(): boolean {
+		return this.savePending;
+	}
+
+	getGeneration(): number {
+		return this.generation;
+	}
+
+	redoRun(): boolean {
+		if (this.savePending || this.flowState.step !== 'saving') return false;
+		this.generation += 1;
+		this.timerOperationClaim += 1;
+		this.linkLost = false;
+		this.runMode = 'none';
+		this.timerOwned = false;
+		this.terminalTransition = false;
+		this.recorder.reset();
+		this.flowState.redoBrewing();
+		if (this.flowState.selection.method === 'filter') this.timerController.resetToIdle();
+		this.deps.renderContent();
+		return true;
 	}
 
 	async startRun(): Promise<boolean> {
@@ -163,11 +197,13 @@ export class BrewRunCoordinator {
 	}
 
 	handleScaleButton(event: ButtonEvent): void {
-		if (this.flowState.selection.method === 'filter' && this.flowState.step === 'brewing') {
+		if (
+			this.flowState.selection.method === 'filter' &&
+			this.flowState.step === 'brewing' &&
+			this.deps.getScaleState() === 'connected'
+		) {
 			const running = this.flowState.brewingStarted;
-			if (this.terminalTransition && running && (event.type === 'timer_stop' || event.type === 'timer_reset')) {
-				return;
-			}
+			if (this.terminalTransition && running && event.type === 'timer_stop') return;
 			if (!running && event.type === 'timer_start') {
 				const gen = ++this.generation;
 				this.runTimerOperation((claim) => {
@@ -196,27 +232,6 @@ export class BrewRunCoordinator {
 						if (ok) this.deps.renderContent();
 					})
 					.catch((err) => console.error('[BrewRunCoordinator] scale stop failed:', err));
-				return;
-			}
-			if (running && event.type === 'timer_reset') {
-				const gen = ++this.generation;
-				this.terminalTransition = true;
-				this.recorder.reset();
-				this.flowState.cancelBrewingRun();
-				this.linkLost = false;
-				this.runMode = 'none';
-				this.timerOwned = false;
-				this.runTimerOperation(() => this.timerController.handleScaleButton(event))
-					.then(() => {
-						if (gen === this.generation) {
-							this.terminalTransition = false;
-							this.deps.renderContent('brewing');
-						}
-					})
-					.catch((err) => {
-						if (gen === this.generation) this.terminalTransition = false;
-						console.error('[BrewRunCoordinator] scale reset failed:', err);
-					});
 				return;
 			}
 		}
@@ -257,7 +272,7 @@ export class BrewRunCoordinator {
 		this.recorder.reset();
 		const connected = this.deps.getScaleState() === 'connected';
 		this.runTimerOperation(async () => {
-			if (connected) await this.timerController.cancelRun();
+			if (connected && !this.timerController.isIdle()) await this.timerController.cancelRun();
 			else this.timerController.resetToIdle();
 		}).catch((err) => {
 			console.error('[BrewRunCoordinator] reset timer cancel failed:', err);
