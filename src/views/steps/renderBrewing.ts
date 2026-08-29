@@ -17,14 +17,16 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 
 	if (isEspresso) {
 		container.createDiv({ cls: 'brew-flow-espresso-msg', text: t('brew.espressoMsg') });
+		renderManualResultSteppers(container, ctx);
 		const controls = container.createDiv({ cls: 'brewing-controls' });
 		const doneBtn = controls.createEl('button', {
 			text: t('brew.extractionDone'),
 			cls: 'brewing-ctrl-btn brew-flow-stop-btn',
 		});
 		doneBtn.addEventListener('click', () => {
-			ctx.flowState.finishBrewing(undefined, undefined);
-			ctx.renderContent('brewing', 'saving');
+			const sel = ctx.flowState.selection;
+			ctx.flowState.finishBrewing(sel.time, sel.yield);
+			ctx.renderContent();
 		});
 		return;
 	}
@@ -50,6 +52,8 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 			chart = liveChart;
 			ctx.registerCleanup(() => liveChart.destroy());
 			liveChart.startLive(ctx.recorder);
+		} else {
+			renderManualResultSteppers(container, ctx);
 		}
 		const controls = container.createDiv({ cls: 'brewing-controls' });
 		const stopBtn = controls.createEl('button', { text: t('brew.done'), cls: 'brewing-ctrl-btn brew-flow-stop-btn' });
@@ -65,13 +69,10 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 						(parseFloat(ctx.getWeightText()) || undefined);
 					ctx.flowState.finishBrewing(totalSeconds || undefined, yieldGrams);
 				} else {
-					ctx.flowState.finishBrewing(undefined, undefined);
+					const sel = ctx.flowState.selection;
+					ctx.flowState.finishBrewing(sel.time, sel.yield);
 				}
-				if (ctx.recorder.getPoints().length > 0) {
-					ctx.renderContent();
-				} else {
-					ctx.renderContent('brewing', 'saving');
-				}
+				ctx.renderContent();
 			} catch (err) {
 				console.error('[StepRenderers] brew stop failed:', err);
 				new Notice(t('brew.unexpectedError'));
@@ -132,6 +133,37 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 	}
 }
 
+function renderManualResultSteppers(container: HTMLElement, ctx: StepRenderContext): void {
+	const sel = ctx.flowState.selection;
+	const manualForm = container.createDiv({ cls: 'brew-flow-form' });
+	createStepper(manualForm, {
+		label: t('modal.time'),
+		initial: sel.time ?? 0,
+		min: 0,
+		max: 600,
+		step: 1,
+		format: (v) => t('modal.seconds', { n: v }),
+		pxPerStep: 6,
+		onChange: (v) => {
+			ctx.flowState.updateVariables({ time: v || undefined });
+			ctx.accordion.updateSummaries();
+		},
+	});
+	createStepper(manualForm, {
+		label: t('modal.extractionYield'),
+		initial: sel.yield ?? 0,
+		min: 0,
+		max: 1000,
+		step: 0.1,
+		format: (v) => `${v.toFixed(1)}g`,
+		pxPerStep: 12,
+		onChange: (v) => {
+			ctx.flowState.updateVariables({ yield: v || undefined });
+			ctx.accordion.updateSummaries();
+		},
+	});
+}
+
 function renderReview(container: HTMLElement, ctx: StepRenderContext): void {
 	const sel = ctx.flowState.selection;
 	const points = ctx.recorder.getPoints();
@@ -150,33 +182,7 @@ function renderReview(container: HTMLElement, ctx: StepRenderContext): void {
 		ctx.registerCleanup(() => staticChart.destroy());
 		staticChart.renderStatic(points);
 	} else {
-		const manualForm = container.createDiv({ cls: 'brew-flow-form' });
-		createStepper(manualForm, {
-			label: t('modal.time'),
-			initial: sel.time ?? 0,
-			min: 0,
-			max: 600,
-			step: 1,
-			format: (v) => t('modal.seconds', { n: v }),
-			pxPerStep: 6,
-			onChange: (v) => {
-				ctx.flowState.updateVariables({ time: v || undefined });
-				ctx.accordion.updateSummaries();
-			},
-		});
-		createStepper(manualForm, {
-			label: t('modal.extractionYield'),
-			initial: sel.yield ?? 0,
-			min: 0,
-			max: 1000,
-			step: 0.1,
-			format: (v) => `${v.toFixed(1)}g`,
-			pxPerStep: 12,
-			onChange: (v) => {
-				ctx.flowState.updateVariables({ yield: v || undefined });
-				ctx.accordion.updateSummaries();
-			},
-		});
+		renderManualResultSteppers(container, ctx);
 	}
 
 	const controls = container.createDiv({ cls: 'brewing-controls' });

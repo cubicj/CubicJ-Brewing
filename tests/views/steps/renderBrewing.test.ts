@@ -215,24 +215,40 @@ describe('renderBrewing phase controls', () => {
 		expect(ctx.timerController.cancelRun).not.toHaveBeenCalled();
 	});
 
-	it('finishing without a recorded profile keeps focus on brewing and expands saving', async () => {
+	it('scale-less running shows manual steppers and done finishes with the entered values', async () => {
 		const container = createContainer();
 		const flowState = makeFlowState('filter');
 		flowState.beginBrewingRun();
 		const { ctx } = makeContext(flowState, [], 'disconnected');
 		renderBrewing(container, ctx);
+		expect(container.querySelectorAll('.cubicj-stepper').length).toBe(2);
+		flowState.updateVariables({ time: 45, yield: 200 });
 		(container.querySelector('.brew-flow-stop-btn') as HTMLButtonElement).click();
-		await vi.waitFor(() => expect(ctx.renderContent).toHaveBeenCalledWith('brewing', 'saving'));
+		await vi.waitFor(() => expect(ctx.renderContent).toHaveBeenCalledWith());
 		expect(ctx.flowState.step).toBe('saving');
+		expect(ctx.flowState.selection.time).toBe(45);
+		expect(ctx.flowState.selection.yield).toBe(200);
 	});
 
-	it('espresso done keeps focus on brewing and expands saving', () => {
+	it('connected running shows the chart without manual steppers', () => {
+		const container = createContainer();
+		const ctx = makeRunningContext();
+		renderBrewing(container, ctx);
+		expect(container.querySelectorAll('.cubicj-stepper').length).toBe(0);
+		expect(container.querySelector('.brew-profile-container')).not.toBeNull();
+	});
+
+	it('espresso shows manual steppers next to done and done finishes with the entered values', () => {
 		const container = createContainer();
 		const { ctx } = makeContext(makeFlowState('espresso'));
 		renderBrewing(container, ctx);
+		expect(container.querySelectorAll('.cubicj-stepper').length).toBe(2);
+		ctx.flowState.updateVariables({ time: 30, yield: 36 });
 		(container.querySelector('.brew-flow-stop-btn') as HTMLButtonElement).click();
-		expect(ctx.renderContent).toHaveBeenCalledWith('brewing', 'saving');
+		expect(ctx.renderContent).toHaveBeenCalledWith();
 		expect(ctx.flowState.step).toBe('saving');
+		expect(ctx.flowState.selection.time).toBe(30);
+		expect(ctx.flowState.selection.yield).toBe(36);
 	});
 
 	it('finishing with a recorded profile focuses saving as before', async () => {
