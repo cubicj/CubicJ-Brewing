@@ -86,7 +86,7 @@ export function getStepSummary(step: FlowStep, sel: BrewFlowSelection): string {
 			return parts.join(' · ');
 		}
 		case 'configure': {
-			if (sel.grindSize == null) return '';
+			if (sel.grindSize == null || sel.dose == null) return '';
 			const fmt = (v: number) => parseFloat(v.toFixed(2));
 			const parts: string[] = [`${t('summary.grindSize')} ${fmt(sel.grindSize)}`];
 			if (sel.rpm != null) parts.push(`RPM ${Math.round(sel.rpm)}`);

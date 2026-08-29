@@ -17,6 +17,11 @@ describe('getStepSummary configure', () => {
 		expect(getStepSummary('configure', sel)).toBe('summary.grindSize 20 · RPM 1200 · summary.dose 15g · 93°C');
 	});
 
+	it('returns empty while the dose is not yet set even if the grind size is', () => {
+		const sel: BrewFlowSelection = { method: 'filter', grindSize: 20 };
+		expect(getStepSummary('configure', sel)).toBe('');
+	});
+
 	it('omits RPM when not set', () => {
 		const sel: BrewFlowSelection = { method: 'filter', grindSize: 20, dose: 15, waterTemp: 93 };
 		expect(getStepSummary('configure', sel)).toBe('summary.grindSize 20 · summary.dose 15g · 93°C');
