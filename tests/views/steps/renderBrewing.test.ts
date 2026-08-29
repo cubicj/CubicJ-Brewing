@@ -270,19 +270,12 @@ describe('renderBrewing phase controls', () => {
 		expect(container.querySelector('.brew-flow-stop-btn')).toBeNull();
 	});
 
-	it('review with a recorded profile also shows prefilled time and yield steppers', () => {
+	it('review with a recorded profile shows the chart without result steppers', () => {
 		const flowState = makeReviewFlowWithPoints({ time: 130, yield: 210 });
 		const harness = makeHarness(flowState, { connected: true, points: [{ t: 1, w: 10 }] });
 		renderBrewing(harness.container, harness.ctx);
 		expect(harness.container.querySelector('.brew-profile-container')).not.toBeNull();
-		const steppers = harness.container.querySelectorAll<HTMLElement>('.brew-flow-form .cubicj-stepper');
-		expect(steppers).toHaveLength(2);
-		expect(steppers[0].querySelector('.cubicj-stepper-value')?.textContent).toBe('130s');
-		expect(steppers[1].querySelector('.cubicj-stepper-value')?.textContent).toBe('210.0g');
-		steppers[0].querySelectorAll<HTMLButtonElement>('.cubicj-stepper-btn')[1].click();
-		steppers[1].querySelectorAll<HTMLButtonElement>('.cubicj-stepper-btn')[1].click();
-		expect(flowState.selection.time).toBe(131);
-		expect(flowState.selection.yield).toBe(210.1);
+		expect(harness.container.querySelectorAll('.brew-flow-form .cubicj-stepper')).toHaveLength(0);
 	});
 
 	it('review without a profile renders manual time/yield steppers seeded from selection', () => {

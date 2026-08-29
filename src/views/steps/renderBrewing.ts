@@ -187,8 +187,9 @@ function renderReview(container: HTMLElement, ctx: StepRenderContext): void {
 		const staticChart = new BrewProfileChart(chartContainer);
 		ctx.registerCleanup(() => staticChart.destroy());
 		staticChart.renderStatic(points);
+	} else {
+		renderManualResultSteppers(container, ctx);
 	}
-	renderManualResultSteppers(container, ctx);
 
 	const controls = container.createDiv({ cls: 'brewing-controls' });
 	const redoBtn = controls.createEl('button', { text: t('brew.redoBrew'), cls: 'brewing-ctrl-btn brew-flow-redo-btn' });
