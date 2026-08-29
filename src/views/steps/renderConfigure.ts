@@ -16,6 +16,7 @@ import { renderRecipeSelect } from './configure/RecipeField';
 
 export function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	container.addClass('brew-flow-configure');
+	const isReview = ctx.flowState.phase === 'review';
 	const sel = ctx.flowState.selection;
 	const isFilter = sel.method === 'filter';
 	const isEspresso = sel.method === 'espresso';
@@ -36,16 +37,15 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 		const record = records[newIndex];
 		if (!record) return;
 		recordIndex = newIndex;
-		cardControls.updateCard(record);
-		cardControls.updateNav(newIndex, records.length);
+		cardControls?.updateCard(record);
+		cardControls?.updateNav(newIndex, records.length);
 		applyRecordSelection(record);
 	};
-	const cardControls = renderLastRecordCard(container, onNavigate, () => ({
-		index: recordIndex,
-		total: records.length,
-	}));
-	cardControls.updateCard(undefined);
-	cardControls.updateNav(0, 0);
+	const cardControls = isReview
+		? null
+		: renderLastRecordCard(container, onNavigate, () => ({ index: recordIndex, total: records.length }));
+	cardControls?.updateCard(undefined);
+	cardControls?.updateNav(0, 0);
 
 	const form = container.createDiv({ cls: 'brew-flow-form' });
 
@@ -57,8 +57,8 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 		recordIndex = 0;
 		const record = findNewestApplicableRecord(records, ctx.equipment);
 		if (record) recordIndex = records.indexOf(record);
-		cardControls.updateCard(record);
-		cardControls.updateNav(record ? recordIndex : 0, record ? records.length : 0);
+		cardControls?.updateCard(record);
+		cardControls?.updateNav(record ? recordIndex : 0, record ? records.length : 0);
 	};
 	const fetchFreshStrictRecords = async () => {
 		if (!isRenderAlive) return undefined;
@@ -89,6 +89,7 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 	});
 
 	const handleEquipmentChange = () => {
+		if (isReview) return;
 		void queryAndApplyDials().catch(() => undefined);
 	};
 	const handleGrinderChange = (grinder: GrinderConfig) => {
@@ -146,48 +147,50 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 		ctx.flowState.nextConfigureInitToken();
 		records = [];
 		recordIndex = 0;
-		cardControls.updateCard(undefined);
-		cardControls.updateNav(0, 0);
+		cardControls?.updateCard(undefined);
+		cardControls?.updateNav(0, 0);
 		const nextRecords = await fetchFreshStrictRecords();
 		if (!isRenderAlive || !nextRecords) return;
 		const record = findNewestApplicableRecord(nextRecords, ctx.equipment);
 		if (record) {
 			recordIndex = nextRecords.indexOf(record);
 			applyRecordSelection(record);
-			cardControls.updateCard(record);
-			cardControls.updateNav(recordIndex, nextRecords.length);
+			cardControls?.updateCard(record);
+			cardControls?.updateNav(recordIndex, nextRecords.length);
 			return;
 		}
 		if (!isRenderAlive) return;
 		applyDefaultDials();
-		cardControls.updateCard(undefined);
-		cardControls.updateNav(0, 0);
+		cardControls?.updateCard(undefined);
+		cardControls?.updateNav(0, 0);
 	};
 
 	renderRecipeSelect(container, ctx.plugin, ctx.flowState);
 
-	const completeBtn = container.createEl('button', { text: t('brew.settingsDone'), cls: 'brew-flow-start-btn' });
-	completeBtn.addEventListener('click', () => {
-		const dialValues = dialControls.readValues();
-		const vars: Partial<BrewFlowSelection> = {
-			grindSize: dialValues.grindSize,
-			dose: dialValues.dose,
-			grinder: sel.grinder,
-			rpm: dialValues.rpm,
-		};
-		if (isFilter) {
-			vars.waterTemp = dialValues.waterTemp;
-			vars.filter = equipRefs.filterSelect!.value;
-			vars.dripper = equipRefs.dripperSelect?.value;
-		}
-		if (isEspresso) {
-			vars.basket = equipRefs.basketSelect!.value;
-			vars.accessories = dialValues.accessories;
-		}
-		ctx.flowState.updateVariables(vars);
-		ctx.flowState.startBrewing();
-		ctx.renderContent();
-	});
+	if (ctx.flowState.step === 'configure') {
+		const completeBtn = container.createEl('button', { text: t('brew.settingsDone'), cls: 'brew-flow-start-btn' });
+		completeBtn.addEventListener('click', () => {
+			const dialValues = dialControls.readValues();
+			const vars: Partial<BrewFlowSelection> = {
+				grindSize: dialValues.grindSize,
+				dose: dialValues.dose,
+				grinder: sel.grinder,
+				rpm: dialValues.rpm,
+			};
+			if (isFilter) {
+				vars.waterTemp = dialValues.waterTemp;
+				vars.filter = equipRefs.filterSelect!.value;
+				vars.dripper = equipRefs.dripperSelect?.value;
+			}
+			if (isEspresso) {
+				vars.basket = equipRefs.basketSelect!.value;
+				vars.accessories = dialValues.accessories;
+			}
+			ctx.flowState.updateVariables(vars);
+			ctx.flowState.startBrewing();
+			ctx.renderContent();
+		});
+	}
 
 	const initFromRecords = async () => {
 		const capturedSetupKey = buildConfigureSetupKey(sel);
@@ -213,17 +216,19 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 			records = applicableLooseRecords;
 			recordIndex = applicableLooseRecords.indexOf(record);
 			applyRecordSelection(record);
-			cardControls.updateCard(record);
-			cardControls.updateNav(recordIndex, applicableLooseRecords.length);
+			cardControls?.updateCard(record);
+			cardControls?.updateNav(recordIndex, applicableLooseRecords.length);
 		} else {
 			applyDefaultsToEquipment();
-			cardControls.updateCard(undefined);
-			cardControls.updateNav(0, 0);
+			cardControls?.updateCard(undefined);
+			cardControls?.updateNav(0, 0);
 		}
 
 		if (!isCurrentConfigureInit()) return;
 		if (capturedSetupKey) ctx.flowState.markConfigureInitialized(capturedSetupKey);
 		await fetchFreshStrictRecords();
 	};
-	void initFromRecords().catch(() => undefined);
+	if (!isReview) {
+		void initFromRecords().catch(() => undefined);
+	}
 }
