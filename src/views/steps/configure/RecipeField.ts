@@ -8,7 +8,10 @@ export function renderRecipeSelect(
 	flowState: BrewFlowState,
 ): void {
 	const recipes = plugin.vaultData.getAllRecipes();
-	if (recipes.length === 0) return;
+	if (recipes.length === 0) {
+		if (flowState.selection.recipe) flowState.clearRecipe();
+		return;
+	}
 
 	const recipeGroup = container.createDiv({ cls: 'brew-flow-recipe-select' });
 	recipeGroup.createEl('label', { text: t('brew.recipe') });
@@ -22,4 +25,10 @@ export function renderRecipeSelect(
 		if (recipe) flowState.selectRecipe(recipe);
 		else flowState.clearRecipe();
 	});
+	const storedPath = flowState.selection.recipe?.path ?? '';
+	recipeSelect.value = storedPath;
+	if (storedPath && recipeSelect.value !== storedPath) {
+		recipeSelect.value = '';
+		flowState.clearRecipe();
+	}
 }

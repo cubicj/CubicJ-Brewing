@@ -33,6 +33,11 @@ function applyPolyfills(el: HTMLElement): HTMLElement {
 		this.classList.remove(...classes);
 	};
 
+	(el as any).toggleClass = function (this: HTMLElement, classes: string | string[], value: boolean) {
+		const classNames = Array.isArray(classes) ? classes : [classes];
+		for (const className of classNames) this.classList.toggle(className, value);
+	};
+
 	(el as any).hasClass = function (this: HTMLElement, cls: string) {
 		return this.classList.contains(cls);
 	};

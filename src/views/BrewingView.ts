@@ -203,6 +203,13 @@ export class BrewingView extends ItemView {
 		this.log('resetFlow');
 		this.flowState.cancel();
 		this.recorder.reset();
+		if (this.plugin.acaiaService?.state === 'connected') {
+			this.timerController.cancelRun().catch((err) => {
+				console.error('[BrewingView] resetFlow timer cancel failed:', err);
+			});
+		} else {
+			this.timerController.resetToIdle();
+		}
 		this.flowState.startBrew();
 		this.accordion.clearExpandedSteps();
 		this.lastFocusedStep = this.flowState.step;

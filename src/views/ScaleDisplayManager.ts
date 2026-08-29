@@ -136,6 +136,7 @@ export class ScaleDisplayManager {
 		if (state === 'disconnected' || state === 'reconnecting') {
 			this.weightEl?.addClass('brewing-dimmed');
 			this.timerEl?.addClass('brewing-dimmed');
+			if (this.weightEl) this.weightEl.textContent = '--';
 			if (state === 'disconnected') {
 				resetTimer();
 			}

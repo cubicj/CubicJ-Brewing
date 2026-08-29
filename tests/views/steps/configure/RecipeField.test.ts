@@ -64,4 +64,38 @@ describe('renderRecipeSelect', () => {
 
 		expect(container.querySelector('select')).toBeNull();
 	});
+
+	it('clears a stored recipe when no recipes exist', () => {
+		const flowState = new BrewFlowState();
+		flowState.startBrew();
+		flowState.selectRecipe(makeRecipe());
+		const container = createContainer();
+		renderRecipeSelect(container, makePlugin([]), flowState);
+
+		expect(flowState.selection.recipe).toBeUndefined();
+		expect(container.querySelector('select')).toBeNull();
+	});
+
+	it('seeds the select from the stored recipe selection on rebuild', () => {
+		const flowState = new BrewFlowState();
+		const recipe = makeRecipe();
+		flowState.startBrew();
+		flowState.selectRecipe(recipe);
+		const container = createContainer();
+		renderRecipeSelect(container, makePlugin([recipe]), flowState);
+		const select = container.querySelector('select')!;
+		expect(select.value).toBe(recipe.path);
+	});
+
+	it('clears a stored recipe that no longer exists in the vault', () => {
+		const flowState = new BrewFlowState();
+		const recipe = makeRecipe();
+		flowState.startBrew();
+		flowState.selectRecipe({ ...recipe, path: 'gone.md' });
+		const container = createContainer();
+		renderRecipeSelect(container, makePlugin([recipe]), flowState);
+		const select = container.querySelector('select')!;
+		expect(select.value).toBe('');
+		expect(flowState.selection.recipe).toBeUndefined();
+	});
 });
