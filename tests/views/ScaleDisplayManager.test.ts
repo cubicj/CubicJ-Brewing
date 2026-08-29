@@ -2,15 +2,20 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { installPolyfills, createContainer } from '../helpers/obsidian-dom-polyfill';
 import { ScaleDisplayManager } from '../../src/views/ScaleDisplayManager';
+import { MAX_RECONNECT_ATTEMPTS } from '../../src/acaia/AcaiaService';
+
+const { tMock } = vi.hoisted(() => ({
+	tMock: vi.fn((key: string) => key),
+}));
 
 vi.mock('../../src/i18n/index', () => ({
-	t: (key: string) => key,
+	t: tMock,
 	initI18n: vi.fn(),
 }));
 
 beforeAll(() => installPolyfills());
 
-function buildManager(): ScaleDisplayManager {
+function buildManager(reconnectAttempt = 0): ScaleDisplayManager {
 	const host = createContainer();
 	const connectBtn = host.createEl('button');
 	const powerOffBtn = host.createEl('button');
@@ -18,7 +23,7 @@ function buildManager(): ScaleDisplayManager {
 		onTimerClick: vi.fn(),
 		onTare: vi.fn(),
 		isConnected: () => true,
-		getReconnectAttempt: () => 0,
+		getReconnectAttempt: () => reconnectAttempt,
 	});
 	manager.buildHeader(host.createDiv());
 	manager.buildData(host.createDiv());
@@ -39,5 +44,19 @@ describe('ScaleDisplayManager stale weight clearing', () => {
 		manager.updateWeight(21.0, true);
 		manager.updateControls('reconnecting', vi.fn());
 		expect(manager.getWeightText()).toBe('--');
+	});
+});
+
+describe('ScaleDisplayManager reconnect status', () => {
+	it('passes the current attempt and maximum attempt count to i18n', () => {
+		const manager = buildManager(4);
+		tMock.mockClear();
+
+		manager.updateHeader('reconnecting');
+
+		expect(tMock).toHaveBeenCalledWith('scale.reconnecting', {
+			attempt: 4,
+			max: MAX_RECONNECT_ATTEMPTS,
+		});
 	});
 });

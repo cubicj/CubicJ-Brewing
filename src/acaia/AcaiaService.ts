@@ -48,7 +48,9 @@ export class AcaiaService extends TypedEmitter<AcaiaEvents> {
 	private lastPacketTime = 0;
 	private packetBuffer = new PacketBuffer();
 	private writeQueue: QueuedWrite[] = [];
+	private currentWrite: QueuedWrite | null = null;
 	private writing = false;
+	private queueGeneration = 0;
 	private scaleTimerRunning = false;
 	private connecting = false;
 	private connectAborted = false;
@@ -469,7 +471,9 @@ export class AcaiaService extends TypedEmitter<AcaiaEvents> {
 		this.log('cleanupConnection()');
 		this.stopTimers();
 		this.packetBuffer.reset();
+		this.queueGeneration++;
 		this.writeQueue = [];
+		this.currentWrite = null;
 		this.writing = false;
 		this.scaleTimerRunning = false;
 		this.disconnecting = false;
@@ -478,7 +482,7 @@ export class AcaiaService extends TypedEmitter<AcaiaEvents> {
 	}
 
 	private pushWrite(data: Buffer, kind: WriteKind): void {
-		if (this.writeQueue.some((entry) => entry.data.equals(data))) {
+		if (this.currentWrite?.data.equals(data) || this.writeQueue.some((entry) => entry.data.equals(data))) {
 			this.log(`write skipped — duplicate ${kind} payload pending`);
 			return;
 		}
@@ -497,15 +501,22 @@ export class AcaiaService extends TypedEmitter<AcaiaEvents> {
 	}
 
 	private async processQueue(): Promise<void> {
+		const generation = this.queueGeneration;
 		this.writing = true;
 		while (this.writeQueue.length > 0) {
 			const entry = this.writeQueue.shift()!;
 			if (!this.transport.canWrite) break;
+			this.currentWrite = entry;
 			try {
 				await this.transport.write(entry.data);
+				if (generation !== this.queueGeneration) return;
+				this.currentWrite = null;
 				this.consecutiveWriteFailures = 0;
 			} catch (err: unknown) {
-				this.consecutiveWriteFailures++;
+				if (generation !== this.queueGeneration) return;
+				this.currentWrite = null;
+				const flushedHeartbeatFailures = this.writeQueue.filter((queued) => queued.kind === 'heartbeat').length;
+				this.consecutiveWriteFailures += 1 + flushedHeartbeatFailures;
 				const msg = err instanceof Error ? err.message : String(err);
 				this.log(`write fail #${this.consecutiveWriteFailures} — ${msg}`);
 				this.writeQueue = [];
@@ -516,7 +527,9 @@ export class AcaiaService extends TypedEmitter<AcaiaEvents> {
 				break;
 			}
 			await new Promise((r) => window.setTimeout(r, 50));
+			if (generation !== this.queueGeneration) return;
 		}
+		if (generation !== this.queueGeneration) return;
 		this.writing = false;
 	}
 

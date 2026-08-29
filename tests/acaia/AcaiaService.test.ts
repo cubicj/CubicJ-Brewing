@@ -504,6 +504,32 @@ describe('AcaiaService handlePacket routing', () => {
 });
 
 describe('AcaiaService write health', () => {
+	it('disconnects after two completely failed heartbeat cycles', async () => {
+		const writeChar = createMockWriteChar();
+		const notifyChar = createMockNotifyChar();
+		const peripheral = createMockPeripheral(writeChar, notifyChar);
+		const noble = createMockNoble(peripheral);
+		const service = new AcaiaService({ nobleFactory: () => noble });
+
+		await service.connect();
+		expect(service.state).toBe('connected');
+
+		const internals = service as unknown as QueueInternals;
+		internals.stopTimers();
+		writeChar.writeAsync = vi.fn().mockRejectedValue(new Error('write failed'));
+
+		internals.lastPacketTime = Date.now();
+		await internals.runHeartbeatCycle();
+		expect(internals.consecutiveWriteFailures).toBe(3);
+		expect(service.state).toBe('connected');
+
+		internals.lastPacketTime = Date.now();
+		await internals.runHeartbeatCycle();
+		expect(service.state).toBe('reconnecting');
+
+		service.destroy();
+	});
+
 	it('triggers disconnect after 6 consecutive write failures', async () => {
 		const writeChar = createMockWriteChar();
 		const notifyChar = createMockNotifyChar();
@@ -622,12 +648,69 @@ describe('AcaiaService write queue', () => {
 	});
 
 	it('absorbs a second tare pressed while the first is still pending', async () => {
-		const service = createQueueService();
+		let resolveWrite!: () => void;
+		const writeChar = createMockWriteChar();
+		const peripheral = createMockPeripheral(writeChar);
+		const noble = createMockNoble(peripheral);
+		const service = new AcaiaService({ nobleFactory: () => noble });
+		await service.connect();
+		(service as unknown as QueueInternals).stopTimers();
+
+		writeChar.writeAsync = vi
+			.fn()
+			.mockImplementationOnce(
+				() =>
+					new Promise<void>((resolve) => {
+						resolveWrite = resolve;
+					}),
+			)
+			.mockResolvedValue(undefined);
+
+		const firstTare = service.tare();
+		await vi.waitFor(() => expect(writeChar.writeAsync).toHaveBeenCalledTimes(1));
+		await service.tare();
+
+		resolveWrite();
+		await firstTare;
+
+		const tareWrites = writeChar.writeAsync.mock.calls.filter(([data]) => data.equals(encodeTare()));
+		expect(tareWrites).toHaveLength(1);
+		service.destroy();
+	});
+
+	it('ignores a stale queue processor after connection cleanup', async () => {
+		let rejectWrite!: (reason: Error) => void;
+		const writeChar = createMockWriteChar();
+		const peripheral = createMockPeripheral(writeChar);
+		const noble = createMockNoble(peripheral);
+		const service = new AcaiaService({ nobleFactory: () => noble });
+		await service.connect();
 		const internals = service as unknown as QueueInternals;
+		internals.stopTimers();
+
+		writeChar.writeAsync = vi.fn(
+			() =>
+				new Promise<void>((_, reject) => {
+					rejectWrite = reject;
+				}),
+		);
+
+		const stalledTare = service.tare();
+		await vi.waitFor(() => expect(writeChar.writeAsync).toHaveBeenCalledTimes(1));
+		service.disconnect();
+
+		const newEntry = { data: encodeHeartbeat(), kind: 'heartbeat' as const };
+		internals.writeQueue.push(newEntry);
+		internals.consecutiveWriteFailures = 4;
 		internals.writing = true;
-		await service.tare();
-		await service.tare();
-		expect(internals.writeQueue.filter((entry) => entry.data.equals(encodeTare()))).toHaveLength(1);
+
+		rejectWrite(new Error('old write failed'));
+		await stalledTare;
+
+		expect(internals.writeQueue).toEqual([newEntry]);
+		expect(internals.consecutiveWriteFailures).toBe(4);
+		expect(internals.writing).toBe(true);
+
 		service.destroy();
 	});
 
