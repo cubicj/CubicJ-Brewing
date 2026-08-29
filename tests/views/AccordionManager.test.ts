@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { installPolyfills, createContainer } from '../helpers/obsidian-dom-polyfill';
+import type { PanelMode } from '../../src/brew/BrewFlowState';
 import type { FlowStep } from '../../src/views/StepRenderers';
 
 vi.mock('../../src/i18n/index', () => ({
@@ -16,15 +17,15 @@ function makeAccordion() {
 	const container = createContainer();
 	const renderStep = vi.fn();
 	const getStepSummary = vi.fn().mockReturnValue('');
-	const getCurrentStep = vi.fn().mockReturnValue('method');
+	const getPanelMode = vi.fn().mockReturnValue('editable' as const);
 
 	const manager = new AccordionManager(container, {
 		renderStep,
 		getStepSummary,
-		getCurrentStep,
+		getPanelMode,
 	});
 
-	return { container, manager, renderStep, getStepSummary, getCurrentStep };
+	return { container, manager, renderStep, getStepSummary, getPanelMode };
 }
 
 function installAnimationFrameQueue() {
@@ -315,6 +316,59 @@ describe('AccordionManager', () => {
 
 		const body = acc.container.querySelectorAll('.brew-accordion-body')[0];
 		expect(body.classList.contains('is-open')).toBe(true);
+	});
+
+	it('togglePanel ignores clicks on disabled panels', () => {
+		const modes: Record<string, PanelMode> = { method: 'editable', bean: 'disabled' };
+		const mgr = new AccordionManager(acc.container, {
+			renderStep: () => {},
+			getStepSummary: () => '',
+			getPanelMode: (step) => modes[step] ?? 'disabled',
+		});
+		mgr.build();
+		mgr.togglePanel(1);
+		mgr.update();
+		expect(acc.container.querySelectorAll('.brew-accordion-body.is-open').length).toBe(0);
+		mgr.togglePanel(0);
+		mgr.update();
+		expect(acc.container.querySelectorAll('.brew-accordion-body.is-open').length).toBe(1);
+	});
+
+	it('marks disabled headers and collapses panels that become disabled', () => {
+		const animation = installAnimationFrameQueue();
+		let mode: PanelMode = 'editable';
+		const mgr = new AccordionManager(acc.container, {
+			renderStep: () => {},
+			getStepSummary: () => '',
+			getPanelMode: (step) => (step === 'saving' ? mode : 'editable'),
+		});
+		mgr.build();
+		mgr.togglePanel(4);
+		mgr.update();
+		expect(acc.container.querySelectorAll('.brew-accordion-body.is-open').length).toBe(1);
+		mode = 'disabled';
+		mgr.update();
+		animation.runFrame(0);
+		animation.runFrame(16);
+		expect(acc.container.querySelectorAll('.brew-accordion-body.is-open').length).toBe(0);
+		const headers = acc.container.querySelectorAll('.brew-accordion-header');
+		expect(headers[4].classList.contains('is-disabled')).toBe(true);
+		expect(headers[0].classList.contains('is-disabled')).toBe(false);
+	});
+
+	it('adds is-readonly to the body inner of readonly panels', () => {
+		const mgr = new AccordionManager(acc.container, {
+			renderStep: () => {},
+			getStepSummary: () => '',
+			getPanelMode: (step) => (step === 'method' ? 'readonly' : 'editable'),
+		});
+		mgr.build();
+		mgr.togglePanel(0);
+		mgr.togglePanel(1);
+		mgr.update();
+		const inners = acc.container.querySelectorAll('.brew-accordion-body-inner');
+		expect(inners[0].classList.contains('is-readonly')).toBe(true);
+		expect(inners[1].classList.contains('is-readonly')).toBe(false);
 	});
 
 	it('animateContentChange calls mutation', () => {

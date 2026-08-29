@@ -78,7 +78,7 @@ export class BrewingView extends ItemView {
 			renderStep: (step, el, registerCleanup) =>
 				renderStep(step, el, this.buildRenderContext(registerCleanup)),
 			getStepSummary: (step) => getStepSummary(step, this.flowState.selection),
-			getCurrentStep: () => this.flowState.step,
+			getPanelMode: (step) => this.flowState.panelMode(step),
 		});
 
 		this.bindServiceEvents();

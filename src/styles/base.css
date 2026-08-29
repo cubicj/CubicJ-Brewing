@@ -312,6 +312,20 @@
 	background: var(--background-modifier-hover);
 }
 
+.cubicj-brewing-view .brew-accordion-header.is-disabled {
+	opacity: 0.45;
+	cursor: default;
+}
+
+.cubicj-brewing-view .brew-accordion-header.is-disabled:hover {
+	background: transparent;
+}
+
+.cubicj-brewing-view .brew-accordion-body-inner.is-readonly {
+	opacity: 0.6;
+	pointer-events: none;
+}
+
 .cubicj-brewing-view .brew-accordion-indicator {
 	width: 22px;
 	height: 22px;
