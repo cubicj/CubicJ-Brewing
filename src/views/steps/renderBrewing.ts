@@ -57,7 +57,16 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 		}
 		const controls = container.createDiv({ cls: 'brewing-controls' });
 		const stopBtn = controls.createEl('button', { text: t('brew.done'), cls: 'brewing-ctrl-btn brew-flow-stop-btn' });
+		const cancelBtn = controls.createEl('button', {
+			text: t('common.cancel'),
+			cls: 'brewing-ctrl-btn brew-flow-cancel-btn',
+		});
+		let stopPending = false;
 		const stopBrewing = async () => {
+			if (stopPending) return;
+			stopPending = true;
+			stopBtn.disabled = true;
+			cancelBtn.disabled = true;
 			try {
 				if (chart) chart.stopLive();
 				if (scaleConnected) {
@@ -76,14 +85,13 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 			} catch (err) {
 				console.error('[StepRenderers] brew stop failed:', err);
 				new Notice(t('brew.unexpectedError'));
+				stopPending = false;
+				stopBtn.disabled = false;
+				cancelBtn.disabled = false;
 			}
 		};
 		stopBtn.addEventListener('click', () => {
 			void stopBrewing();
-		});
-		const cancelBtn = controls.createEl('button', {
-			text: t('common.cancel'),
-			cls: 'brewing-ctrl-btn brew-flow-cancel-btn',
 		});
 		let cancelPending = false;
 		const cancelBrewing = async () => {
@@ -113,9 +121,13 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 			text: t('brew.startBrewing'),
 			cls: 'brewing-ctrl-btn brew-flow-start-btn',
 		});
+		let startPending = false;
 		const startBrewing = async () => {
+			if (startPending) return;
+			startPending = true;
+			startBtn.disabled = true;
 			try {
-				ctx.flowState.beginBrewingRun();
+				if (!ctx.flowState.beginBrewingRun()) return;
 				if (scaleConnected) {
 					ctx.recorder.start();
 					await ctx.timerController.handleTimerClick();
@@ -125,6 +137,12 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 			} catch (err) {
 				console.error('[StepRenderers] brew start failed:', err);
 				new Notice(t('brew.unexpectedError'));
+				ctx.flowState.cancelBrewingRun();
+				ctx.recorder.reset();
+				ctx.renderContent('brewing');
+			} finally {
+				startPending = false;
+				startBtn.disabled = false;
 			}
 		};
 		startBtn.addEventListener('click', () => {

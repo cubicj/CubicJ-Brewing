@@ -274,3 +274,77 @@ describe('renderBrewing phase controls', () => {
 		consoleError.mockRestore();
 	});
 });
+
+describe('renderBrewing re-entry guards', () => {
+	it('double-clicking start begins exactly one run', async () => {
+		const flowState = makeFlowState('filter');
+		const { ctx, recorder } = makeContext(flowState);
+		let resolveTimer!: () => void;
+		vi.mocked(ctx.timerController.handleTimerClick).mockImplementation(
+			() => new Promise<void>((resolve) => (resolveTimer = resolve)),
+		);
+		const container = createContainer();
+		renderBrewing(container, ctx);
+		const startBtn = container.querySelector<HTMLButtonElement>('.brew-flow-start-btn')!;
+		startBtn.click();
+		startBtn.click();
+		resolveTimer();
+		await Promise.resolve();
+		expect(recorder.start).toHaveBeenCalledTimes(1);
+		expect(ctx.timerController.handleTimerClick).toHaveBeenCalledTimes(1);
+	});
+
+	it('a stale start button whose run already began performs no side effects', () => {
+		const flowState = makeFlowState('filter');
+		const { ctx, recorder } = makeContext(flowState);
+		const container = createContainer();
+		renderBrewing(container, ctx);
+		flowState.beginBrewingRun();
+		container.querySelector<HTMLButtonElement>('.brew-flow-start-btn')!.click();
+		expect(recorder.start).not.toHaveBeenCalled();
+		expect(ctx.timerController.handleTimerClick).not.toHaveBeenCalled();
+	});
+
+	it('a rejected timer start returns to an armed state that can be retried', async () => {
+		const flowState = makeFlowState('filter');
+		const { ctx, recorder } = makeContext(flowState);
+		vi.mocked(ctx.timerController.handleTimerClick).mockRejectedValueOnce(new Error('timer failed'));
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			const container = createContainer();
+			renderBrewing(container, ctx);
+			container.querySelector<HTMLButtonElement>('.brew-flow-start-btn')!.click();
+			await vi.waitFor(() => expect(consoleError).toHaveBeenCalledTimes(1));
+			expect(flowState.brewingStarted).toBe(false);
+			expect(recorder.reset).toHaveBeenCalledTimes(1);
+			expect(ctx.renderContent).toHaveBeenCalledWith('brewing');
+
+			const retryContainer = createContainer();
+			renderBrewing(retryContainer, ctx);
+			retryContainer.querySelector<HTMLButtonElement>('.brew-flow-start-btn')!.click();
+			await Promise.resolve();
+			expect(flowState.brewingStarted).toBe(true);
+			expect(recorder.start).toHaveBeenCalledTimes(2);
+			expect(ctx.timerController.handleTimerClick).toHaveBeenCalledTimes(2);
+		} finally {
+			consoleError.mockRestore();
+		}
+	});
+
+	it('double-clicking done stops exactly once', async () => {
+		const ctx = makeRunningContext();
+		let resolveFreeze!: () => void;
+		vi.mocked(ctx.timerController.freeze).mockImplementation(
+			() => new Promise<void>((resolve) => (resolveFreeze = resolve)),
+		);
+		const container = createContainer();
+		renderBrewing(container, ctx);
+		const stopBtn = container.querySelector<HTMLButtonElement>('.brew-flow-stop-btn')!;
+		stopBtn.click();
+		stopBtn.click();
+		resolveFreeze();
+		await Promise.resolve();
+		expect(ctx.recorder.stop).toHaveBeenCalledTimes(1);
+		expect(ctx.timerController.freeze).toHaveBeenCalledTimes(1);
+	});
+});
