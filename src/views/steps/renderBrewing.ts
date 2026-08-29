@@ -192,9 +192,8 @@ function renderReview(container: HTMLElement, ctx: StepRenderContext): void {
 
 	const controls = container.createDiv({ cls: 'brewing-controls' });
 	const redoBtn = controls.createEl('button', { text: t('brew.redoBrew'), cls: 'brewing-ctrl-btn brew-flow-redo-btn' });
+	redoBtn.disabled = ctx.runCoordinator.isSavePending();
 	redoBtn.addEventListener('click', () => {
-		ctx.flowState.redoBrewing();
-		ctx.recorder.reset();
-		ctx.renderContent();
+		ctx.runCoordinator.redoRun();
 	});
 }

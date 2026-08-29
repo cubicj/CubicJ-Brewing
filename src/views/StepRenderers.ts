@@ -30,8 +30,9 @@ export interface AccordionActions {
 	update: () => void;
 	expand: (step: FlowStep) => void;
 	scrollToStep: (step: FlowStep) => void;
-	animateContentChange: (step: FlowStep, fn: () => void) => void;
+	animateContentChange: (step: FlowStep, mutation: () => void) => void;
 	updateSummaries: () => void;
+	getStepPanel: (step: FlowStep) => HTMLElement | null;
 }
 
 export interface StepRenderContext {

@@ -2,9 +2,10 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { BrewFlowState } from '../../../src/brew/BrewFlowState';
 import { BrewProfileRecorder } from '../../../src/views/BrewProfileRecorder';
+import { BrewRunCoordinator } from '../../../src/views/BrewRunCoordinator';
 import { installPolyfills, createContainer } from '../../helpers/obsidian-dom-polyfill';
 import type { StepRenderContext } from '../../../src/views/StepRenderers';
-import type { BeanInfo } from '../../../src/brew/types';
+import type { BeanInfo, BrewProfilePoint } from '../../../src/brew/types';
 import { ok, fail, type Result } from '../../../src/types/result';
 import { renderSaving } from '../../../src/views/steps/renderSaving';
 
@@ -22,7 +23,27 @@ beforeAll(() => {
 	} as unknown as typeof ResizeObserver;
 });
 
-function makeSavingContext(bean: BeanInfo, setWeightResult: Result<void>) {
+function deferred<T>() {
+	let resolve!: (value: T) => void;
+	const promise = new Promise<T>((res) => {
+		resolve = res;
+	});
+	return { promise, resolve };
+}
+
+function makeSavingContext(
+	bean: BeanInfo,
+	setWeightResult: Result<void>,
+	{
+		points = [],
+		add = vi.fn(async () => ok(undefined)),
+		profileSave = vi.fn(async () => ok('profiles/test.json')),
+	}: {
+		points?: BrewProfilePoint[];
+		add?: ReturnType<typeof vi.fn>;
+		profileSave?: ReturnType<typeof vi.fn>;
+	} = {},
+) {
 	const flowState = new BrewFlowState();
 	flowState.step = 'saving';
 	flowState.selection = {
@@ -34,9 +55,22 @@ function makeSavingContext(bean: BeanInfo, setWeightResult: Result<void>) {
 		waterTemp: 93,
 	};
 
-	const add = vi.fn(async () => ok(undefined));
 	const setWeight = vi.fn(async () => setWeightResult);
 	const resetFlow = vi.fn();
+	const recorder = new BrewProfileRecorder();
+	vi.spyOn(recorder, 'getPoints').mockReturnValue(points);
+	const timerController = {
+		resetToIdle: vi.fn(),
+		cancelRun: vi.fn().mockResolvedValue(undefined),
+		isIdle: vi.fn(() => true),
+	};
+	const renderContent = vi.fn();
+	const runCoordinator = new BrewRunCoordinator(
+		flowState,
+		recorder,
+		timerController as unknown as StepRenderContext['timerController'],
+		{ getScaleState: () => 'disconnected', renderContent },
+	);
 
 	const ctx = {
 		flowState,
@@ -45,25 +79,26 @@ function makeSavingContext(bean: BeanInfo, setWeightResult: Result<void>) {
 			vaultData: { setWeight },
 			pluginLogger: null,
 		} as unknown as StepRenderContext['plugin'],
-		renderContent: vi.fn(),
+		renderContent,
 		accordion: {
 			update: vi.fn(),
 			expand: vi.fn(),
 			scrollToStep: vi.fn(),
 			animateContentChange: vi.fn((_, fn: () => void) => fn()),
 			updateSummaries: vi.fn(),
+			getStepPanel: vi.fn(() => null),
 		},
-		timerController: {} as StepRenderContext['timerController'],
-		runCoordinator: {} as StepRenderContext['runCoordinator'],
+		timerController: timerController as unknown as StepRenderContext['timerController'],
+		runCoordinator,
 		getWeightText: vi.fn(() => '0'),
 		resetFlow,
-		recorder: new BrewProfileRecorder(),
-		profileStorage: {} as StepRenderContext['profileStorage'],
+		recorder,
+		profileStorage: { save: profileSave } as unknown as StepRenderContext['profileStorage'],
 		equipment: {} as StepRenderContext['equipment'],
 		registerCleanup: vi.fn(),
 	} as StepRenderContext;
 
-	return { ctx, add, setWeight, resetFlow };
+	return { ctx, add, profileSave, setWeight, resetFlow };
 }
 
 const makeBean = (): BeanInfo => ({
@@ -129,4 +164,66 @@ it('seeds the addition stepper from the stored selection weight', () => {
 	renderSaving(container, ctx);
 	const value = container.querySelector('.cubicj-stepper-value')!;
 	expect(value.textContent).toBe('120.0g');
+});
+
+it('renders memo only during the running phase', () => {
+	const ctx = makeContext({ method: 'filter' });
+	ctx.flowState.step = 'brewing';
+	ctx.flowState.brewingStarted = true;
+	renderSaving(container, ctx);
+	expect(container.querySelector('.brew-flow-note')).not.toBeNull();
+	expect(container.querySelector('.brew-flow-save-btn')).toBeNull();
+	expect(container.querySelector('.cubicj-stepper')).toBeNull();
+});
+
+it('memo edits persist into the selection', () => {
+	const ctx = makeContext({ method: 'filter' });
+	renderSaving(container, ctx);
+	const note = container.querySelector<HTMLTextAreaElement>('.brew-flow-note')!;
+	note.value = 'channeling on second pour';
+	note.dispatchEvent(new Event('input'));
+	expect(ctx.flowState.selection.note).toBe('channeling on second pour');
+});
+
+it('save snapshots record inputs before awaiting storage', async () => {
+	const profileDeferred = deferred<Result<string>>();
+	const profileSave = vi.fn(() => profileDeferred.promise);
+	const { ctx, add } = makeSavingContext(makeBean(), ok(undefined), {
+		points: [{ t: 0, w: 0 }],
+		profileSave,
+	});
+	ctx.flowState.selection.yield = 250;
+	renderSaving(container, ctx);
+	container.querySelector<HTMLButtonElement>('.brew-flow-save-btn')!.click();
+	await vi.waitFor(() => expect(profileSave).toHaveBeenCalledTimes(1));
+	ctx.flowState.selection.yield = 300;
+	profileDeferred.resolve(ok('profiles/test.json'));
+	await vi.waitFor(() => expect(add).toHaveBeenCalledTimes(1));
+	expect(add.mock.calls[0][0].yield).toBe(250);
+});
+
+it('save completion skips resetFlow when the generation moved', async () => {
+	const addDeferred = deferred<Result<void>>();
+	const add = vi.fn(() => addDeferred.promise);
+	const { ctx, resetFlow } = makeSavingContext(makeBean(), ok(undefined), { add });
+	renderSaving(container, ctx);
+	container.querySelector<HTMLButtonElement>('.brew-flow-save-btn')!.click();
+	await vi.waitFor(() => expect(add).toHaveBeenCalledTimes(1));
+	expect(ctx.runCoordinator.isSavePending()).toBe(true);
+	ctx.runCoordinator.resetAll();
+	addDeferred.resolve(ok(undefined));
+	await vi.waitFor(() => expect(ctx.runCoordinator.isSavePending()).toBe(false));
+	expect(resetFlow).not.toHaveBeenCalled();
+});
+
+it('save holds the save claim for its duration', async () => {
+	const addDeferred = deferred<Result<void>>();
+	const add = vi.fn(() => addDeferred.promise);
+	const { ctx } = makeSavingContext(makeBean(), ok(undefined), { add });
+	renderSaving(container, ctx);
+	container.querySelector<HTMLButtonElement>('.brew-flow-save-btn')!.click();
+	await vi.waitFor(() => expect(add).toHaveBeenCalledTimes(1));
+	expect(ctx.runCoordinator.isSavePending()).toBe(true);
+	addDeferred.resolve(ok(undefined));
+	await vi.waitFor(() => expect(ctx.runCoordinator.isSavePending()).toBe(false));
 });

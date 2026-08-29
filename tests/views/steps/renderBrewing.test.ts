@@ -135,6 +135,7 @@ function makeHarness(
 			scrollToStep: vi.fn(),
 			animateContentChange: vi.fn(),
 			updateSummaries: vi.fn(),
+			getStepPanel: vi.fn(() => null),
 		},
 		timerController,
 		getWeightText: vi.fn(() => '0'),
@@ -294,15 +295,26 @@ describe('renderBrewing phase controls', () => {
 		expect(container.querySelector('.brew-flow-redo-btn')).not.toBeNull();
 	});
 
-	it('redo button clears time/yield, resets the recorder, and re-renders', () => {
+	it('redo button delegates to the coordinator', () => {
 		const container = createContainer();
 		const ctx = makeReviewContext({ method: 'filter', points: [{ t: 0, w: 0 }], time: 120, yieldGrams: 250 });
+		const redoSpy = vi.spyOn(ctx.runCoordinator, 'redoRun');
 		renderBrewing(container, ctx);
 		(container.querySelector('.brew-flow-redo-btn') as HTMLButtonElement).click();
+		expect(redoSpy).toHaveBeenCalledTimes(1);
 		expect(ctx.flowState.step).toBe('brewing');
 		expect(ctx.flowState.selection.time).toBeUndefined();
 		expect(ctx.recorder.getPoints().length).toBe(0);
 		expect(ctx.renderContent).toHaveBeenCalled();
+	});
+
+	it('redo button renders disabled while a save is pending', () => {
+		const container = createContainer();
+		const ctx = makeReviewContext({ method: 'filter', points: [{ t: 0, w: 0 }] });
+		ctx.runCoordinator.beginSave();
+		renderBrewing(container, ctx);
+		const redoBtn = container.querySelector<HTMLButtonElement>('.brew-flow-redo-btn')!;
+		expect(redoBtn.disabled).toBe(true);
 	});
 
 	it('connected cancel stops the chart and timer, discards the run, and focuses brewing', async () => {

@@ -260,6 +260,7 @@ export class BrewingView extends ItemView {
 				scrollToStep: (step) => this.accordion.scrollStepToTop(step),
 				animateContentChange: (step, fn) => this.accordion.animateContentChange(step, fn),
 				updateSummaries: () => this.accordion.updateSummaries(),
+				getStepPanel: (step) => this.accordion.getStepPanel(step),
 			},
 			timerController: this.timerController,
 			runCoordinator: this.runCoordinator,

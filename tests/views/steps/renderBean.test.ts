@@ -31,6 +31,7 @@ function makeContext(flowState: BrewFlowState): StepRenderContext {
 			scrollToStep: vi.fn(),
 			animateContentChange: vi.fn((_, fn: () => void) => fn()),
 			updateSummaries: vi.fn(),
+			getStepPanel: vi.fn(() => null),
 		},
 		timerController: {} as StepRenderContext['timerController'],
 		runCoordinator: {} as StepRenderContext['runCoordinator'],
