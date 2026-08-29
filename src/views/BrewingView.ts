@@ -175,7 +175,7 @@ export class BrewingView extends ItemView {
 		});
 	}
 
-	private renderContent(focusStep?: FlowStep): void {
+	private renderContent(focusStep?: FlowStep, alsoExpand?: FlowStep): void {
 		this.accordion.destroy();
 		for (const fn of this.cleanups) fn();
 		this.cleanups = [];
@@ -194,6 +194,9 @@ export class BrewingView extends ItemView {
 		const targetStep = focusStep ?? (this.flowState.step as FlowStep);
 		if (shouldFocus) {
 			this.accordion.focusStep(targetStep);
+			if (alsoExpand !== undefined) {
+				this.accordion.expandStep(alsoExpand);
+			}
 			this.lastFocusedStep = this.flowState.step;
 		}
 		this.accordion.update();
@@ -213,7 +216,7 @@ export class BrewingView extends ItemView {
 		return {
 			flowState: this.flowState,
 			plugin: this.plugin,
-			renderContent: (focusStep) => this.renderContent(focusStep),
+			renderContent: (focusStep, alsoExpand) => this.renderContent(focusStep, alsoExpand),
 			accordion: {
 				update: () => this.accordion.update(),
 				expand: (step) => this.accordion.expandStep(step),

@@ -215,6 +215,35 @@ describe('renderBrewing phase controls', () => {
 		expect(ctx.timerController.cancelRun).not.toHaveBeenCalled();
 	});
 
+	it('finishing without a recorded profile keeps focus on brewing and expands saving', async () => {
+		const container = createContainer();
+		const flowState = makeFlowState('filter');
+		flowState.beginBrewingRun();
+		const { ctx } = makeContext(flowState, [], 'disconnected');
+		renderBrewing(container, ctx);
+		(container.querySelector('.brew-flow-stop-btn') as HTMLButtonElement).click();
+		await vi.waitFor(() => expect(ctx.renderContent).toHaveBeenCalledWith('brewing', 'saving'));
+		expect(ctx.flowState.step).toBe('saving');
+	});
+
+	it('espresso done keeps focus on brewing and expands saving', () => {
+		const container = createContainer();
+		const { ctx } = makeContext(makeFlowState('espresso'));
+		renderBrewing(container, ctx);
+		(container.querySelector('.brew-flow-stop-btn') as HTMLButtonElement).click();
+		expect(ctx.renderContent).toHaveBeenCalledWith('brewing', 'saving');
+		expect(ctx.flowState.step).toBe('saving');
+	});
+
+	it('finishing with a recorded profile focuses saving as before', async () => {
+		const container = createContainer();
+		const ctx = makeRunningContext();
+		renderBrewing(container, ctx);
+		(container.querySelector('.brew-flow-stop-btn') as HTMLButtonElement).click();
+		await vi.waitFor(() => expect(ctx.renderContent).toHaveBeenCalledWith());
+		expect(ctx.flowState.step).toBe('saving');
+	});
+
 	it('cancel rejection still re-renders a coherent armed brewing state', async () => {
 		const container = createContainer();
 		const ctx = makeRunningContext();

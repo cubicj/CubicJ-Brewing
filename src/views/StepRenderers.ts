@@ -36,7 +36,7 @@ export interface AccordionActions {
 export interface StepRenderContext {
 	flowState: BrewFlowState;
 	plugin: CubicJBrewingPlugin;
-	renderContent: (focusStep?: FlowStep) => void;
+	renderContent: (focusStep?: FlowStep, alsoExpand?: FlowStep) => void;
 	accordion: AccordionActions;
 	timerController: TimerController;
 	getWeightText: () => string;

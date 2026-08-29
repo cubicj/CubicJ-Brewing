@@ -24,7 +24,7 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 		});
 		doneBtn.addEventListener('click', () => {
 			ctx.flowState.finishBrewing(undefined, undefined);
-			ctx.renderContent();
+			ctx.renderContent('brewing', 'saving');
 		});
 		return;
 	}
@@ -67,7 +67,11 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 				} else {
 					ctx.flowState.finishBrewing(undefined, undefined);
 				}
-				ctx.renderContent();
+				if (ctx.recorder.getPoints().length > 0) {
+					ctx.renderContent();
+				} else {
+					ctx.renderContent('brewing', 'saving');
+				}
 			} catch (err) {
 				console.error('[StepRenderers] brew stop failed:', err);
 				new Notice(t('brew.unexpectedError'));
