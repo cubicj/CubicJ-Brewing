@@ -86,7 +86,13 @@ describe('AccordionManager', () => {
 		acc.manager.build();
 		const titles = acc.container.querySelectorAll('.brew-accordion-title');
 		expect(titles.length).toBe(5);
-		expect(titles[0].textContent).toBe('brew.step.method');
+		expect(Array.from(titles).map((title) => title.textContent)).toEqual([
+			'brew.step.bean',
+			'brew.step.method',
+			'brew.step.variables',
+			'brew.step.brewing',
+			'brew.step.memo',
+		]);
 	});
 
 	it('no panels expanded initially after build + update', () => {
@@ -293,10 +299,10 @@ describe('AccordionManager', () => {
 		acc.manager.focusStep('method');
 		acc.manager.update();
 
-		const panel0Summaries = acc.container
-			.querySelectorAll('.brew-accordion-panel')[0]
+		const methodSummaries = acc.container
+			.querySelectorAll('.brew-accordion-panel')[1]
 			.querySelectorAll('.brew-accordion-summary');
-		expect(panel0Summaries.length).toBe(0);
+		expect(methodSummaries.length).toBe(0);
 	});
 
 	it('updateSummaries shows check icon for completed steps', () => {
@@ -304,7 +310,7 @@ describe('AccordionManager', () => {
 		acc.getStepSummary.mockImplementation((step: string) => (step === 'method' ? 'Filter · Hot' : ''));
 		acc.manager.updateSummaries();
 
-		const indicator = acc.container.querySelectorAll('.brew-accordion-indicator')[0];
+		const indicator = acc.container.querySelectorAll('.brew-accordion-indicator')[1];
 		expect(indicator.classList.contains('is-done')).toBe(true);
 		expect(indicator.querySelector('svg')).not.toBeNull();
 	});
@@ -326,10 +332,10 @@ describe('AccordionManager', () => {
 			getPanelMode: (step) => modes[step] ?? 'disabled',
 		});
 		mgr.build();
-		mgr.togglePanel(1);
+		mgr.togglePanel(0);
 		mgr.update();
 		expect(acc.container.querySelectorAll('.brew-accordion-body.is-open').length).toBe(0);
-		mgr.togglePanel(0);
+		mgr.togglePanel(1);
 		mgr.update();
 		expect(acc.container.querySelectorAll('.brew-accordion-body.is-open').length).toBe(1);
 	});
@@ -367,10 +373,10 @@ describe('AccordionManager', () => {
 		mgr.togglePanel(1);
 		mgr.update();
 		const inners = acc.container.querySelectorAll('.brew-accordion-body-inner');
-		expect(inners[0].classList.contains('is-readonly')).toBe(true);
-		expect(inners[0].hasAttribute('inert')).toBe(true);
-		expect(inners[1].classList.contains('is-readonly')).toBe(false);
-		expect(inners[1].hasAttribute('inert')).toBe(false);
+		expect(inners[0].classList.contains('is-readonly')).toBe(false);
+		expect(inners[0].hasAttribute('inert')).toBe(false);
+		expect(inners[1].classList.contains('is-readonly')).toBe(true);
+		expect(inners[1].hasAttribute('inert')).toBe(true);
 	});
 
 	it('animateContentChange calls mutation', () => {

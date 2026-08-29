@@ -17,8 +17,8 @@ import { renderSaving } from './steps/renderSaving';
 export type FlowStep = 'method' | 'bean' | 'configure' | 'brewing' | 'saving';
 
 export const STEP_CONFIG: Array<{ step: FlowStep; label: () => string }> = [
-	{ step: 'method', label: () => t('brew.step.method') },
 	{ step: 'bean', label: () => t('brew.step.bean') },
+	{ step: 'method', label: () => t('brew.step.method') },
 	{ step: 'configure', label: () => t('brew.step.variables') },
 	{ step: 'brewing', label: () => t('brew.step.brewing') },
 	{ step: 'saving', label: () => t('brew.step.memo') },

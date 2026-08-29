@@ -8,10 +8,10 @@ describe('BrewFlowState', () => {
 		expect(state.step).toBe('idle');
 	});
 
-	it('idle -> method on startBrew', () => {
+	it('idle -> bean on startBrew', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
-		expect(state.step).toBe('method');
+		expect(state.step).toBe('bean');
 	});
 
 	it('method -> bean on selectMethod', () => {
@@ -110,7 +110,7 @@ describe('BrewFlowState', () => {
 
 		state.deselectBean();
 
-		expect(state.step).toBe('method');
+		expect(state.step).toBe('bean');
 		expect(state.selection.bean).toBeUndefined();
 
 		state.selectMethod('filter', 'hot');
@@ -320,7 +320,7 @@ describe('BrewFlowState', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
 		state.startBrewing();
-		expect(state.step).toBe('method');
+		expect(state.step).toBe('bean');
 	});
 
 	it('finishBrewing is no-op when not in brewing step', () => {
@@ -516,20 +516,20 @@ describe('panelMode', () => {
 		expect(s.panelMode('saving')).toBe('disabled');
 	});
 
-	it('locks panels 1-3 while running', () => {
+	it('keeps configure and saving editable while running', () => {
 		const s = reach('brewing');
 		s.beginBrewingRun();
 		expect(s.panelMode('method')).toBe('readonly');
 		expect(s.panelMode('bean')).toBe('readonly');
-		expect(s.panelMode('configure')).toBe('readonly');
+		expect(s.panelMode('configure')).toBe('editable');
 		expect(s.panelMode('brewing')).toBe('editable');
-		expect(s.panelMode('saving')).toBe('disabled');
+		expect(s.panelMode('saving')).toBe('editable');
 	});
 
-	it('locks method/bean but keeps configure editable in review', () => {
+	it('locks method but keeps bean and configure editable in review', () => {
 		const s = reach('saving');
 		expect(s.panelMode('method')).toBe('readonly');
-		expect(s.panelMode('bean')).toBe('readonly');
+		expect(s.panelMode('bean')).toBe('editable');
 		expect(s.panelMode('configure')).toBe('editable');
 		expect(s.panelMode('brewing')).toBe('editable');
 		expect(s.panelMode('saving')).toBe('editable');
@@ -574,21 +574,21 @@ describe('back navigation transitions', () => {
 		const s = new BrewFlowState();
 		s.startBrew();
 		s.redoBrewing();
-		expect(s.step).toBe('method');
+		expect(s.step).toBe('bean');
 	});
 
-	it('selectMethod works from configure and rewinds to bean', () => {
+	it('selectMethod works from configure and keeps the completed flow at configure', () => {
 		const s = new BrewFlowState();
 		s.startBrew();
 		s.selectMethod('filter', 'hot');
 		s.selectBean(bean);
 		expect(s.step).toBe('configure');
 		s.selectMethod('filter', 'iced');
-		expect(s.step).toBe('bean');
+		expect(s.step).toBe('configure');
 		expect(s.selection.temp).toBe('iced');
 	});
 
-	it('selectMethod and selectBean are no-ops outside setup', () => {
+	it('selectMethod is a no-op while running and selectBean works in review', () => {
 		const s = new BrewFlowState();
 		s.startBrew();
 		s.selectMethod('filter', 'hot');
@@ -599,7 +599,7 @@ describe('back navigation transitions', () => {
 		expect(s.selection.method).toBe('filter');
 		s.finishBrewing(120, 250);
 		s.selectBean({ ...bean, name: 'C' });
-		expect(s.selection.bean?.name).toBe('B');
+		expect(s.selection.bean?.name).toBe('C');
 	});
 
 	it('selectBean and deselectBean work while armed', () => {
@@ -690,5 +690,109 @@ describe('rewindToMethod', () => {
 		s.rewindToMethod();
 		expect(s.step).toBe('brewing');
 		expect(s.selection.grindSize).toBe(20);
+	});
+});
+
+describe('bean-first flow order', () => {
+	it('startBrew enters at bean', () => {
+		const s = new BrewFlowState();
+		s.startBrew();
+		expect(s.step).toBe('bean');
+	});
+
+	it('keeps bean and method enabled from the start and later panels disabled', () => {
+		const s = new BrewFlowState();
+		s.startBrew();
+		expect(s.panelMode('bean')).toBe('editable');
+		expect(s.panelMode('method')).toBe('editable');
+		expect(s.panelMode('configure')).toBe('disabled');
+		expect(s.panelMode('brewing')).toBe('disabled');
+		expect(s.panelMode('saving')).toBe('disabled');
+	});
+
+	it('selectBean without method advances to method', () => {
+		const s = new BrewFlowState();
+		s.startBrew();
+		s.selectBean({ name: 'A', path: 'a.md', roaster: '', status: 'active', roastDate: null, weight: null });
+		expect(s.step).toBe('method');
+		expect(s.panelMode('configure')).toBe('disabled');
+	});
+
+	it('selectMethod without bean regresses focus to bean and keeps configure disabled', () => {
+		const s = new BrewFlowState();
+		s.startBrew();
+		s.selectMethod('filter', 'hot');
+		expect(s.step).toBe('bean');
+		expect(s.panelMode('method')).toBe('editable');
+		expect(s.panelMode('configure')).toBe('disabled');
+	});
+
+	it('either order reaches configure once both are complete', () => {
+		const a = new BrewFlowState();
+		a.startBrew();
+		a.selectBean({ name: 'A', path: 'a.md', roaster: '', status: 'active', roastDate: null, weight: null });
+		a.selectMethod('filter', 'hot');
+		expect(a.step).toBe('configure');
+		const b = new BrewFlowState();
+		b.startBrew();
+		b.selectMethod('filter', 'hot');
+		b.selectBean({ name: 'A', path: 'a.md', roaster: '', status: 'active', roastDate: null, weight: null });
+		expect(b.step).toBe('configure');
+	});
+
+	it('deselectBean regresses to bean and disables configure', () => {
+		const s = new BrewFlowState();
+		s.startBrew();
+		s.selectMethod('filter', 'hot');
+		s.selectBean({ name: 'A', path: 'a.md', roaster: '', status: 'active', roastDate: null, weight: null });
+		s.deselectBean();
+		expect(s.step).toBe('bean');
+		expect(s.panelMode('configure')).toBe('disabled');
+	});
+});
+
+describe('panel mode relaxations', () => {
+	function runningState(): BrewFlowState {
+		const s = new BrewFlowState();
+		s.startBrew();
+		s.selectBean({ name: 'A', path: 'a.md', roaster: '', status: 'active', roastDate: null, weight: null });
+		s.selectMethod('filter', 'hot');
+		s.startBrewing();
+		s.beginBrewingRun();
+		return s;
+	}
+
+	it('running phase: configure and saving editable, bean and method readonly', () => {
+		const s = runningState();
+		expect(s.panelMode('brewing')).toBe('editable');
+		expect(s.panelMode('configure')).toBe('editable');
+		expect(s.panelMode('saving')).toBe('editable');
+		expect(s.panelMode('bean')).toBe('readonly');
+		expect(s.panelMode('method')).toBe('readonly');
+	});
+
+	it('review phase: bean editable, method readonly', () => {
+		const s = runningState();
+		s.finishBrewing(30, 200);
+		expect(s.panelMode('bean')).toBe('editable');
+		expect(s.panelMode('method')).toBe('readonly');
+		expect(s.panelMode('configure')).toBe('editable');
+	});
+
+	it('selectBean in review swaps the bean without touching equipment or step', () => {
+		const s = runningState();
+		s.updateVariables({ grindSize: 20, dose: 15, waterTemp: 92 });
+		s.finishBrewing(30, 200);
+		s.selectBean({ name: 'B', path: 'b.md', roaster: '', status: 'active', roastDate: null, weight: null });
+		expect(s.selection.bean?.name).toBe('B');
+		expect(s.selection.grindSize).toBe(20);
+		expect(s.step).toBe('saving');
+	});
+
+	it('selectBean stays a no-op while running', () => {
+		const s = runningState();
+		const bean = s.selection.bean;
+		s.selectBean({ name: 'B', path: 'b.md', roaster: '', status: 'active', roastDate: null, weight: null });
+		expect(s.selection.bean).toBe(bean);
 	});
 });
