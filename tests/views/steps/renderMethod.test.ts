@@ -81,4 +81,24 @@ describe('renderMethod', () => {
 
 		expect(container.querySelectorAll('.brew-flow-toggle').length).toBeGreaterThan(0);
 	});
+
+	it('deselecting the active temperature clears equipment immediately and keeps the bean', () => {
+		const flowState = new BrewFlowState();
+		flowState.startBrew();
+		flowState.selectMethod('filter', 'hot');
+		flowState.selectBean({ path: 'b.md', name: 'B', roaster: '', status: 'active', roastDate: null, weight: null });
+		flowState.updateVariables({ grindSize: 20, dose: 15, waterTemp: 92, grinder: 'G1' });
+		const container = createContainer();
+		renderMethod(container, makeContext(flowState));
+		const hotBtn = Array.from(container.querySelectorAll('.brew-flow-toggle')).find(
+			(button) => button.textContent === 'temp.hot',
+		)!;
+
+		(hotBtn as HTMLElement).click();
+
+		expect(flowState.step).toBe('method');
+		expect(flowState.selection.bean?.path).toBe('b.md');
+		expect(flowState.selection.grindSize).toBeUndefined();
+		expect(flowState.selection.grinder).toBeUndefined();
+	});
 });

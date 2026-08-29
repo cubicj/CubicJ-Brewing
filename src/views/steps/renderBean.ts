@@ -14,7 +14,7 @@ export function renderBean(container: HTMLElement, ctx: StepRenderContext): void
 	const selectedBean = ctx.flowState.selection.bean;
 
 	for (const bean of beans) {
-		const isSelected = selectedBean?.name === bean.name;
+		const isSelected = selectedBean?.path === bean.path;
 		const item = container.createDiv({ cls: `brew-flow-bean-item${isSelected ? ' is-selected' : ''}` });
 		item.createDiv({ text: bean.name });
 

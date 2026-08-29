@@ -70,8 +70,8 @@ export function renderStep(step: FlowStep, container: HTMLElement, ctx: StepRend
 export function getStepSummary(step: FlowStep, sel: BrewFlowSelection): string {
 	switch (step) {
 		case 'method': {
-			if (!sel.method) return '';
-			const parts = [getMethodLabel(sel.method), getTempLabel(sel.temp!)];
+			if (!sel.method || !sel.temp || (sel.method === 'espresso' && !sel.drink)) return '';
+			const parts = [getMethodLabel(sel.method), getTempLabel(sel.temp)];
 			if (sel.drink) parts.push(getDrinkLabel(sel.drink));
 			return parts.join(' · ');
 		}

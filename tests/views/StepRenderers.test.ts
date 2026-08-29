@@ -15,4 +15,11 @@ describe('getStepSummary configure', () => {
 		const sel: BrewFlowSelection = { method: 'filter', grindSize: 20, dose: 15, waterTemp: 93 };
 		expect(getStepSummary('configure', sel)).toBe('summary.grindSize 20 · summary.dose 15g · 93°C');
 	});
+
+	it('method summary is empty until every required method field is chosen', () => {
+		expect(getStepSummary('method', { method: 'filter' })).toBe('');
+		expect(getStepSummary('method', { method: 'espresso', temp: 'hot' })).toBe('');
+		expect(getStepSummary('method', { method: 'filter', temp: 'hot' })).not.toBe('');
+		expect(getStepSummary('method', { method: 'espresso', temp: 'hot', drink: 'latte' })).not.toBe('');
+	});
 });

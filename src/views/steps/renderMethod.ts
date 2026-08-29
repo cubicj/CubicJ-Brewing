@@ -68,7 +68,7 @@ export function renderMethod(container: HTMLElement, ctx: StepRenderContext): vo
 			}
 			ctx.renderContent();
 		} else if (ctx.flowState.step !== 'method') {
-			ctx.flowState.goToStep('method');
+			ctx.flowState.rewindToMethod();
 			ctx.renderContent();
 		}
 	};
