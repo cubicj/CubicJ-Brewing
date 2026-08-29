@@ -55,7 +55,11 @@ function makeFlowState(method: 'filter' | 'espresso') {
 	return s;
 }
 
-function makeContext(flowState = makeFlowState('filter'), points: BrewProfilePoint[] = []) {
+function makeContext(
+	flowState = makeFlowState('filter'),
+	points: BrewProfilePoint[] = [],
+	scaleState: 'connected' | 'disconnected' = 'connected',
+) {
 	const cleanups: Array<() => void> = [];
 	let recordedPoints = [...points];
 	const recorder = {
@@ -69,7 +73,7 @@ function makeContext(flowState = makeFlowState('filter'), points: BrewProfilePoi
 	const ctx = {
 		flowState,
 		plugin: {
-			acaiaService: { state: 'connected' },
+			acaiaService: { state: scaleState },
 			app: {},
 		},
 		renderContent: vi.fn(),
@@ -112,10 +116,10 @@ function makeReviewContext({
 	return makeContext(flowState, points).ctx;
 }
 
-function makeRunningContext() {
+function makeRunningContext(scaleState: 'connected' | 'disconnected' = 'connected') {
 	const flowState = makeFlowState('filter');
 	flowState.beginBrewingRun();
-	return makeContext(flowState, [{ t: 0, w: 0 }]).ctx;
+	return makeContext(flowState, [{ t: 0, w: 0 }], scaleState).ctx;
 }
 
 describe('renderBrewing chart cleanup', () => {
@@ -183,16 +187,45 @@ describe('renderBrewing phase controls', () => {
 		expect(ctx.renderContent).toHaveBeenCalled();
 	});
 
-	it('running renders cancel next to done; cancel discards the run and stays on brewing', async () => {
+	it('connected cancel stops the chart and timer, discards the run, and focuses brewing', async () => {
 		const container = createContainer();
 		const ctx = makeRunningContext();
 		renderBrewing(container, ctx);
 		const cancelBtn = container.querySelector('.brew-flow-cancel-btn') as HTMLButtonElement;
+		const doneBtn = container.querySelector('.brew-flow-stop-btn') as HTMLButtonElement;
 		expect(cancelBtn).not.toBeNull();
 		cancelBtn.click();
-		await vi.waitFor(() => expect(ctx.renderContent).toHaveBeenCalled());
+		expect(cancelBtn.disabled).toBe(true);
+		expect(doneBtn.disabled).toBe(true);
+		await vi.waitFor(() => expect(ctx.renderContent).toHaveBeenCalledWith('brewing'));
+		expect(chartMocks.instances[0].stopLive).toHaveBeenCalledTimes(1);
+		expect(ctx.timerController.cancelRun).toHaveBeenCalledTimes(1);
 		expect(ctx.flowState.step).toBe('brewing');
 		expect(ctx.flowState.brewingStarted).toBe(false);
 		expect(ctx.recorder.getPoints().length).toBe(0);
+	});
+
+	it('disconnected cancel resets the local timer to idle', async () => {
+		const container = createContainer();
+		const ctx = makeRunningContext('disconnected');
+		renderBrewing(container, ctx);
+		(container.querySelector('.brew-flow-cancel-btn') as HTMLButtonElement).click();
+		await vi.waitFor(() => expect(ctx.renderContent).toHaveBeenCalledWith('brewing'));
+		expect(ctx.timerController.resetToIdle).toHaveBeenCalledTimes(1);
+		expect(ctx.timerController.cancelRun).not.toHaveBeenCalled();
+	});
+
+	it('cancel rejection still re-renders a coherent armed brewing state', async () => {
+		const container = createContainer();
+		const ctx = makeRunningContext();
+		vi.mocked(ctx.timerController.cancelRun).mockRejectedValueOnce(new Error('reset failed'));
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		renderBrewing(container, ctx);
+		(container.querySelector('.brew-flow-cancel-btn') as HTMLButtonElement).click();
+		await vi.waitFor(() => expect(ctx.renderContent).toHaveBeenCalledWith('brewing'));
+		expect(ctx.flowState.step).toBe('brewing');
+		expect(ctx.flowState.brewingStarted).toBe(false);
+		expect(ctx.recorder.getPoints().length).toBe(0);
+		consoleError.mockRestore();
 	});
 });

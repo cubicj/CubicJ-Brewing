@@ -149,9 +149,12 @@ export function renderConfigureDials(
 			pxPerStep: 12,
 			onChange: grindOnChange,
 		});
+		grindStepper.setValue(0, true);
 		form.insertBefore(grindStepper.el, doseStepper.el);
+		sel.grindSize = grindStepper.getValue();
 		sel.rpm = undefined;
 		buildRpmStepper();
+		syncSummary();
 	};
 
 	const applyRecord = (record: BrewRecord) => {

@@ -112,7 +112,10 @@ export class AccordionManager {
 				this.cleanupPanel(i);
 				body.empty();
 				const inner = body.createDiv({ cls: 'brew-accordion-body-inner' });
-				if (this.callbacks.getPanelMode(config.step) === 'readonly') inner.addClass('is-readonly');
+				if (this.callbacks.getPanelMode(config.step) === 'readonly') {
+					inner.addClass('is-readonly');
+					inner.setAttribute('inert', '');
+				}
 				const cleanups: Array<() => void> = [];
 				this.panelCleanups.set(i, cleanups);
 				this.callbacks.renderStep(config.step, inner, (fn) => cleanups.push(fn));

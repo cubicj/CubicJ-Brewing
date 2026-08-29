@@ -356,7 +356,7 @@ describe('AccordionManager', () => {
 		expect(headers[0].classList.contains('is-disabled')).toBe(false);
 	});
 
-	it('adds is-readonly to the body inner of readonly panels', () => {
+	it('marks readonly body inners as inert without affecting editable panels', () => {
 		const mgr = new AccordionManager(acc.container, {
 			renderStep: () => {},
 			getStepSummary: () => '',
@@ -368,7 +368,9 @@ describe('AccordionManager', () => {
 		mgr.update();
 		const inners = acc.container.querySelectorAll('.brew-accordion-body-inner');
 		expect(inners[0].classList.contains('is-readonly')).toBe(true);
+		expect(inners[0].hasAttribute('inert')).toBe(true);
 		expect(inners[1].classList.contains('is-readonly')).toBe(false);
+		expect(inners[1].hasAttribute('inert')).toBe(false);
 	});
 
 	it('animateContentChange calls mutation', () => {

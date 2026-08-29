@@ -80,17 +80,23 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 			text: t('common.cancel'),
 			cls: 'brewing-ctrl-btn brew-flow-cancel-btn',
 		});
+		let cancelPending = false;
 		const cancelBrewing = async () => {
+			if (cancelPending) return;
+			cancelPending = true;
+			stopBtn.disabled = true;
+			cancelBtn.disabled = true;
 			try {
 				if (chart) chart.stopLive();
 				ctx.recorder.reset();
 				ctx.flowState.cancelBrewingRun();
 				if (scaleConnected) await ctx.timerController.cancelRun();
 				else ctx.timerController.resetToIdle();
-				ctx.renderContent();
 			} catch (err) {
 				console.error('[StepRenderers] brew cancel failed:', err);
 				new Notice(t('brew.unexpectedError'));
+			} finally {
+				ctx.renderContent('brewing');
 			}
 		};
 		cancelBtn.addEventListener('click', () => {

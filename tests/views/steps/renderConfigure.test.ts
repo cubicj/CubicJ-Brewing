@@ -84,4 +84,34 @@ describe('renderConfigure phase gating', () => {
 		expect(queries.loose).not.toHaveBeenCalled();
 		expect(queries.strict).not.toHaveBeenCalled();
 	});
+
+	it('keeps the rebuilt grind display and selection aligned after a review grinder change', async () => {
+		const flowState = makeFlowState('saving');
+		flowState.updateVariables({ grinder: 'Old', grindSize: 20 });
+		const ctx = makeContext(flowState);
+		ctx.equipment = {
+			grinders: [
+				{ name: 'Old', step: 1, min: 0, max: 40 },
+				{ name: 'New', step: 0.5, min: 5, max: 10 },
+			],
+			drippers: [],
+			filters: ['V60'],
+			baskets: [],
+			accessories: [],
+		};
+		renderConfigure(container, ctx);
+		const grinderSelect = Array.from(container.querySelectorAll('select')).find(
+			(select) => Array.from(select.options).some((option) => option.value === 'New'),
+		)!;
+		grinderSelect.value = 'New';
+		grinderSelect.dispatchEvent(new Event('change'));
+		const grindStepper = container.querySelector('.cubicj-stepper')!;
+		const displayedGrind = parseFloat(grindStepper.querySelector('.cubicj-stepper-value')!.textContent!);
+		expect(displayedGrind).toBe(flowState.selection.grindSize);
+		expect(flowState.selection.grindSize).toBe(5);
+		expect(ctx.accordion.updateSummaries).toHaveBeenCalled();
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(queries.loose).not.toHaveBeenCalled();
+		expect(queries.strict).not.toHaveBeenCalled();
+	});
 });
