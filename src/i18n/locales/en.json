@@ -75,7 +75,7 @@
 	"scale.disconnect": "Disconnect",
 	"scale.disconnected": "Disconnected",
 	"scale.reconnect": "Reconnect",
-	"scale.reconnecting": "Reconnecting ({{attempt}}/3)",
+	"scale.reconnecting": "Reconnecting ({{attempt}}/{{max}})",
 
 	"settings.openView": "Open brewing view",
 	"settings.openViewDesc": "Show brewing panel in the sidebar.",

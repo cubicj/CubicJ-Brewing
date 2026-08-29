@@ -1,3 +1,4 @@
+import { MAX_RECONNECT_ATTEMPTS } from '../acaia/AcaiaService';
 import type { AcaiaState } from '../acaia/types';
 import { t } from '../i18n/index';
 
@@ -111,7 +112,7 @@ export class ScaleDisplayManager {
 				break;
 			case 'reconnecting': {
 				const attempt = this.callbacks.getReconnectAttempt();
-				this.scaleStatusEl.textContent = t('scale.reconnecting', { attempt });
+				this.scaleStatusEl.textContent = t('scale.reconnecting', { attempt, max: MAX_RECONNECT_ATTEMPTS });
 				this.connectBtn.textContent = t('scale.scanCancel');
 				this.scaleBatteryEl.textContent = '';
 				break;

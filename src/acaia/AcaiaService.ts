@@ -14,6 +14,10 @@ import { NobleTransport } from './NobleTransport';
 import { TypedEmitter } from './TypedEmitter';
 import { decodePacket } from './packetDecoder';
 
+export const MAX_RECONNECT_ATTEMPTS = 6;
+const RECONNECT_BASE_MS = 1000;
+const RECONNECT_MAX_DELAY_MS = 15000;
+
 type WriteKind = 'command' | 'heartbeat';
 
 interface QueuedWrite {
@@ -53,8 +57,6 @@ export class AcaiaService extends TypedEmitter<AcaiaEvents> {
 	private static readonly MAX_WRITE_FAILURES = 6;
 	private static readonly SILENCE_WARN_MS = 5000;
 	private static readonly SILENCE_DEAD_MS = 8000;
-	private static readonly MAX_RECONNECT_ATTEMPTS = 3;
-	private static readonly RECONNECT_BASE_MS = 1000;
 	private userDisconnected = false;
 	private reconnectAttempt = 0;
 	private reconnectTimer: number | null = null;
@@ -431,17 +433,17 @@ export class AcaiaService extends TypedEmitter<AcaiaEvents> {
 			this.log('maybeReconnect() skipped — connect aborted');
 			return;
 		}
-		if (this.reconnectAttempt >= AcaiaService.MAX_RECONNECT_ATTEMPTS) {
+		if (this.reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
 			this.log(`maybeReconnect() giving up — ${this.reconnectAttempt} attempts exhausted`);
 			this.reconnectAttempt = 0;
-			this.emitError('Reconnect failed after 3 attempts');
+			this.emitError(`Reconnect failed after ${MAX_RECONNECT_ATTEMPTS} attempts`);
 			return;
 		}
 
-		const delay = AcaiaService.RECONNECT_BASE_MS * Math.pow(2, this.reconnectAttempt);
+		const delay = Math.min(RECONNECT_BASE_MS * Math.pow(2, this.reconnectAttempt), RECONNECT_MAX_DELAY_MS);
 		this.reconnectAttempt++;
 		this.log(
-			`maybeReconnect() attempt ${this.reconnectAttempt}/${AcaiaService.MAX_RECONNECT_ATTEMPTS}, delay=${delay}ms`,
+			`maybeReconnect() attempt ${this.reconnectAttempt}/${MAX_RECONNECT_ATTEMPTS}, delay=${delay}ms`,
 		);
 		this.setState('reconnecting');
 

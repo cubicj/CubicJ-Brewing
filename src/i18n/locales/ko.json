@@ -75,7 +75,7 @@
 	"scale.disconnect": "해제",
 	"scale.disconnected": "연결 끊김",
 	"scale.reconnect": "재연결",
-	"scale.reconnecting": "재연결 중 ({{attempt}}/3)",
+	"scale.reconnecting": "재연결 중 ({{attempt}}/{{max}})",
 
 	"settings.openView": "브루잉 뷰 열기",
 	"settings.openViewDesc": "사이드바에 브루잉 패널을 표시합니다.",

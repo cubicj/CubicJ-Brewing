@@ -201,7 +201,7 @@ describe('AcaiaService reconnect', () => {
 		}
 	});
 
-	it('gives up with an error after three failed reconnect attempts', async () => {
+	it('gives up with an error after six failed reconnect attempts', async () => {
 		vi.useFakeTimers();
 		const peripheral = createMockPeripheral();
 		const noble = createMockNoble(peripheral);
@@ -217,15 +217,43 @@ describe('AcaiaService reconnect', () => {
 			(noble as unknown as { startScanning: () => void }).startScanning = vi.fn();
 			triggerDisconnect(peripheral);
 
-			await vi.advanceTimersByTimeAsync(1000);
-			await vi.advanceTimersByTimeAsync(10000);
-			await vi.advanceTimersByTimeAsync(2000);
-			await vi.advanceTimersByTimeAsync(10000);
-			await vi.advanceTimersByTimeAsync(4000);
-			await vi.advanceTimersByTimeAsync(10000);
+			for (const delay of [1000, 2000, 4000, 8000, 15000, 15000]) {
+				await vi.advanceTimersByTimeAsync(delay);
+				await vi.advanceTimersByTimeAsync(10000);
+			}
 
-			expect(errors).toContain('Reconnect failed after 3 attempts');
+			expect(errors).toContain('Reconnect failed after 6 attempts');
 			expect(service.state).toBe('idle');
+		} finally {
+			service.destroy();
+			vi.useRealTimers();
+		}
+	});
+
+	it('caps the reconnect delay at 15 seconds', async () => {
+		vi.useFakeTimers();
+		const peripheral = createMockPeripheral();
+		const noble = createMockNoble(peripheral);
+		const service = new AcaiaService({ nobleFactory: () => noble });
+		try {
+			const connectPromise = service.connect();
+			await vi.advanceTimersByTimeAsync(200);
+			await connectPromise;
+
+			(noble as unknown as { startScanning: () => void }).startScanning = vi.fn();
+			triggerDisconnect(peripheral);
+
+			for (const delay of [1000, 2000, 4000, 8000]) {
+				await vi.advanceTimersByTimeAsync(delay);
+				await vi.advanceTimersByTimeAsync(10000);
+			}
+			expect(service.currentReconnectAttempt).toBe(5);
+			expect(service.state).toBe('reconnecting');
+
+			await vi.advanceTimersByTimeAsync(14999);
+			expect(service.state).toBe('reconnecting');
+			await vi.advanceTimersByTimeAsync(1);
+			expect(service.state).toBe('scanning');
 		} finally {
 			service.destroy();
 			vi.useRealTimers();
