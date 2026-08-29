@@ -120,6 +120,18 @@ export class BrewingView extends ItemView {
 				renderStep(step, el, this.buildRenderContext(registerCleanup)),
 			getStepSummary: (step) => getStepSummary(step, this.flowState.selection),
 			getPanelMode: (step) => this.flowState.panelMode(step),
+			getDisabledHint: (step) => {
+				if (step === 'configure') {
+					const beanMissing = !this.flowState.selection.bean;
+					const methodMissing = !this.flowState.isMethodComplete();
+					if (beanMissing && methodMissing) return t('brew.hint.selectBeanMethod');
+					if (beanMissing) return t('brew.hint.selectBean');
+					return t('brew.hint.selectMethod');
+				}
+				if (step === 'brewing') return t('brew.hint.completeSetup');
+				if (step === 'saving') return t('brew.hint.finishBrew');
+				return '';
+			},
 		});
 
 		this.bindServiceEvents();

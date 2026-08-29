@@ -18,14 +18,16 @@ function makeAccordion() {
 	const renderStep = vi.fn();
 	const getStepSummary = vi.fn().mockReturnValue('');
 	const getPanelMode = vi.fn().mockReturnValue('editable' as const);
+	const getDisabledHint = vi.fn().mockReturnValue('hint text');
 
 	const manager = new AccordionManager(container, {
 		renderStep,
 		getStepSummary,
 		getPanelMode,
+		getDisabledHint,
 	});
 
-	return { container, manager, renderStep, getStepSummary, getPanelMode };
+	return { container, manager, renderStep, getStepSummary, getPanelMode, getDisabledHint };
 }
 
 function installAnimationFrameQueue() {
@@ -324,39 +326,47 @@ describe('AccordionManager', () => {
 		expect(body.classList.contains('is-open')).toBe(true);
 	});
 
-	it('togglePanel ignores clicks on disabled panels', () => {
-		const modes: Record<string, PanelMode> = { method: 'editable', bean: 'disabled' };
-		const mgr = new AccordionManager(acc.container, {
-			renderStep: () => {},
-			getStepSummary: () => '',
-			getPanelMode: (step) => modes[step] ?? 'disabled',
-		});
-		mgr.build();
-		mgr.togglePanel(0);
-		mgr.update();
-		expect(acc.container.querySelectorAll('.brew-accordion-body.is-open').length).toBe(0);
-		mgr.togglePanel(1);
-		mgr.update();
-		expect(acc.container.querySelectorAll('.brew-accordion-body.is-open').length).toBe(1);
+	it('expands a disabled panel and renders the hint instead of step content', () => {
+		acc.getPanelMode.mockImplementation((step) => (step === 'configure' ? 'disabled' : 'editable'));
+		acc.manager.build();
+
+		acc.manager.togglePanel(2);
+
+		const body = acc.container.querySelectorAll('.brew-accordion-body')[2];
+		expect(body.querySelector('.brew-accordion-hint')?.textContent).toBe('hint text');
+		expect(acc.renderStep).not.toHaveBeenCalledWith('configure', expect.anything(), expect.anything());
 	});
 
-	it('marks disabled headers and collapses panels that become disabled', () => {
-		const animation = installAnimationFrameQueue();
-		let mode: PanelMode = 'editable';
-		const mgr = new AccordionManager(acc.container, {
-			renderStep: () => {},
-			getStepSummary: () => '',
-			getPanelMode: (step) => (step === 'saving' ? mode : 'editable'),
-		});
-		mgr.build();
-		mgr.togglePanel(4);
-		mgr.update();
-		expect(acc.container.querySelectorAll('.brew-accordion-body.is-open').length).toBe(1);
-		mode = 'disabled';
-		mgr.update();
-		animation.runFrame(0);
-		animation.runFrame(16);
-		expect(acc.container.querySelectorAll('.brew-accordion-body.is-open').length).toBe(0);
+	it('keeps a disabled panel expanded across update()', () => {
+		acc.getPanelMode.mockImplementation((step) => (step === 'configure' ? 'disabled' : 'editable'));
+		acc.manager.build();
+
+		acc.manager.togglePanel(2);
+		acc.manager.update();
+
+		const body = acc.container.querySelectorAll('.brew-accordion-body')[2];
+		expect(body.classList.contains('is-open')).toBe(true);
+	});
+
+	it('replaces the hint with real content when the panel becomes enabled', () => {
+		let mode: PanelMode = 'disabled';
+		acc.getPanelMode.mockImplementation((step) => (step === 'configure' ? mode : 'editable'));
+		acc.manager.build();
+
+		acc.manager.togglePanel(2);
+		mode = 'editable';
+		acc.manager.update();
+
+		const body = acc.container.querySelectorAll('.brew-accordion-body')[2];
+		expect(body.querySelector('.brew-accordion-hint')).toBeNull();
+		expect(acc.renderStep).toHaveBeenCalledWith('configure', expect.anything(), expect.anything());
+	});
+
+	it('marks disabled headers without affecting enabled headers', () => {
+		acc.getPanelMode.mockImplementation((step) => (step === 'saving' ? 'disabled' : 'editable'));
+		acc.manager.build();
+		acc.manager.update();
+
 		const headers = acc.container.querySelectorAll('.brew-accordion-header');
 		expect(headers[4].classList.contains('is-disabled')).toBe(true);
 		expect(headers[0].classList.contains('is-disabled')).toBe(false);
@@ -367,6 +377,7 @@ describe('AccordionManager', () => {
 			renderStep: () => {},
 			getStepSummary: () => '',
 			getPanelMode: (step) => (step === 'method' ? 'readonly' : 'editable'),
+			getDisabledHint: () => 'hint text',
 		});
 		mgr.build();
 		mgr.togglePanel(0);

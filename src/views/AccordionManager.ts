@@ -5,6 +5,7 @@ interface AccordionCallbacks {
 	renderStep: (step: FlowStep, container: HTMLElement, registerCleanup: (fn: () => void) => void) => void;
 	getStepSummary: (step: FlowStep) => string;
 	getPanelMode: (step: FlowStep) => PanelMode;
+	getDisabledHint: (step: FlowStep) => string;
 }
 
 export class AccordionManager {
@@ -50,7 +51,6 @@ export class AccordionManager {
 	}
 
 	togglePanel(index: number): void {
-		if (this.callbacks.getPanelMode(STEP_CONFIG[index].step) === 'disabled') return;
 		if (this.expandedSteps.has(index)) {
 			this.expandedSteps.delete(index);
 		} else {
@@ -92,9 +92,6 @@ export class AccordionManager {
 	}
 
 	update(): void {
-		for (let i = 0; i < STEP_CONFIG.length; i++) {
-			if (this.callbacks.getPanelMode(STEP_CONFIG[i].step) === 'disabled') this.expandedSteps.delete(i);
-		}
 		this.updateSummaries();
 		for (let i = 0; i < STEP_CONFIG.length; i++) {
 			const config = STEP_CONFIG[i];
@@ -112,13 +109,18 @@ export class AccordionManager {
 				this.cleanupPanel(i);
 				body.empty();
 				const inner = body.createDiv({ cls: 'brew-accordion-body-inner' });
-				if (this.callbacks.getPanelMode(config.step) === 'readonly') {
-					inner.addClass('is-readonly');
-					inner.setAttribute('inert', '');
+				const mode = this.callbacks.getPanelMode(config.step);
+				if (mode === 'disabled') {
+					inner.createDiv({ cls: 'brew-accordion-hint', text: this.callbacks.getDisabledHint(config.step) });
+				} else {
+					if (mode === 'readonly') {
+						inner.addClass('is-readonly');
+						inner.setAttribute('inert', '');
+					}
+					const cleanups: Array<() => void> = [];
+					this.panelCleanups.set(i, cleanups);
+					this.callbacks.renderStep(config.step, inner, (fn) => cleanups.push(fn));
 				}
-				const cleanups: Array<() => void> = [];
-				this.panelCleanups.set(i, cleanups);
-				this.callbacks.renderStep(config.step, inner, (fn) => cleanups.push(fn));
 				if (!wasOpen) {
 					body.classList.add('is-open');
 					const h = body.scrollHeight;
