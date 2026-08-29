@@ -10,9 +10,40 @@ import { ScaleDisplayManager } from './ScaleDisplayManager';
 import { type FlowStep, renderStep, getStepSummary, type StepRenderContext } from './StepRenderers';
 import { AccordionManager } from './AccordionManager';
 import { BrewProfileRecorder } from './BrewProfileRecorder';
+import { BrewRunCoordinator } from './BrewRunCoordinator';
 import { NobleInstallModal } from './NobleInstallModal';
 
 export const VIEW_TYPE_BREWING = 'cubicj-brewing';
+const TIMER_OPERATION_TIMEOUT_MS = 5000;
+
+export function withTimerOperationTimeout(operation: () => Promise<void>): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const rejectWithError = (reason: unknown) => {
+			reject(reason instanceof Error ? reason : new Error(String(reason)));
+		};
+		const timeoutId = window.setTimeout(() => {
+			reject(new Error(`Timer operation timed out after ${TIMER_OPERATION_TIMEOUT_MS}ms`));
+		}, TIMER_OPERATION_TIMEOUT_MS);
+		let pending: Promise<void>;
+		try {
+			pending = operation();
+		} catch (err) {
+			window.clearTimeout(timeoutId);
+			rejectWithError(err);
+			return;
+		}
+		pending.then(
+			() => {
+				window.clearTimeout(timeoutId);
+				resolve();
+			},
+			(err) => {
+				window.clearTimeout(timeoutId);
+				rejectWithError(err);
+			},
+		);
+	});
+}
 
 export class BrewingView extends ItemView {
 	private plugin: CubicJBrewingPlugin;
@@ -29,6 +60,7 @@ export class BrewingView extends ItemView {
 	private accordion!: AccordionManager;
 
 	private timerController!: TimerController;
+	private runCoordinator!: BrewRunCoordinator;
 	private recorder = new BrewProfileRecorder();
 
 	constructor(leaf: WorkspaceLeaf, plugin: CubicJBrewingPlugin) {
@@ -57,7 +89,7 @@ export class BrewingView extends ItemView {
 		const svc = this.plugin.acaiaService!;
 		this.scaleDisplay = new ScaleDisplayManager(this.scaleConnectBtn, this.scalePowerOffBtn, {
 			onTimerClick: () => {
-				void this.timerController.handleTimerClick();
+				this.runCoordinator.handleToolbarTimer();
 			},
 			onTare: () => {
 				void svc.tare();
@@ -71,8 +103,16 @@ export class BrewingView extends ItemView {
 		const scaleElems = this.scaleDisplay.buildData(dataEl);
 		this.timerController = new TimerController(
 			{ timerEl: scaleElems.timerEl, timerBtn: scaleElems.timerBtn },
-			{ startTimer: () => svc.startTimer(), stopTimer: () => svc.stopTimer(), resetTimer: () => svc.resetTimer() },
+			{
+				startTimer: () => withTimerOperationTimeout(() => svc.startTimer()),
+				stopTimer: () => withTimerOperationTimeout(() => svc.stopTimer()),
+				resetTimer: () => withTimerOperationTimeout(() => svc.resetTimer()),
+			},
 		);
+		this.runCoordinator = new BrewRunCoordinator(this.flowState, this.recorder, this.timerController, {
+			getScaleState: () => this.plugin.acaiaService?.state ?? 'idle',
+			renderContent: (focusStep) => this.renderContent(focusStep),
+		});
 
 		const contentArea = container.createDiv({ cls: 'brewing-content-area' });
 		this.accordion = new AccordionManager(contentArea, {
@@ -111,7 +151,7 @@ export class BrewingView extends ItemView {
 	}
 
 	toggleTimer(): void {
-		void this.timerController.handleTimerClick();
+		this.runCoordinator.handleToolbarTimer();
 	}
 
 	powerOff(): void {
@@ -202,14 +242,7 @@ export class BrewingView extends ItemView {
 	private resetFlow(): void {
 		this.log('resetFlow');
 		this.flowState.cancel();
-		this.recorder.reset();
-		if (this.plugin.acaiaService?.state === 'connected') {
-			this.timerController.cancelRun().catch((err) => {
-				console.error('[BrewingView] resetFlow timer cancel failed:', err);
-			});
-		} else {
-			this.timerController.resetToIdle();
-		}
+		this.runCoordinator.resetAll();
 		this.flowState.startBrew();
 		this.accordion.clearExpandedSteps();
 		this.lastFocusedStep = this.flowState.step;
@@ -229,6 +262,7 @@ export class BrewingView extends ItemView {
 				updateSummaries: () => this.accordion.updateSummaries(),
 			},
 			timerController: this.timerController,
+			runCoordinator: this.runCoordinator,
 			getWeightText: () => this.scaleDisplay.getWeightText(),
 			resetFlow: () => this.resetFlow(),
 			recorder: this.recorder,
@@ -241,8 +275,11 @@ export class BrewingView extends ItemView {
 	private bindServiceEvents(): void {
 		this.listen('state', (state: AcaiaState) => {
 			this.log(`state → ${state}`);
+			this.runCoordinator.handleScaleState(state);
 			this.scaleDisplay.updateHeader(state, this.plugin.acaiaService?.scaleName);
-			this.scaleDisplay.updateControls(state, () => this.timerController.resetToIdle());
+			this.scaleDisplay.updateControls(state, () => {
+				if (!this.runCoordinator.hasActiveRun()) this.timerController.resetToIdle();
+			});
 		});
 
 		this.listen('weight', (grams: number, stable: boolean) => {
@@ -255,7 +292,7 @@ export class BrewingView extends ItemView {
 		});
 
 		this.listen('button', (event: ButtonEvent) => {
-			this.timerController.handleScaleButton(event);
+			this.runCoordinator.handleScaleButton(event);
 		});
 
 		this.listen('battery', (percent: number) => {

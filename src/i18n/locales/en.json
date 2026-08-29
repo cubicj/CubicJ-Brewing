@@ -22,6 +22,8 @@
 	"brew.done": "Done",
 	"brew.startBrewing": "Start brewing",
 	"brew.redoBrew": "Redo brew",
+	"brew.linkLost": "Scale disconnected · reconnecting…",
+	"brew.convertToManual": "Switch to manual entry",
 	"brew.saving": "Saving...",
 	"brew.saved": "Saved",
 	"brew.saveFailed": "Save failed",

@@ -2,6 +2,7 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BrewFlowState } from '../../../src/brew/BrewFlowState';
 import type { BrewProfilePoint } from '../../../src/brew/types';
+import { BrewRunCoordinator } from '../../../src/views/BrewRunCoordinator';
 import type { StepRenderContext } from '../../../src/views/StepRenderers';
 import { createContainer, installPolyfills } from '../../helpers/obsidian-dom-polyfill';
 
@@ -34,7 +35,7 @@ vi.mock('../../../src/views/BrewProfileModal', () => ({
 }));
 
 vi.mock('../../../src/i18n/index', () => ({
-	t: (key: string) => key,
+	t: (key: string, vars?: Record<string, string | number>) => (key === 'modal.seconds' ? `${vars?.n}s` : key),
 	initI18n: vi.fn(),
 }));
 
@@ -55,28 +56,80 @@ function makeFlowState(method: 'filter' | 'espresso') {
 	return s;
 }
 
-function makeContext(
-	flowState = makeFlowState('filter'),
-	points: BrewProfilePoint[] = [],
-	scaleState: 'connected' | 'disconnected' = 'connected',
+function makeArmedFilterFlow() {
+	return makeFlowState('filter');
+}
+
+function makeRunningFilterFlow() {
+	return makeFlowState('filter');
+}
+
+function makeReviewFlowWithPoints({ time, yield: yieldGrams }: { time: number; yield: number }) {
+	const flowState = makeRunningFilterFlow();
+	flowState.finishBrewing(time, yieldGrams);
+	return flowState;
+}
+
+function makeHarness(
+	flowState = makeArmedFilterFlow(),
+	{
+		points = [],
+		connected = true,
+		recording = false,
+	}: { points?: BrewProfilePoint[]; connected?: boolean; recording?: boolean } = {},
 ) {
 	const cleanups: Array<() => void> = [];
 	let recordedPoints = [...points];
+	let isRecording = false;
 	const recorder = {
+		get isRecording() {
+			return isRecording;
+		},
 		getPoints: vi.fn(() => recordedPoints),
-		start: vi.fn(),
-		stop: vi.fn(),
+		start: vi.fn(() => {
+			isRecording = true;
+		}),
+		stop: vi.fn(() => {
+			isRecording = false;
+		}),
 		reset: vi.fn(() => {
 			recordedPoints = [];
+			isRecording = false;
 		}),
 	};
-	const ctx = {
+	const timerController = {
+		freeze: vi.fn(),
+		getElapsedSeconds: vi.fn(() => 0),
+		handleTimerClick: vi.fn(),
+		cancelRun: vi.fn().mockResolvedValue(undefined),
+		resetToIdle: vi.fn(),
+	};
+	const container = createContainer();
+	let ctx!: StepRenderContext;
+	const renderContent = vi.fn(() => {
+		container.empty();
+		renderBrewing(container, ctx);
+	});
+	const runCoordinator = new BrewRunCoordinator(
+		flowState,
+		recorder as unknown as StepRenderContext['recorder'],
+		timerController as unknown as StepRenderContext['timerController'],
+		{
+			getScaleState: () => (connected ? 'connected' : 'idle'),
+			renderContent,
+		},
+	);
+	if (recording) {
+		if (flowState.brewingStarted) flowState.cancelBrewingRun();
+		void runCoordinator.startRun();
+	}
+	ctx = {
 		flowState,
 		plugin: {
-			acaiaService: { state: scaleState },
+			acaiaService: { state: connected ? 'connected' : 'disconnected' },
 			app: {},
 		},
-		renderContent: vi.fn(),
+		renderContent,
 		accordion: {
 			update: vi.fn(),
 			expand: vi.fn(),
@@ -84,19 +137,32 @@ function makeContext(
 			animateContentChange: vi.fn(),
 			updateSummaries: vi.fn(),
 		},
-		timerController: {
-			freeze: vi.fn(),
-			getElapsedSeconds: vi.fn(() => 0),
-			handleTimerClick: vi.fn(),
-			cancelRun: vi.fn().mockResolvedValue(undefined),
-			resetToIdle: vi.fn(),
-		},
+		timerController,
 		getWeightText: vi.fn(() => '0'),
+		runCoordinator,
 		recorder,
 		registerCleanup: (fn: () => void) => cleanups.push(fn),
 	} as unknown as StepRenderContext;
 
-	return { ctx, cleanups, recorder };
+	return {
+		container,
+		ctx,
+		cleanups,
+		recorder,
+		renderContent,
+		timerController,
+		setConnected(value: boolean) {
+			connected = value;
+		},
+	};
+}
+
+function makeContext(
+	flowState = makeArmedFilterFlow(),
+	points: BrewProfilePoint[] = [],
+	scaleState: 'connected' | 'disconnected' = 'connected',
+) {
+	return makeHarness(flowState, { points, connected: scaleState === 'connected', recording: flowState.brewingStarted });
 }
 
 function makeReviewContext({
@@ -117,9 +183,11 @@ function makeReviewContext({
 }
 
 function makeRunningContext(scaleState: 'connected' | 'disconnected' = 'connected') {
-	const flowState = makeFlowState('filter');
-	flowState.beginBrewingRun();
-	return makeContext(flowState, [{ t: 0, w: 0 }], scaleState).ctx;
+	return makeHarness(makeRunningFilterFlow(), {
+		points: [{ t: 0, w: 0 }],
+		connected: scaleState === 'connected',
+		recording: true,
+	}).ctx;
 }
 
 describe('renderBrewing chart cleanup', () => {
@@ -156,6 +224,42 @@ describe('renderBrewing chart cleanup', () => {
 });
 
 describe('renderBrewing phase controls', () => {
+	it('shows the link-lost banner with a convert button while a run has lost its scale', async () => {
+		const flowState = makeRunningFilterFlow();
+		const harness = makeHarness(flowState, { connected: true, recording: true });
+		renderBrewing(harness.container, harness.ctx);
+		harness.setConnected(false);
+		harness.ctx.runCoordinator.handleScaleState('disconnected');
+		expect(harness.container.querySelector('.brew-flow-link-lost')).not.toBeNull();
+		expect(harness.container.querySelector('.brew-flow-convert-btn')).not.toBeNull();
+	});
+
+	it('convert click discards points and requests a manual rerender', async () => {
+		const flowState = makeRunningFilterFlow();
+		const harness = makeHarness(flowState, {
+			points: [{ t: 1, w: 10 }],
+			connected: true,
+			recording: true,
+		});
+		renderBrewing(harness.container, harness.ctx);
+		harness.setConnected(false);
+		harness.ctx.runCoordinator.handleScaleState('disconnected');
+		harness.container.querySelector<HTMLButtonElement>('.brew-flow-convert-btn')!.click();
+		expect(harness.recorder.getPoints()).toEqual([]);
+		expect(harness.ctx.runCoordinator.isScaleModeRun()).toBe(false);
+		expect(harness.renderContent).toHaveBeenCalledWith('brewing');
+		expect(harness.container.querySelectorAll('.cubicj-stepper')).toHaveLength(2);
+		expect(harness.container.querySelector('.brew-profile-container')).toBeNull();
+		expect(harness.container.querySelector('.brew-flow-link-lost')).toBeNull();
+	});
+
+	it('renders no banner on a healthy connected run', () => {
+		const flowState = makeRunningFilterFlow();
+		const harness = makeHarness(flowState, { connected: true, recording: true });
+		renderBrewing(harness.container, harness.ctx);
+		expect(harness.container.querySelector('.brew-flow-link-lost')).toBeNull();
+	});
+
 	it('review with a recorded profile renders static chart and redo button, no stop/start', () => {
 		const container = createContainer();
 		const ctx = makeReviewContext({ method: 'filter', points: [{ t: 0, w: 0 }, { t: 1, w: 10 }] });
@@ -164,6 +268,21 @@ describe('renderBrewing phase controls', () => {
 		expect(container.querySelector('.brew-flow-redo-btn')).not.toBeNull();
 		expect(container.querySelector('.brew-flow-start-btn')).toBeNull();
 		expect(container.querySelector('.brew-flow-stop-btn')).toBeNull();
+	});
+
+	it('review with a recorded profile also shows prefilled time and yield steppers', () => {
+		const flowState = makeReviewFlowWithPoints({ time: 130, yield: 210 });
+		const harness = makeHarness(flowState, { connected: true, points: [{ t: 1, w: 10 }] });
+		renderBrewing(harness.container, harness.ctx);
+		expect(harness.container.querySelector('.brew-profile-container')).not.toBeNull();
+		const steppers = harness.container.querySelectorAll<HTMLElement>('.brew-flow-form .cubicj-stepper');
+		expect(steppers).toHaveLength(2);
+		expect(steppers[0].querySelector('.cubicj-stepper-value')?.textContent).toBe('130s');
+		expect(steppers[1].querySelector('.cubicj-stepper-value')?.textContent).toBe('210.0g');
+		steppers[0].querySelectorAll<HTMLButtonElement>('.cubicj-stepper-btn')[1].click();
+		steppers[1].querySelectorAll<HTMLButtonElement>('.cubicj-stepper-btn')[1].click();
+		expect(flowState.selection.time).toBe(131);
+		expect(flowState.selection.yield).toBe(210.1);
 	});
 
 	it('review without a profile renders manual time/yield steppers seeded from selection', () => {
@@ -276,6 +395,26 @@ describe('renderBrewing phase controls', () => {
 });
 
 describe('renderBrewing re-entry guards', () => {
+	it('start reads connectivity at click time, not render time', async () => {
+		const flowState = makeArmedFilterFlow();
+		const harness = makeHarness(flowState, { connected: true });
+		renderBrewing(harness.container, harness.ctx);
+		harness.setConnected(false);
+		harness.container.querySelector<HTMLButtonElement>('.brew-flow-start-btn')!.click();
+		await vi.waitFor(() => expect(flowState.brewingStarted).toBe(true));
+		expect(harness.recorder.start).not.toHaveBeenCalled();
+		expect(harness.timerController.handleTimerClick).not.toHaveBeenCalled();
+	});
+
+	it('done on a running scale-mode panel finishes through the coordinator', async () => {
+		const flowState = makeRunningFilterFlow();
+		const harness = makeHarness(flowState, { connected: true, recording: true });
+		renderBrewing(harness.container, harness.ctx);
+		harness.container.querySelector<HTMLButtonElement>('.brew-flow-stop-btn')!.click();
+		await vi.waitFor(() => expect(flowState.step).toBe('saving'));
+		expect(harness.timerController.freeze).toHaveBeenCalledTimes(1);
+	});
+
 	it('double-clicking start begins exactly one run', async () => {
 		const flowState = makeFlowState('filter');
 		const { ctx, recorder } = makeContext(flowState);
@@ -288,6 +427,7 @@ describe('renderBrewing re-entry guards', () => {
 		const startBtn = container.querySelector<HTMLButtonElement>('.brew-flow-start-btn')!;
 		startBtn.click();
 		startBtn.click();
+		await vi.waitFor(() => expect(ctx.timerController.handleTimerClick).toHaveBeenCalledTimes(1));
 		resolveTimer();
 		await Promise.resolve();
 		expect(recorder.start).toHaveBeenCalledTimes(1);
@@ -342,6 +482,7 @@ describe('renderBrewing re-entry guards', () => {
 		const stopBtn = container.querySelector<HTMLButtonElement>('.brew-flow-stop-btn')!;
 		stopBtn.click();
 		stopBtn.click();
+		await vi.waitFor(() => expect(ctx.timerController.freeze).toHaveBeenCalledTimes(1));
 		resolveFreeze();
 		await Promise.resolve();
 		expect(ctx.recorder.stop).toHaveBeenCalledTimes(1);

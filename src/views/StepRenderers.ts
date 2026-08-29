@@ -4,6 +4,7 @@ import type { BrewFlowSelection, EquipmentSettings } from '../brew/types';
 import type { TimerController } from './TimerController';
 import { formatTimer } from './TimerController';
 import type { BrewProfileRecorder } from './BrewProfileRecorder';
+import type { BrewRunCoordinator } from './BrewRunCoordinator';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import { getDrinkLabel, getMethodLabel, getTempLabel, calcRoastDays } from '../brew/constants';
 import { t } from '../i18n/index';
@@ -39,6 +40,7 @@ export interface StepRenderContext {
 	renderContent: (focusStep?: FlowStep) => void;
 	accordion: AccordionActions;
 	timerController: TimerController;
+	runCoordinator: BrewRunCoordinator;
 	getWeightText: () => string;
 	resetFlow: () => void;
 	recorder: BrewProfileRecorder;

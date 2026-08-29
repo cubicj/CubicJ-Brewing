@@ -54,6 +54,7 @@ function makeSavingContext(bean: BeanInfo, setWeightResult: Result<void>) {
 			updateSummaries: vi.fn(),
 		},
 		timerController: {} as StepRenderContext['timerController'],
+		runCoordinator: {} as StepRenderContext['runCoordinator'],
 		getWeightText: vi.fn(() => '0'),
 		resetFlow,
 		recorder: new BrewProfileRecorder(),

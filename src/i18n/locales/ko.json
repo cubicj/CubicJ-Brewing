@@ -22,6 +22,8 @@
 	"brew.done": "완료",
 	"brew.startBrewing": "브루잉 시작",
 	"brew.redoBrew": "다시 추출",
+	"brew.linkLost": "저울 연결 끊김 · 재연결 중…",
+	"brew.convertToManual": "수동 입력으로 전환",
 	"brew.saving": "저장 중...",
 	"brew.saved": "저장 완료",
 	"brew.saveFailed": "저장 실패",

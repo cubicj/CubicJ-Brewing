@@ -1,5 +1,4 @@
 import { Notice } from 'obsidian';
-import { estimateYield } from '../../brew/yieldEstimator';
 import { BrewProfileChart } from '../BrewProfileChart';
 import { BrewProfileModal } from '../BrewProfileModal';
 import { createStepper } from '../Stepper';
@@ -13,7 +12,6 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 		return;
 	}
 	const isEspresso = ctx.flowState.selection.method === 'espresso';
-	const scaleConnected = ctx.plugin.acaiaService?.state === 'connected';
 
 	if (isEspresso) {
 		container.createDiv({ cls: 'brew-flow-espresso-msg', text: t('brew.espressoMsg') });
@@ -46,7 +44,7 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 
 	if (ctx.flowState.brewingStarted) {
 		let chart: BrewProfileChart | null = null;
-		if (scaleConnected) {
+		if (ctx.runCoordinator.isScaleModeRun()) {
 			const chartContainer = container.createDiv({ cls: 'brew-profile-container' });
 			const liveChart = new BrewProfileChart(chartContainer);
 			chart = liveChart;
@@ -54,6 +52,17 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 			liveChart.startLive(ctx.recorder);
 		} else {
 			renderManualResultSteppers(container, ctx);
+		}
+		if (ctx.runCoordinator.isLinkLost()) {
+			const banner = container.createDiv({ cls: 'brew-flow-link-lost' });
+			banner.createSpan({ text: t('brew.linkLost') });
+			const convertBtn = banner.createEl('button', {
+				text: t('brew.convertToManual'),
+				cls: 'brewing-ctrl-btn brew-flow-convert-btn',
+			});
+			convertBtn.addEventListener('click', () => {
+				ctx.runCoordinator.convertToManual();
+			});
 		}
 		const controls = container.createDiv({ cls: 'brewing-controls' });
 		const stopBtn = controls.createEl('button', { text: t('brew.done'), cls: 'brewing-ctrl-btn brew-flow-stop-btn' });
@@ -69,19 +78,7 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 			cancelBtn.disabled = true;
 			try {
 				if (chart) chart.stopLive();
-				if (scaleConnected) {
-					ctx.recorder.stop();
-					await ctx.timerController.freeze();
-					const totalSeconds = ctx.timerController.getElapsedSeconds();
-					const yieldGrams =
-						(ctx.flowState.selection.method === 'filter' ? estimateYield(ctx.recorder.getPoints()) : undefined) ??
-						(parseFloat(ctx.getWeightText()) || undefined);
-					ctx.flowState.finishBrewing(totalSeconds || undefined, yieldGrams);
-				} else {
-					const sel = ctx.flowState.selection;
-					ctx.flowState.finishBrewing(sel.time, sel.yield);
-				}
-				ctx.renderContent();
+				if (await ctx.runCoordinator.finishRun()) ctx.renderContent();
 			} catch (err) {
 				console.error('[StepRenderers] brew stop failed:', err);
 				new Notice(t('brew.unexpectedError'));
@@ -101,10 +98,7 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 			cancelBtn.disabled = true;
 			try {
 				if (chart) chart.stopLive();
-				ctx.recorder.reset();
-				ctx.flowState.cancelBrewingRun();
-				if (scaleConnected) await ctx.timerController.cancelRun();
-				else ctx.timerController.resetToIdle();
+				await ctx.runCoordinator.cancelRun();
 			} catch (err) {
 				console.error('[StepRenderers] brew cancel failed:', err);
 				new Notice(t('brew.unexpectedError'));
@@ -127,19 +121,13 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 			startPending = true;
 			startBtn.disabled = true;
 			try {
-				if (!ctx.flowState.beginBrewingRun()) return;
-				if (scaleConnected) {
-					ctx.recorder.start();
-					await ctx.timerController.handleTimerClick();
+				if (await ctx.runCoordinator.startRun()) {
+					ctx.accordion.update();
+					ctx.accordion.scrollToStep('brewing');
 				}
-				ctx.accordion.update();
-				ctx.accordion.scrollToStep('brewing');
 			} catch (err) {
 				console.error('[StepRenderers] brew start failed:', err);
 				new Notice(t('brew.unexpectedError'));
-				ctx.flowState.cancelBrewingRun();
-				ctx.recorder.reset();
-				ctx.renderContent('brewing');
 			} finally {
 				startPending = false;
 				startBtn.disabled = false;
@@ -199,9 +187,8 @@ function renderReview(container: HTMLElement, ctx: StepRenderContext): void {
 		const staticChart = new BrewProfileChart(chartContainer);
 		ctx.registerCleanup(() => staticChart.destroy());
 		staticChart.renderStatic(points);
-	} else {
-		renderManualResultSteppers(container, ctx);
 	}
+	renderManualResultSteppers(container, ctx);
 
 	const controls = container.createDiv({ cls: 'brewing-controls' });
 	const redoBtn = controls.createEl('button', { text: t('brew.redoBrew'), cls: 'brewing-ctrl-btn brew-flow-redo-btn' });

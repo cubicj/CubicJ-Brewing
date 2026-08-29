@@ -25,6 +25,7 @@ function makeContext(flowState: BrewFlowState, renderContent = vi.fn()): StepRen
 			updateSummaries: vi.fn(),
 		},
 		timerController: {} as StepRenderContext['timerController'],
+		runCoordinator: {} as StepRenderContext['runCoordinator'],
 		getWeightText: vi.fn(() => ''),
 		resetFlow: vi.fn(),
 		recorder: {} as StepRenderContext['recorder'],

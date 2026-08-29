@@ -647,6 +647,19 @@
 	color: var(--text-muted);
 }
 
+.brew-flow-link-lost {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin: 8px 0;
+	padding: 6px 10px;
+	border-radius: 6px;
+	background-color: var(--background-modifier-error);
+	color: var(--text-on-accent);
+	font-size: var(--font-ui-small);
+}
+
 .cubicj-brewing-view .brew-flow-stop-btn {
 	background: var(--interactive-accent);
 	color: var(--text-on-accent);
