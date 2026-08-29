@@ -52,6 +52,7 @@ function makeContext(flowState: BrewFlowState): StepRenderContext {
 		accordion: {
 			update: vi.fn(),
 			expand: vi.fn(),
+			getStepPanel: vi.fn(() => null),
 			scrollToStep: vi.fn(),
 			animateContentChange: (
 				_s: Parameters<StepRenderContext['accordion']['animateContentChange']>[0],
@@ -73,7 +74,17 @@ describe('renderConfigure phase gating', () => {
 	it('renders the complete button and runs record init at configure', async () => {
 		renderConfigure(container, makeContext(makeFlowState('configure')));
 		expect(container.querySelector('.brew-flow-start-btn')).not.toBeNull();
+		expect(container.querySelector('.brew-flow-last-record')).not.toBeNull();
 		await vi.waitFor(() => expect(queries.loose).toHaveBeenCalled());
+	});
+
+	it('hides the last-record card outside the setup phase', () => {
+		const flowState = makeFlowState('configure');
+		flowState.updateVariables({ grindSize: 20, dose: 15, waterTemp: 93, filter: 'V60' });
+		flowState.startBrewing();
+		flowState.beginBrewingRun();
+		renderConfigure(container, makeContext(flowState));
+		expect(container.querySelector('.brew-flow-last-record')).toBeNull();
 	});
 
 	it('hides the complete button, the record card, and skips all record queries in review', async () => {

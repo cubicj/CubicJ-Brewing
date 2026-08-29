@@ -16,6 +16,7 @@ import { renderRecipeSelect } from './configure/RecipeField';
 
 export function renderConfigure(container: HTMLElement, ctx: StepRenderContext): void {
 	container.addClass('brew-flow-configure');
+	const isSetup = ctx.flowState.phase === 'setup';
 	const isReview = ctx.flowState.phase === 'review';
 	const sel = ctx.flowState.selection;
 	const isFilter = sel.method === 'filter';
@@ -41,9 +42,9 @@ export function renderConfigure(container: HTMLElement, ctx: StepRenderContext):
 		cardControls?.updateNav(newIndex, records.length);
 		applyRecordSelection(record);
 	};
-	const cardControls = isReview
-		? null
-		: renderLastRecordCard(container, onNavigate, () => ({ index: recordIndex, total: records.length }));
+	const cardControls = isSetup
+		? renderLastRecordCard(container, onNavigate, () => ({ index: recordIndex, total: records.length }))
+		: null;
 	cardControls?.updateCard(undefined);
 	cardControls?.updateNav(0, 0);
 
