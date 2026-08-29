@@ -186,6 +186,7 @@ export class BrewingView extends ItemView {
 
 		if (!this.accordion.isBuilt()) {
 			this.accordion.build();
+			this.lastFocusedStep = this.flowState.step;
 		}
 
 		const stepChanged = this.flowState.step !== this.lastFocusedStep;
@@ -196,9 +197,6 @@ export class BrewingView extends ItemView {
 			this.lastFocusedStep = this.flowState.step;
 		}
 		this.accordion.update();
-		if (shouldFocus) {
-			this.accordion.scrollStepToTop(targetStep);
-		}
 	}
 
 	private resetFlow(): void {
@@ -206,6 +204,8 @@ export class BrewingView extends ItemView {
 		this.flowState.cancel();
 		this.recorder.reset();
 		this.flowState.startBrew();
+		this.accordion.clearExpandedSteps();
+		this.lastFocusedStep = this.flowState.step;
 		this.renderContent();
 	}
 

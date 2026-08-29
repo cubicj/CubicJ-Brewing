@@ -28,9 +28,17 @@ export class BrewFlowState {
 		return 'setup';
 	}
 
+	private isMethodComplete(): boolean {
+		const { method, temp, drink } = this.selection;
+		return !!method && !!temp && (method !== 'espresso' || !!drink);
+	}
+
 	panelMode(panel: Exclude<BrewFlowStep, 'idle'>): PanelMode {
 		const current = this.step === 'idle' ? 'method' : this.step;
-		if (FLOW_ORDER.indexOf(panel) > FLOW_ORDER.indexOf(current)) return 'disabled';
+		const currentIndex = FLOW_ORDER.indexOf(current);
+		const effectiveCurrentIndex =
+			this.phase === 'setup' ? Math.max(currentIndex, FLOW_ORDER.indexOf('bean')) : currentIndex;
+		if (FLOW_ORDER.indexOf(panel) > effectiveCurrentIndex) return 'disabled';
 		if (this.phase === 'setup') return 'editable';
 		if (this.phase === 'running') return panel === 'brewing' ? 'editable' : 'readonly';
 		return panel === 'method' || panel === 'bean' ? 'readonly' : 'editable';
@@ -65,18 +73,17 @@ export class BrewFlowState {
 	}
 
 	selectBean(bean: BeanInfo): void {
-		if (this.phase !== 'setup' || this.step === 'method') return;
+		if (this.phase !== 'setup') return;
 		this.selection.bean = bean;
 		this.clearEquipment();
-		this.step = 'configure';
+		this.step = this.isMethodComplete() ? 'configure' : 'method';
 	}
 
 	deselectBean(): void {
-		if (this.phase !== 'setup') return;
-		if (this.step !== 'configure' && this.step !== 'brewing') return;
+		if (this.phase !== 'setup' || !this.selection.bean) return;
 		this.selection.bean = undefined;
 		this.clearEquipment();
-		this.step = 'bean';
+		this.step = this.isMethodComplete() ? 'bean' : 'method';
 	}
 
 	updateVariables(vars: Partial<BrewFlowSelection>): void {

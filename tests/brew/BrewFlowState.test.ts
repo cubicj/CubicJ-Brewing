@@ -48,6 +48,79 @@ describe('BrewFlowState', () => {
 		expect(state.selection.bean).toBe(bean);
 	});
 
+	it('stores a bean and clears equipment before the method is complete', () => {
+		const state = new BrewFlowState();
+		const bean = {
+			path: 'test.md',
+			name: '첼로',
+			roaster: 'LULL',
+			status: 'active' as const,
+			roastDate: '2026-02-20',
+			weight: null,
+		};
+		state.startBrew();
+		state.updateVariables({ grindSize: 2.6, dose: 18, waterTemp: 96, filter: '하이플럭스' });
+
+		state.selectBean(bean);
+
+		expect(state.selection.bean).toBe(bean);
+		expect(state.selection.grindSize).toBeUndefined();
+		expect(state.selection.dose).toBeUndefined();
+		expect(state.selection.waterTemp).toBeUndefined();
+		expect(state.selection.filter).toBeUndefined();
+		expect(state.step).toBe('method');
+		expect(state.panelMode('bean')).toBe('editable');
+		expect(state.panelMode('configure')).toBe('disabled');
+	});
+
+	it('advances to configure when the method completes after a bean-first pick', () => {
+		const state = new BrewFlowState();
+		const bean = {
+			path: 'test.md',
+			name: '첼로',
+			roaster: 'LULL',
+			status: 'active' as const,
+			roastDate: '2026-02-20',
+			weight: null,
+		};
+		state.startBrew();
+		state.selectBean(bean);
+		expect(state.selection.bean).toBe(bean);
+
+		state.selectMethod('filter', 'hot');
+		state.selectBean(bean);
+
+		expect(state.step).toBe('configure');
+		expect(state.selection.bean).toBe(bean);
+	});
+
+	it('returns to the next incomplete step when deselecting a bean', () => {
+		const state = new BrewFlowState();
+		const bean = {
+			path: 'test.md',
+			name: '첼로',
+			roaster: 'LULL',
+			status: 'active' as const,
+			roastDate: '2026-02-20',
+			weight: null,
+		};
+		state.startBrew();
+		state.selectBean(bean);
+		expect(state.selection.bean).toBe(bean);
+
+		state.deselectBean();
+
+		expect(state.step).toBe('method');
+		expect(state.selection.bean).toBeUndefined();
+
+		state.selectMethod('filter', 'hot');
+		state.selectBean(bean);
+		state.deselectBean();
+
+		expect(state.step).toBe('bean');
+		expect(state.selection.bean).toBeUndefined();
+	});
+
 	it('configure -> brewing on startBrewing', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
