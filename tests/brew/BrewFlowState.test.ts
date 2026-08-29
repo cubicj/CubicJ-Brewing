@@ -96,22 +96,24 @@ describe('BrewFlowState', () => {
 		expect(cancelToken === state.getConfigureInitToken()).toBe(false);
 	});
 
-	it('blocks method changes after brewing starts', () => {
+	it('blocks method changes after the brew run starts', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
 		state.selectMethod('filter', 'hot');
 		state.selectBean({ path: 'a.md', name: 'A', roaster: '', status: 'active', roastDate: null, weight: null });
 		state.startBrewing();
+		state.beginBrewingRun();
 		state.selectMethod('espresso', 'hot', 'shot');
 		expect(state.selection.method).toBe('filter');
 	});
 
-	it('blocks bean changes after brewing starts', () => {
+	it('blocks bean changes after the brew run starts', () => {
 		const state = new BrewFlowState();
 		state.startBrew();
 		state.selectMethod('filter', 'hot');
 		state.selectBean({ path: 'a.md', name: 'A', roaster: '', status: 'active', roastDate: null, weight: null });
 		state.startBrewing();
+		state.beginBrewingRun();
 		state.selectBean({ path: 'b.md', name: 'B', roaster: '', status: 'active', roastDate: null, weight: null });
 		expect(state.selection.bean?.name).toBe('A');
 	});
@@ -133,30 +135,6 @@ describe('BrewFlowState', () => {
 		expect(state.step).toBe('saving');
 		expect(state.selection.time).toBe(180.5);
 		expect(state.selection.yield).toBe(282);
-	});
-
-	it('goBack from bean returns to method', () => {
-		const state = new BrewFlowState();
-		state.startBrew();
-		state.selectMethod('filter', 'hot');
-		state.goBack();
-		expect(state.step).toBe('method');
-	});
-
-	it('goBack from configure returns to bean', () => {
-		const state = new BrewFlowState();
-		state.startBrew();
-		state.selectMethod('filter', 'hot');
-		state.selectBean({
-			path: 'test.md',
-			name: '첼로',
-			roaster: 'LULL',
-			status: 'active',
-			roastDate: '2026-02-20',
-			weight: null,
-		});
-		state.goBack();
-		expect(state.step).toBe('bean');
 	});
 
 	it('cancel resets to idle', () => {
@@ -258,10 +236,11 @@ describe('BrewFlowState', () => {
 		expect(state.selection.dripper).toBeUndefined();
 	});
 
-	it('selectMethod is no-op when not in method step', () => {
+	it('selectMethod works from idle setup', () => {
 		const state = new BrewFlowState();
 		state.selectMethod('filter', 'hot');
-		expect(state.step).toBe('idle');
+		expect(state.step).toBe('bean');
+		expect(state.selection.method).toBe('filter');
 	});
 
 	it('startBrewing is no-op when not in configure step', () => {
@@ -400,5 +379,168 @@ describe('rpm handling', () => {
 		state.updateVariables({ rpm: 1200 });
 		state.selectBean({ ...bean, name: 'Other Bean' });
 		expect(state.selection.rpm).toBeUndefined();
+	});
+});
+
+describe('phase', () => {
+	it('is setup for idle/method/bean/configure and armed brewing', () => {
+		const s = new BrewFlowState();
+		expect(s.phase).toBe('setup');
+		s.startBrew();
+		expect(s.phase).toBe('setup');
+		s.selectMethod('filter', 'hot');
+		s.selectBean({ path: 'b.md', name: 'B', roaster: '', status: 'active', roastDate: null, weight: null });
+		s.updateVariables({ grindSize: 20, dose: 15 });
+		s.startBrewing();
+		expect(s.step).toBe('brewing');
+		expect(s.phase).toBe('setup');
+	});
+
+	it('is running while brewing has started and review at saving', () => {
+		const s = new BrewFlowState();
+		s.startBrew();
+		s.selectMethod('filter', 'hot');
+		s.selectBean({ path: 'b.md', name: 'B', roaster: '', status: 'active', roastDate: null, weight: null });
+		s.startBrewing();
+		s.beginBrewingRun();
+		expect(s.phase).toBe('running');
+		s.finishBrewing(120, 250);
+		expect(s.phase).toBe('review');
+		expect(s.brewingStarted).toBe(false);
+	});
+});
+
+describe('panelMode', () => {
+	const reach = (step: 'method' | 'bean' | 'configure' | 'brewing' | 'saving') => {
+		const s = new BrewFlowState();
+		s.startBrew();
+		if (step === 'method') return s;
+		s.selectMethod('filter', 'hot');
+		if (step === 'bean') return s;
+		s.selectBean({ path: 'b.md', name: 'B', roaster: '', status: 'active', roastDate: null, weight: null });
+		if (step === 'configure') return s;
+		s.startBrewing();
+		if (step === 'brewing') return s;
+		s.beginBrewingRun();
+		s.finishBrewing(120, 250);
+		return s;
+	};
+
+	it('disables panels beyond the current step', () => {
+		const s = reach('bean');
+		expect(s.panelMode('method')).toBe('editable');
+		expect(s.panelMode('bean')).toBe('editable');
+		expect(s.panelMode('configure')).toBe('disabled');
+		expect(s.panelMode('brewing')).toBe('disabled');
+		expect(s.panelMode('saving')).toBe('disabled');
+	});
+
+	it('keeps panels 1-3 editable while armed', () => {
+		const s = reach('brewing');
+		expect(s.panelMode('method')).toBe('editable');
+		expect(s.panelMode('configure')).toBe('editable');
+		expect(s.panelMode('brewing')).toBe('editable');
+		expect(s.panelMode('saving')).toBe('disabled');
+	});
+
+	it('locks panels 1-3 while running', () => {
+		const s = reach('brewing');
+		s.beginBrewingRun();
+		expect(s.panelMode('method')).toBe('readonly');
+		expect(s.panelMode('bean')).toBe('readonly');
+		expect(s.panelMode('configure')).toBe('readonly');
+		expect(s.panelMode('brewing')).toBe('editable');
+		expect(s.panelMode('saving')).toBe('disabled');
+	});
+
+	it('locks method/bean but keeps configure editable in review', () => {
+		const s = reach('saving');
+		expect(s.panelMode('method')).toBe('readonly');
+		expect(s.panelMode('bean')).toBe('readonly');
+		expect(s.panelMode('configure')).toBe('editable');
+		expect(s.panelMode('brewing')).toBe('editable');
+		expect(s.panelMode('saving')).toBe('editable');
+	});
+});
+
+describe('back navigation transitions', () => {
+	const bean = { path: 'b.md', name: 'B', roaster: '', status: 'active', roastDate: null, weight: null } as const;
+
+	it('cancelBrewingRun returns to armed without touching variables', () => {
+		const s = new BrewFlowState();
+		s.startBrew();
+		s.selectMethod('filter', 'hot');
+		s.selectBean(bean);
+		s.updateVariables({ grindSize: 20, dose: 15, waterTemp: 93 });
+		s.startBrewing();
+		s.beginBrewingRun();
+		s.cancelBrewingRun();
+		expect(s.step).toBe('brewing');
+		expect(s.brewingStarted).toBe(false);
+		expect(s.selection.grindSize).toBe(20);
+	});
+
+	it('redoBrewing clears time/yield only and returns to armed', () => {
+		const s = new BrewFlowState();
+		s.startBrew();
+		s.selectMethod('filter', 'hot');
+		s.selectBean(bean);
+		s.updateVariables({ grindSize: 20, dose: 15, waterTemp: 93, note: 'memo' });
+		s.startBrewing();
+		s.beginBrewingRun();
+		s.finishBrewing(120, 250);
+		s.redoBrewing();
+		expect(s.step).toBe('brewing');
+		expect(s.selection.time).toBeUndefined();
+		expect(s.selection.yield).toBeUndefined();
+		expect(s.selection.note).toBe('memo');
+		expect(s.selection.grindSize).toBe(20);
+	});
+
+	it('redoBrewing is a no-op outside review', () => {
+		const s = new BrewFlowState();
+		s.startBrew();
+		s.redoBrewing();
+		expect(s.step).toBe('method');
+	});
+
+	it('selectMethod works from configure and rewinds to bean', () => {
+		const s = new BrewFlowState();
+		s.startBrew();
+		s.selectMethod('filter', 'hot');
+		s.selectBean(bean);
+		expect(s.step).toBe('configure');
+		s.selectMethod('filter', 'iced');
+		expect(s.step).toBe('bean');
+		expect(s.selection.temp).toBe('iced');
+	});
+
+	it('selectMethod and selectBean are no-ops outside setup', () => {
+		const s = new BrewFlowState();
+		s.startBrew();
+		s.selectMethod('filter', 'hot');
+		s.selectBean(bean);
+		s.startBrewing();
+		s.beginBrewingRun();
+		s.selectMethod('espresso', 'hot', 'shot');
+		expect(s.selection.method).toBe('filter');
+		s.finishBrewing(120, 250);
+		s.selectBean({ ...bean, name: 'C' });
+		expect(s.selection.bean?.name).toBe('B');
+	});
+
+	it('selectBean and deselectBean work while armed', () => {
+		const s = new BrewFlowState();
+		s.startBrew();
+		s.selectMethod('filter', 'hot');
+		s.selectBean(bean);
+		s.startBrewing();
+		s.selectBean({ ...bean, name: 'C' });
+		expect(s.step).toBe('configure');
+		expect(s.selection.bean?.name).toBe('C');
+		s.startBrewing();
+		s.deselectBean();
+		expect(s.step).toBe('bean');
+		expect(s.selection.bean).toBeUndefined();
 	});
 });

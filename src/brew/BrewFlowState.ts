@@ -10,26 +10,45 @@ import type {
 } from './types';
 import { calcRoastDays } from './constants';
 
+export type FlowPhase = 'setup' | 'running' | 'review';
+export type PanelMode = 'editable' | 'readonly' | 'disabled';
+
 const FLOW_ORDER: BrewFlowStep[] = ['idle', 'method', 'bean', 'configure', 'brewing', 'saving'];
 
 export class BrewFlowState {
 	step: BrewFlowStep = 'idle';
 	selection: BrewFlowSelection = {};
+	brewingStarted = false;
 	private initializedConfigureSetupKey: string | undefined;
 	private configureInitToken = 0;
+
+	get phase(): FlowPhase {
+		if (this.step === 'saving') return 'review';
+		if (this.step === 'brewing' && this.brewingStarted) return 'running';
+		return 'setup';
+	}
+
+	panelMode(panel: Exclude<BrewFlowStep, 'idle'>): PanelMode {
+		const current = this.step === 'idle' ? 'method' : this.step;
+		if (FLOW_ORDER.indexOf(panel) > FLOW_ORDER.indexOf(current)) return 'disabled';
+		if (this.phase === 'setup') return 'editable';
+		if (this.phase === 'running') return panel === 'brewing' ? 'editable' : 'readonly';
+		return panel === 'method' || panel === 'bean' ? 'readonly' : 'editable';
+	}
 
 	startBrew(): void {
 		this.step = 'method';
 		this.selection = {};
+		this.brewingStarted = false;
 		this.initializedConfigureSetupKey = undefined;
 		this.configureInitToken += 1;
 	}
 
 	selectMethod(method: BrewMethod, temp: BrewTemp, drink?: EspressoDrink): void {
-		if (this.step !== 'method') return;
+		if (this.phase !== 'setup') return;
 		this.selection.method = method;
 		this.selection.temp = temp;
-		if (method === 'espresso') this.selection.drink = drink;
+		this.selection.drink = method === 'espresso' ? drink : undefined;
 		this.step = 'bean';
 	}
 
@@ -46,14 +65,15 @@ export class BrewFlowState {
 	}
 
 	selectBean(bean: BeanInfo): void {
-		if (this.step !== 'bean' && this.step !== 'configure') return;
+		if (this.phase !== 'setup' || this.step === 'method') return;
 		this.selection.bean = bean;
 		this.clearEquipment();
 		this.step = 'configure';
 	}
 
 	deselectBean(): void {
-		if (this.step !== 'configure') return;
+		if (this.phase !== 'setup') return;
+		if (this.step !== 'configure' && this.step !== 'brewing') return;
 		this.selection.bean = undefined;
 		this.clearEquipment();
 		this.step = 'bean';
@@ -93,20 +113,33 @@ export class BrewFlowState {
 		this.step = 'brewing';
 	}
 
+	beginBrewingRun(): void {
+		if (this.step !== 'brewing' || this.brewingStarted) return;
+		this.brewingStarted = true;
+	}
+
+	cancelBrewingRun(): void {
+		if (this.step !== 'brewing') return;
+		this.brewingStarted = false;
+	}
+
 	finishBrewing(time?: number, yieldGrams?: number): void {
 		if (this.step !== 'brewing') return;
 		this.selection.time = time;
 		this.selection.yield = yieldGrams;
+		this.brewingStarted = false;
 		this.step = 'saving';
 	}
 
-	goBack(): void {
-		const idx = FLOW_ORDER.indexOf(this.step);
-		if (idx > 1) this.step = FLOW_ORDER[idx - 1];
-		else if (idx === 1) this.step = 'idle';
+	redoBrewing(): void {
+		if (this.step !== 'saving') return;
+		this.selection.time = undefined;
+		this.selection.yield = undefined;
+		this.step = 'brewing';
 	}
 
 	goToStep(step: BrewFlowStep): void {
+		if (this.phase !== 'setup') return;
 		const targetIdx = FLOW_ORDER.indexOf(step);
 		const currentIdx = FLOW_ORDER.indexOf(this.step);
 		if (targetIdx < currentIdx) this.step = step;
@@ -115,6 +148,7 @@ export class BrewFlowState {
 	cancel(): void {
 		this.step = 'idle';
 		this.selection = {};
+		this.brewingStarted = false;
 		this.initializedConfigureSetupKey = undefined;
 		this.configureInitToken += 1;
 	}
