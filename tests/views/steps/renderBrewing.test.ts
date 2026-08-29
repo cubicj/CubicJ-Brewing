@@ -55,6 +55,8 @@ function makeContext(brewingStarted: boolean, points: BrewProfilePoint[]) {
 	const ctx = {
 		flowState: {
 			selection: { method: 'filter' },
+			brewingStarted,
+			beginBrewingRun: vi.fn(),
 			finishBrewing: vi.fn(),
 		},
 		plugin: {
@@ -75,7 +77,6 @@ function makeContext(brewingStarted: boolean, points: BrewProfilePoint[]) {
 		},
 		getWeightText: vi.fn(() => '0'),
 		recorder,
-		brewingStarted,
 		registerCleanup: (fn: () => void) => cleanups.push(fn),
 	} as unknown as StepRenderContext;
 

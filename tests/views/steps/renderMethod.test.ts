@@ -30,7 +30,6 @@ function makeContext(flowState: BrewFlowState): StepRenderContext {
 		recorder: {} as StepRenderContext['recorder'],
 		profileStorage: {} as StepRenderContext['profileStorage'],
 		equipment: {} as StepRenderContext['equipment'],
-		brewingStarted: true,
 		registerCleanup: vi.fn(),
 	};
 }
@@ -41,6 +40,7 @@ describe('renderMethod', () => {
 		flowState.selection.method = 'filter';
 		flowState.selection.temp = 'hot';
 		flowState.step = 'brewing';
+		flowState.beginBrewingRun();
 		const container = createContainer();
 
 		renderMethod(container, makeContext(flowState));

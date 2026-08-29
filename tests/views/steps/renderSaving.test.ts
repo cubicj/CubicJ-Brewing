@@ -59,7 +59,6 @@ function makeSavingContext(bean: BeanInfo, setWeightResult: Result<void>) {
 		recorder: new BrewProfileRecorder(),
 		profileStorage: {} as StepRenderContext['profileStorage'],
 		equipment: {} as StepRenderContext['equipment'],
-		brewingStarted: false,
 		registerCleanup: vi.fn(),
 	} as StepRenderContext;
 

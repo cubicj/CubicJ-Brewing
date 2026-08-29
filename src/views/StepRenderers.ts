@@ -44,7 +44,6 @@ export interface StepRenderContext {
 	recorder: BrewProfileRecorder;
 	profileStorage: BrewProfileStorage;
 	equipment: EquipmentSettings;
-	brewingStarted: boolean;
 	registerCleanup: (fn: () => void) => void;
 }
 

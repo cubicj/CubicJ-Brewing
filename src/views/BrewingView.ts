@@ -3,6 +3,7 @@ import type CubicJBrewingPlugin from '../main';
 import { t } from '../i18n/index';
 import type { AcaiaEvents, AcaiaState, ButtonEvent } from '../acaia/types';
 import { BrewFlowState } from '../brew/BrewFlowState';
+import type { BrewFlowStep } from '../brew/types';
 import { DataManageModal } from './DataManageModal';
 import { TimerController } from './TimerController';
 import { ScaleDisplayManager } from './ScaleDisplayManager';
@@ -18,7 +19,7 @@ export class BrewingView extends ItemView {
 	private listenerCleanups: Array<() => void> = [];
 	private cleanups: Array<() => void> = [];
 	private flowState = new BrewFlowState();
-	private brewingStarted = false;
+	private lastFocusedStep: BrewFlowStep | null = null;
 	private lastStepChangeTime = 0;
 	private nobleConnectGateInFlight = false;
 
@@ -103,8 +104,9 @@ export class BrewingView extends ItemView {
 	}
 
 	autoFill(): void {
-		const container = this.containerEl.children[1] as HTMLElement;
-		const btns = container.querySelectorAll<HTMLButtonElement>('.cubicj-stepper-scale-btn');
+		const panel = this.accordion.getStepPanel(this.flowState.step as FlowStep);
+		if (!panel) return;
+		const btns = panel.querySelectorAll<HTMLButtonElement>('.cubicj-stepper-scale-btn');
 		if (btns.length > 0) btns[btns.length - 1].click();
 	}
 
@@ -137,7 +139,7 @@ export class BrewingView extends ItemView {
 		const panel = this.accordion.getStepPanel('brewing');
 		if (!panel) return;
 		const isEspresso = this.flowState.selection.method === 'espresso';
-		if (isEspresso || this.brewingStarted) {
+		if (isEspresso || this.flowState.brewingStarted) {
 			this.lastStepChangeTime = Date.now();
 			const stopBtn = panel.querySelector<HTMLButtonElement>('.brew-flow-stop-btn');
 			stopBtn?.click();
@@ -184,28 +186,28 @@ export class BrewingView extends ItemView {
 
 		if (!this.accordion.isBuilt()) {
 			this.accordion.build();
-		} else {
-			this.accordion.focusStep(this.flowState.step as FlowStep);
 		}
 
+		const stepChanged = this.flowState.step !== this.lastFocusedStep;
+		if (stepChanged) {
+			this.accordion.focusStep(this.flowState.step as FlowStep);
+			this.lastFocusedStep = this.flowState.step;
+		}
 		this.accordion.update();
+		if (stepChanged) {
+			this.accordion.scrollStepToTop(this.flowState.step as FlowStep);
+		}
 	}
 
 	private resetFlow(): void {
 		this.log('resetFlow');
 		this.flowState.cancel();
-		this.brewingStarted = false;
 		this.recorder.reset();
 		this.flowState.startBrew();
-		this.accordion.clearExpandedSteps();
-		this.accordion.update();
+		this.renderContent();
 	}
 
 	private buildRenderContext(registerCleanup: (fn: () => void) => void): StepRenderContext {
-		const getBrewing = () => this.brewingStarted;
-		const setBrewing = (v: boolean) => {
-			this.brewingStarted = v;
-		};
 		return {
 			flowState: this.flowState,
 			plugin: this.plugin,
@@ -223,12 +225,6 @@ export class BrewingView extends ItemView {
 			recorder: this.recorder,
 			profileStorage: this.plugin.profileStorage,
 			equipment: this.plugin.equipment,
-			get brewingStarted() {
-				return getBrewing();
-			},
-			set brewingStarted(v: boolean) {
-				setBrewing(v);
-			},
 			registerCleanup,
 		};
 	}

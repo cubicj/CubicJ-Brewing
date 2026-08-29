@@ -19,7 +19,6 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 		});
 		doneBtn.addEventListener('click', () => {
 			ctx.flowState.finishBrewing(undefined, undefined);
-			ctx.brewingStarted = false;
 			ctx.accordion.expand('saving');
 			ctx.accordion.update();
 		});
@@ -42,13 +41,13 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 	let chart: BrewProfileChart | null = null;
 	const hasProfile = ctx.recorder.getPoints().length > 0;
 
-	if (ctx.brewingStarted && scaleConnected) {
+	if (ctx.flowState.brewingStarted && scaleConnected) {
 		const chartContainer = container.createDiv({ cls: 'brew-profile-container' });
 		const liveChart = new BrewProfileChart(chartContainer);
 		chart = liveChart;
 		ctx.registerCleanup(() => liveChart.destroy());
 		liveChart.startLive(ctx.recorder);
-	} else if (!ctx.brewingStarted && hasProfile) {
+	} else if (!ctx.flowState.brewingStarted && hasProfile) {
 		const chartWrapper = container.createDiv({ cls: 'brew-profile-wrapper' });
 		const expandBtn = chartWrapper.createEl('button', { text: '⛶', cls: 'brew-profile-expand-btn' });
 		expandBtn.setAttribute('aria-label', t('brew.expand'));
@@ -63,7 +62,7 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 		staticChart.renderStatic(ctx.recorder.getPoints());
 	}
 
-	if (ctx.brewingStarted) {
+	if (ctx.flowState.brewingStarted) {
 		const controls = container.createDiv({ cls: 'brewing-controls' });
 		const stopBtn = controls.createEl('button', { text: t('brew.done'), cls: 'brewing-ctrl-btn brew-flow-stop-btn' });
 		const stopBrewing = async () => {
@@ -80,7 +79,6 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 				} else {
 					ctx.flowState.finishBrewing(undefined, undefined);
 				}
-				ctx.brewingStarted = false;
 				ctx.accordion.expand('saving');
 				ctx.accordion.update();
 			} catch (err) {
@@ -99,7 +97,7 @@ export function renderBrewing(container: HTMLElement, ctx: StepRenderContext): v
 		});
 		const startBrewing = async () => {
 			try {
-				ctx.brewingStarted = true;
+				ctx.flowState.beginBrewingRun();
 				if (scaleConnected) {
 					ctx.recorder.start();
 					await ctx.timerController.handleTimerClick();
