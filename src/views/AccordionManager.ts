@@ -68,7 +68,6 @@ export class AccordionManager {
 
 			panel.className = 'brew-accordion-panel';
 			header.className = 'brew-accordion-header';
-			if (this.callbacks.getPanelMode(config.step) === 'disabled') header.addClass('is-disabled');
 
 			indicator.empty();
 			if (hasData) {

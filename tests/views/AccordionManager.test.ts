@@ -362,16 +362,6 @@ describe('AccordionManager', () => {
 		expect(acc.renderStep).toHaveBeenCalledWith('configure', expect.anything(), expect.anything());
 	});
 
-	it('marks disabled headers without affecting enabled headers', () => {
-		acc.getPanelMode.mockImplementation((step) => (step === 'saving' ? 'disabled' : 'editable'));
-		acc.manager.build();
-		acc.manager.update();
-
-		const headers = acc.container.querySelectorAll('.brew-accordion-header');
-		expect(headers[4].classList.contains('is-disabled')).toBe(true);
-		expect(headers[0].classList.contains('is-disabled')).toBe(false);
-	});
-
 	it('marks readonly body inners as inert without affecting editable panels', () => {
 		const mgr = new AccordionManager(acc.container, {
 			renderStep: () => {},
