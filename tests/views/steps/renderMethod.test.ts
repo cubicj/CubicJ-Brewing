@@ -12,11 +12,11 @@ vi.mock('../../../src/i18n/index', () => ({
 
 beforeAll(() => installPolyfills());
 
-function makeContext(flowState: BrewFlowState): StepRenderContext {
+function makeContext(flowState: BrewFlowState, renderContent = vi.fn()): StepRenderContext {
 	return {
 		flowState,
 		plugin: {} as StepRenderContext['plugin'],
-		renderContent: vi.fn(),
+		renderContent,
 		accordion: {
 			update: vi.fn(),
 			expand: vi.fn(),
@@ -35,23 +35,50 @@ function makeContext(flowState: BrewFlowState): StepRenderContext {
 }
 
 describe('renderMethod', () => {
-	it('restores active method toggle when locked', () => {
+	it('changing temperature at configure rewinds through the state machine and re-renders', () => {
 		const flowState = new BrewFlowState();
-		flowState.selection.method = 'filter';
-		flowState.selection.temp = 'hot';
-		flowState.step = 'brewing';
-		flowState.beginBrewingRun();
+		flowState.startBrew();
+		flowState.selectMethod('filter', 'hot');
+		flowState.selectBean({
+			path: 'b.md',
+			name: 'B',
+			roaster: '',
+			status: 'active',
+			roastDate: null,
+			weight: null,
+		});
+		const renderContent = vi.fn();
 		const container = createContainer();
+		renderMethod(container, makeContext(flowState, renderContent));
+		const icedBtn = Array.from(container.querySelectorAll('.brew-flow-toggle')).find(
+			(button) => button.textContent === 'temp.iced',
+		)!;
 
+		(icedBtn as HTMLElement).click();
+
+		expect(flowState.selection.temp).toBe('iced');
+		expect(flowState.step).toBe('configure');
+		expect(renderContent).toHaveBeenCalled();
+	});
+
+	it('renders no is-locked branches: toggles stay clickable DOM in review', () => {
+		const flowState = new BrewFlowState();
+		flowState.startBrew();
+		flowState.selectMethod('filter', 'hot');
+		flowState.selectBean({
+			path: 'b.md',
+			name: 'B',
+			roaster: '',
+			status: 'active',
+			roastDate: null,
+			weight: null,
+		});
+		flowState.startBrewing();
+		flowState.beginBrewingRun();
+		flowState.finishBrewing(120, 250);
+		const container = createContainer();
 		renderMethod(container, makeContext(flowState));
 
-		const toggles = container.querySelectorAll('.brew-flow-toggle');
-		const filterToggle = toggles[0] as HTMLElement;
-		const espressoToggle = toggles[1] as HTMLElement;
-		espressoToggle.click();
-
-		expect(flowState.selection.method).toBe('filter');
-		expect(filterToggle.classList.contains('is-active')).toBe(true);
-		expect(espressoToggle.classList.contains('is-active')).toBe(false);
+		expect(container.querySelectorAll('.brew-flow-toggle').length).toBeGreaterThan(0);
 	});
 });

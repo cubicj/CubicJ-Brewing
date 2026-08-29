@@ -8,7 +8,6 @@ export function renderMethod(container: HTMLElement, ctx: StepRenderContext): vo
 	container.addClass('brew-flow-method');
 
 	const sel = ctx.flowState.selection;
-	const isLocked = ctx.flowState.step === 'brewing' || ctx.flowState.step === 'saving';
 	let selectedMethod: BrewMethod | null = sel.method ?? null;
 	let selectedTemp: BrewTemp | null = sel.temp ?? null;
 	let selectedDrink: EspressoDrink | null = sel.drink ?? null;
@@ -19,26 +18,11 @@ export function renderMethod(container: HTMLElement, ctx: StepRenderContext): vo
 		sel.drink = selectedDrink ?? undefined;
 	};
 
-	const restoreToggleGroup = <T extends string>(
-		buttons: HTMLElement[],
-		items: { value: T; label: string }[],
-		selected: T | null,
-	) => {
-		buttons.forEach((btn, index) => {
-			if (items[index]?.value === selected) btn.addClass('is-active');
-			else btn.removeClass('is-active');
-		});
-	};
-
 	const methodItems = [
 		{ value: 'filter' as BrewMethod, label: getMethodLabel('filter') },
 		{ value: 'espresso' as BrewMethod, label: getMethodLabel('espresso') },
 	];
-	const methodButtons = createToggleGroup(container, methodItems, selectedMethod, (val) => {
-		if (isLocked) {
-			restoreToggleGroup(methodButtons, methodItems, selectedMethod);
-			return;
-		}
+	createToggleGroup(container, methodItems, selectedMethod, (val) => {
 		selectedMethod = val;
 		const show = selectedMethod === 'espresso';
 		if (!show) selectedDrink = null;
@@ -54,11 +38,7 @@ export function renderMethod(container: HTMLElement, ctx: StepRenderContext): vo
 		{ value: 'hot' as BrewTemp, label: getTempLabel('hot') },
 		{ value: 'iced' as BrewTemp, label: getTempLabel('iced') },
 	];
-	const tempButtons = createToggleGroup(container, tempItems, selectedTemp, (val) => {
-		if (isLocked) {
-			restoreToggleGroup(tempButtons, tempItems, selectedTemp);
-			return;
-		}
+	createToggleGroup(container, tempItems, selectedTemp, (val) => {
 		selectedTemp = val;
 		syncSelection();
 		tryAdvance();
@@ -72,11 +52,7 @@ export function renderMethod(container: HTMLElement, ctx: StepRenderContext): vo
 		{ value: 'americano' as EspressoDrink, label: getDrinkLabel('americano') },
 		{ value: 'latte' as EspressoDrink, label: getDrinkLabel('latte') },
 	];
-	const drinkButtons = createToggleGroup(drinkRow, drinkItems, selectedDrink, (val) => {
-		if (isLocked) {
-			restoreToggleGroup(drinkButtons, drinkItems, selectedDrink);
-			return;
-		}
+	createToggleGroup(drinkRow, drinkItems, selectedDrink, (val) => {
 		selectedDrink = val;
 		syncSelection();
 		tryAdvance();
@@ -93,7 +69,7 @@ export function renderMethod(container: HTMLElement, ctx: StepRenderContext): vo
 			ctx.renderContent();
 		} else if (ctx.flowState.step !== 'method') {
 			ctx.flowState.goToStep('method');
-			ctx.accordion.update();
+			ctx.renderContent();
 		}
 	};
 }
