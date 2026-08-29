@@ -8,34 +8,6 @@ export function renderSaving(container: HTMLElement, ctx: StepRenderContext): vo
 	container.addClass('brew-flow-saving');
 	const sel = ctx.flowState.selection;
 
-	if (!sel.time && sel.method === 'espresso') {
-		const manualForm = container.createDiv({ cls: 'brew-flow-form' });
-		createStepper(manualForm, {
-			label: t('modal.time'),
-			initial: 0,
-			min: 0,
-			max: 120,
-			step: 1,
-			format: (v) => t('modal.seconds', { n: v }),
-			pxPerStep: 6,
-			onChange: (v) => {
-				ctx.flowState.updateVariables({ time: v || undefined });
-			},
-		});
-		createStepper(manualForm, {
-			label: t('modal.extractionYield'),
-			initial: 0,
-			min: 0,
-			max: 200,
-			step: 0.1,
-			format: (v) => `${v.toFixed(1)}g`,
-			pxPerStep: 12,
-			onChange: (v) => {
-				ctx.flowState.updateVariables({ yield: v || undefined });
-			},
-		});
-	}
-
 	const needsWater = sel.method === 'filter' || (sel.method === 'espresso' && sel.drink === 'americano');
 	const needsMilk = sel.method === 'espresso' && sel.drink === 'latte';
 	if (needsWater || needsMilk) {
@@ -43,7 +15,7 @@ export function renderSaving(container: HTMLElement, ctx: StepRenderContext): vo
 		const label = needsMilk ? t('form.milk') : t('form.addition');
 		const weightStepper = createStepper(weightForm, {
 			label,
-			initial: 0,
+			initial: (needsMilk ? sel.milkWeight : sel.waterWeight) ?? 0,
 			min: 0,
 			max: 1000,
 			step: 0.1,

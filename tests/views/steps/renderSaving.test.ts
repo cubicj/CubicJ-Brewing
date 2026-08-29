@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { BrewFlowState } from '../../../src/brew/BrewFlowState';
 import { BrewProfileRecorder } from '../../../src/views/BrewProfileRecorder';
 import { installPolyfills, createContainer } from '../../helpers/obsidian-dom-polyfill';
@@ -74,6 +74,18 @@ const makeBean = (): BeanInfo => ({
 	weight: 500,
 });
 
+let container: HTMLElement;
+
+beforeEach(() => {
+	container = createContainer();
+});
+
+function makeContext(selection: Partial<BrewFlowState['selection']>): StepRenderContext {
+	const { ctx } = makeSavingContext(makeBean(), ok(undefined));
+	ctx.flowState.selection = { ...ctx.flowState.selection, ...selection };
+	return ctx;
+}
+
 describe('renderSaving bean weight deduction', () => {
 	it('deducts the dose from the bean weight after a successful save', async () => {
 		const bean = makeBean();
@@ -103,4 +115,17 @@ describe('renderSaving bean weight deduction', () => {
 		expect(setWeight).toHaveBeenCalled();
 		expect(bean.weight).toBe(500);
 	});
+});
+
+it('renders no time/yield steppers for espresso without time', () => {
+	const ctx = makeContext({ method: 'espresso', drink: 'shot' });
+	renderSaving(container, ctx);
+	expect(container.querySelectorAll('.cubicj-stepper').length).toBe(0);
+});
+
+it('seeds the addition stepper from the stored selection weight', () => {
+	const ctx = makeContext({ method: 'filter', waterWeight: 120 });
+	renderSaving(container, ctx);
+	const value = container.querySelector('.cubicj-stepper-value')!;
+	expect(value.textContent).toBe('120.0g');
 });
