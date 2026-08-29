@@ -146,4 +146,20 @@ describe('TimerController', () => {
 		vi.advanceTimersByTime(5000);
 		expect(controller.getElapsedSeconds()).toBeCloseTo(before + 5, 0);
 	});
+
+	it('cancelRun resets the scale timer and returns to idle', async () => {
+		const callbacks = {
+			startTimer: vi.fn().mockResolvedValue(undefined),
+			stopTimer: vi.fn().mockResolvedValue(undefined),
+			resetTimer: vi.fn().mockResolvedValue(undefined),
+		};
+		const timerEl = document.createElement('div');
+		const timerBtn = document.createElement('button');
+		const controller = new TimerController({ timerEl, timerBtn }, callbacks);
+		await controller.handleTimerClick();
+		await controller.cancelRun();
+		expect(callbacks.resetTimer).toHaveBeenCalled();
+		expect(controller.getElapsedSeconds()).toBe(0);
+		expect(timerEl.textContent).toBe('0:00');
+	});
 });
