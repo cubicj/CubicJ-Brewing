@@ -14,6 +14,13 @@ import { NobleTransport } from './NobleTransport';
 import { TypedEmitter } from './TypedEmitter';
 import { decodePacket } from './packetDecoder';
 
+type WriteKind = 'command' | 'heartbeat';
+
+interface QueuedWrite {
+	data: Buffer;
+	kind: WriteKind;
+}
+
 export interface BleLogger {
 	log(message: string): void;
 }
@@ -36,7 +43,7 @@ export class AcaiaService extends TypedEmitter<AcaiaEvents> {
 	private heartbeatTimer: number | null = null;
 	private lastPacketTime = 0;
 	private packetBuffer = new PacketBuffer();
-	private writeQueue: Buffer[] = [];
+	private writeQueue: QueuedWrite[] = [];
 	private writing = false;
 	private scaleTimerRunning = false;
 	private connecting = false;
@@ -375,9 +382,14 @@ export class AcaiaService extends TypedEmitter<AcaiaEvents> {
 			this.emit('error', new Error('BLE signal weak'));
 		}
 
-		await this.enqueueWrite(encodeIdentify());
-		await this.enqueueWrite(encodeHeartbeat());
-		await this.enqueueWrite(encodeGetSettings());
+		if (this.writeQueue.some((entry) => entry.kind === 'heartbeat')) {
+			this.log('heartbeat cycle skipped — previous cycle still queued');
+			return;
+		}
+		this.pushWrite(encodeIdentify(), 'heartbeat');
+		this.pushWrite(encodeHeartbeat(), 'heartbeat');
+		this.pushWrite(encodeGetSettings(), 'heartbeat');
+		if (!this.writing) await this.processQueue();
 	}
 
 	private stopTimers(): void {
@@ -463,18 +475,32 @@ export class AcaiaService extends TypedEmitter<AcaiaEvents> {
 		if (disconnectTransport) this.transport.disconnectSync();
 	}
 
-	private async enqueueWrite(data: Buffer): Promise<void> {
-		this.writeQueue.push(data);
+	private pushWrite(data: Buffer, kind: WriteKind): void {
+		if (this.writeQueue.some((entry) => entry.data.equals(data))) {
+			this.log(`write skipped — duplicate ${kind} payload pending`);
+			return;
+		}
+		if (kind === 'command') {
+			const firstHeartbeat = this.writeQueue.findIndex((entry) => entry.kind === 'heartbeat');
+			if (firstHeartbeat === -1) this.writeQueue.push({ data, kind });
+			else this.writeQueue.splice(firstHeartbeat, 0, { data, kind });
+		} else {
+			this.writeQueue.push({ data, kind });
+		}
+	}
+
+	private async enqueueWrite(data: Buffer, kind: WriteKind = 'command'): Promise<void> {
+		this.pushWrite(data, kind);
 		if (!this.writing) await this.processQueue();
 	}
 
 	private async processQueue(): Promise<void> {
 		this.writing = true;
 		while (this.writeQueue.length > 0) {
-			const data = this.writeQueue.shift()!;
+			const entry = this.writeQueue.shift()!;
 			if (!this.transport.canWrite) break;
 			try {
-				await this.transport.write(data);
+				await this.transport.write(entry.data);
 				this.consecutiveWriteFailures = 0;
 			} catch (err: unknown) {
 				this.consecutiveWriteFailures++;

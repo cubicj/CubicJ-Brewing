@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { AcaiaService } from '../../src/acaia/AcaiaService';
+import { encodeTare, encodeHeartbeat, encodeIdentify, encodeGetSettings } from '../../src/acaia/protocol';
 import { AcaiaState, Noble } from '../../src/acaia/types';
 
 vi.stubGlobal('window', globalThis);
@@ -10,10 +11,15 @@ type PacketHandlingService = {
 	scaleTimerRunning: boolean;
 };
 
-type WriteQueueService = {
-	stopTimers(): void;
-	writeQueue: Buffer[];
+type QueueInternals = {
+	writing: boolean;
+	writeQueue: { data: Buffer; kind: 'command' | 'heartbeat' }[];
+	lastPacketTime: number;
+	consecutiveWriteFailures: number;
+	pushWrite(data: Buffer, kind: 'command' | 'heartbeat'): void;
 	processQueue(): Promise<void>;
+	runHeartbeatCycle(): Promise<void>;
+	stopTimers(): void;
 };
 
 function createMockWriteChar() {
@@ -480,13 +486,13 @@ describe('AcaiaService write health', () => {
 		await service.connect();
 		expect(service.state).toBe('connected');
 
-		(service as unknown as WriteQueueService).stopTimers();
+		(service as unknown as QueueInternals).stopTimers();
 
 		writeChar.writeAsync = vi.fn().mockRejectedValue(new Error('write failed'));
 
 		for (let i = 0; i < 6; i++) {
-			(service as unknown as WriteQueueService).writeQueue.push(Buffer.from([0x01]));
-			await (service as unknown as WriteQueueService).processQueue();
+			(service as unknown as QueueInternals).writeQueue.push({ data: Buffer.from([0x01]), kind: 'command' });
+			await (service as unknown as QueueInternals).processQueue();
 		}
 
 		expect(service.state).not.toBe('connected');
@@ -503,7 +509,7 @@ describe('AcaiaService write health', () => {
 
 		await service.connect();
 
-		(service as unknown as WriteQueueService).stopTimers();
+		(service as unknown as QueueInternals).stopTimers();
 
 		let callCount = 0;
 		writeChar.writeAsync = vi.fn(() => {
@@ -512,17 +518,80 @@ describe('AcaiaService write health', () => {
 			return Promise.resolve(undefined);
 		});
 
-		(service as unknown as WriteQueueService).writeQueue.push(
-			Buffer.from([0x01]),
-			Buffer.from([0x02]),
-			Buffer.from([0x03]),
-			Buffer.from([0x04]),
-			Buffer.from([0x05]),
+		(service as unknown as QueueInternals).writeQueue.push(
+			{ data: Buffer.from([0x01]), kind: 'command' },
+			{ data: Buffer.from([0x02]), kind: 'command' },
+			{ data: Buffer.from([0x03]), kind: 'command' },
+			{ data: Buffer.from([0x04]), kind: 'command' },
+			{ data: Buffer.from([0x05]), kind: 'command' },
 		);
-		await (service as unknown as WriteQueueService).processQueue();
+		await (service as unknown as QueueInternals).processQueue();
 
 		expect(service.state).toBe('connected');
 
+		service.destroy();
+	});
+});
+
+describe('AcaiaService write queue', () => {
+	function createQueueService(): AcaiaService {
+		const peripheral = createMockPeripheral();
+		const noble = createMockNoble(peripheral);
+		const service = new AcaiaService({ nobleFactory: () => noble });
+		(service as unknown as { _state: AcaiaState })._state = 'connected';
+		return service;
+	}
+
+	it('inserts a command ahead of queued heartbeat packets', () => {
+		const service = createQueueService();
+		const internals = service as unknown as QueueInternals;
+		internals.writing = true;
+		internals.pushWrite(encodeIdentify(), 'heartbeat');
+		internals.pushWrite(encodeGetSettings(), 'heartbeat');
+		internals.pushWrite(encodeTare(), 'command');
+		expect(internals.writeQueue.map((entry) => entry.kind)).toEqual(['command', 'heartbeat', 'heartbeat']);
+		expect(internals.writeQueue[0].data.equals(encodeTare())).toBe(true);
+		service.destroy();
+	});
+
+	it('drops a duplicate pending payload', () => {
+		const service = createQueueService();
+		const internals = service as unknown as QueueInternals;
+		internals.writing = true;
+		internals.pushWrite(encodeTare(), 'command');
+		internals.pushWrite(encodeTare(), 'command');
+		expect(internals.writeQueue).toHaveLength(1);
+		service.destroy();
+	});
+
+	it('absorbs a second tare pressed while the first is still pending', async () => {
+		const service = createQueueService();
+		const internals = service as unknown as QueueInternals;
+		internals.writing = true;
+		await service.tare();
+		await service.tare();
+		expect(internals.writeQueue.filter((entry) => entry.data.equals(encodeTare()))).toHaveLength(1);
+		service.destroy();
+	});
+
+	it('skips a heartbeat cycle while the previous cycle is still queued', async () => {
+		const service = createQueueService();
+		const internals = service as unknown as QueueInternals;
+		internals.writing = true;
+		internals.lastPacketTime = Date.now();
+		internals.pushWrite(encodeHeartbeat(), 'heartbeat');
+		await internals.runHeartbeatCycle();
+		expect(internals.writeQueue).toHaveLength(1);
+		service.destroy();
+	});
+
+	it('queues a fresh heartbeat cycle when no heartbeat backlog exists', async () => {
+		const service = createQueueService();
+		const internals = service as unknown as QueueInternals;
+		internals.writing = true;
+		internals.lastPacketTime = Date.now();
+		await internals.runHeartbeatCycle();
+		expect(internals.writeQueue.map((entry) => entry.kind)).toEqual(['heartbeat', 'heartbeat', 'heartbeat']);
 		service.destroy();
 	});
 });
