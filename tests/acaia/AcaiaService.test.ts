@@ -531,6 +531,35 @@ describe('AcaiaService write health', () => {
 
 		service.destroy();
 	});
+
+	it('times out a stalled write and counts it as a failure', async () => {
+		vi.useFakeTimers();
+		const writeChar = createMockWriteChar();
+		const notifyChar = createMockNotifyChar();
+		const peripheral = createMockPeripheral(writeChar, notifyChar);
+		const noble = createMockNoble(peripheral);
+		const service = new AcaiaService({ nobleFactory: () => noble });
+		try {
+			const connectPromise = service.connect();
+			await vi.advanceTimersByTimeAsync(200);
+			await connectPromise;
+			expect(service.state).toBe('connected');
+			(service as unknown as QueueInternals).stopTimers();
+
+			writeChar.writeAsync = vi.fn(() => new Promise<void>(() => undefined));
+			const internals = service as unknown as QueueInternals;
+			internals.writeQueue.push({ data: Buffer.from([0x01]), kind: 'command' });
+			const pending = internals.processQueue();
+			await vi.advanceTimersByTimeAsync(3000);
+			await pending;
+
+			expect(internals.consecutiveWriteFailures).toBe(1);
+			expect(service.state).toBe('connected');
+		} finally {
+			service.destroy();
+			vi.useRealTimers();
+		}
+	});
 });
 
 describe('AcaiaService write queue', () => {

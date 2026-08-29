@@ -24,6 +24,7 @@ export interface DiscoveredCharacteristics {
 }
 
 export class NobleTransport {
+	private static readonly WRITE_TIMEOUT_MS = 3000;
 	private readonly nobleFactory: () => Noble | null;
 	private readonly log: (message: string) => void;
 	private readonly onPoweredOff: () => void;
@@ -219,7 +220,7 @@ export class NobleTransport {
 
 	write(data: Buffer): Promise<void> {
 		if (!this.writeChar) return Promise.reject(new Error('Write characteristic unavailable'));
-		return this.writeChar.writeAsync(data, true);
+		return this.withTimeout(this.writeChar.writeAsync(data, true), NobleTransport.WRITE_TIMEOUT_MS, 'Write');
 	}
 
 	stopScanning(): void {
@@ -264,11 +265,18 @@ export class NobleTransport {
 	}
 
 	private withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
-		return Promise.race([
-			promise,
-			new Promise<never>((_, reject) =>
-				window.setTimeout(() => reject(new Error(`${label} timed out (${timeoutMs}ms)`)), timeoutMs),
-			),
-		]);
+		return new Promise<T>((resolve, reject) => {
+			const timer = window.setTimeout(() => reject(new Error(`${label} timed out (${timeoutMs}ms)`)), timeoutMs);
+			promise.then(
+				(value) => {
+					window.clearTimeout(timer);
+					resolve(value);
+				},
+				(error: unknown) => {
+					window.clearTimeout(timer);
+					reject(error instanceof Error ? error : new Error(String(error)));
+				},
+			);
+		});
 	}
 }
