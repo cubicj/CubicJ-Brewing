@@ -162,4 +162,20 @@ describe('TimerController', () => {
 		expect(controller.getElapsedSeconds()).toBe(0);
 		expect(timerEl.textContent).toBe('0:00');
 	});
+
+	it('cancelRun returns to idle even when the scale reset rejects', async () => {
+		const callbacks = {
+			startTimer: vi.fn().mockResolvedValue(undefined),
+			stopTimer: vi.fn().mockResolvedValue(undefined),
+			resetTimer: vi.fn().mockResolvedValue(undefined),
+		};
+		const timerEl = document.createElement('div');
+		const timerBtn = document.createElement('button');
+		const controller = new TimerController({ timerEl, timerBtn }, callbacks);
+		await controller.handleTimerClick();
+		callbacks.resetTimer.mockRejectedValueOnce(new Error('ble write failed'));
+		await expect(controller.cancelRun()).rejects.toThrow('ble write failed');
+		expect(controller.getElapsedSeconds()).toBe(0);
+		expect(timerEl.textContent).toBe('0:00');
+	});
 });

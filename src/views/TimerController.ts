@@ -102,8 +102,11 @@ export class TimerController {
 	}
 
 	async cancelRun(): Promise<void> {
-		await this.callbacks.resetTimer();
-		this.resetToIdle();
+		try {
+			await this.callbacks.resetTimer();
+		} finally {
+			this.resetToIdle();
+		}
 	}
 
 	resetToIdle(): void {
