@@ -163,6 +163,29 @@ describe('TimerController', () => {
 		expect(timerEl.textContent).toBe('0:00');
 	});
 
+	it('cancelRun stops a running scale timer before resetting it', async () => {
+		const { controller, stopTimer, resetTimer } = makeController();
+		await controller.handleTimerClick();
+		stopTimer.mockClear();
+		resetTimer.mockClear();
+		await controller.cancelRun();
+		expect(stopTimer).toHaveBeenCalledTimes(1);
+		expect(resetTimer).toHaveBeenCalledTimes(1);
+		expect(stopTimer.mock.invocationCallOrder[0]).toBeLessThan(resetTimer.mock.invocationCallOrder[0]);
+		expect(controller.getElapsedSeconds()).toBe(0);
+	});
+
+	it('cancelRun skips the stop when the timer is already stopped', async () => {
+		const { controller, stopTimer, resetTimer } = makeController();
+		await controller.handleTimerClick();
+		await controller.handleTimerClick();
+		stopTimer.mockClear();
+		resetTimer.mockClear();
+		await controller.cancelRun();
+		expect(stopTimer).not.toHaveBeenCalled();
+		expect(resetTimer).toHaveBeenCalledTimes(1);
+	});
+
 	it('cancelRun returns to idle even when the scale reset rejects', async () => {
 		const callbacks = {
 			startTimer: vi.fn().mockResolvedValue(undefined),
