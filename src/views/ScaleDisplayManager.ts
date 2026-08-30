@@ -31,6 +31,7 @@ export class ScaleDisplayManager {
 	constructor(
 		private connectBtn: HTMLButtonElement,
 		private powerOffBtn: HTMLButtonElement,
+		private findOtherBtn: HTMLButtonElement,
 		private callbacks: ScaleDisplayCallbacks,
 	) {}
 
@@ -82,6 +83,7 @@ export class ScaleDisplayManager {
 
 		this.scaleNameEl.textContent = '';
 		this.powerOffBtn.setCssProps({ display: 'none' });
+		this.findOtherBtn.setCssProps({ display: 'none' });
 
 		switch (state) {
 			case 'idle':
@@ -93,6 +95,7 @@ export class ScaleDisplayManager {
 				this.scaleStatusEl.textContent = t('scale.scanning');
 				this.connectBtn.textContent = t('scale.scanCancel');
 				this.scaleBatteryEl.textContent = '';
+				this.findOtherBtn.setCssProps({ display: '' });
 				break;
 			case 'connecting':
 				this.scaleStatusEl.textContent = t('scale.connecting');
@@ -115,6 +118,7 @@ export class ScaleDisplayManager {
 				this.scaleStatusEl.textContent = t('scale.reconnecting', { attempt, max: MAX_RECONNECT_ATTEMPTS });
 				this.connectBtn.textContent = t('scale.scanCancel');
 				this.scaleBatteryEl.textContent = '';
+				this.findOtherBtn.setCssProps({ display: '' });
 				break;
 			}
 		}

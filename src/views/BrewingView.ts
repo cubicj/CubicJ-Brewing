@@ -12,6 +12,8 @@ import { AccordionManager } from './AccordionManager';
 import { BrewProfileRecorder } from './BrewProfileRecorder';
 import { BrewRunCoordinator } from './BrewRunCoordinator';
 import { NobleInstallModal } from './NobleInstallModal';
+import { ScalePickerModal } from './ScalePickerModal';
+import { findRegisteredScale, registeredAddresses } from '../services/scaleRegistry';
 
 export const VIEW_TYPE_BREWING = 'cubicj-brewing';
 const TIMER_OPERATION_TIMEOUT_MS = 5000;
@@ -56,6 +58,7 @@ export class BrewingView extends ItemView {
 
 	private scaleConnectBtn!: HTMLButtonElement;
 	private scalePowerOffBtn!: HTMLButtonElement;
+	private scaleFindOtherBtn!: HTMLButtonElement;
 	private scaleDisplay!: ScaleDisplayManager;
 	private accordion!: AccordionManager;
 
@@ -87,7 +90,7 @@ export class BrewingView extends ItemView {
 		this.buildToolbar(container);
 
 		const svc = this.plugin.acaiaService!;
-		this.scaleDisplay = new ScaleDisplayManager(this.scaleConnectBtn, this.scalePowerOffBtn, {
+		this.scaleDisplay = new ScaleDisplayManager(this.scaleConnectBtn, this.scalePowerOffBtn, this.scaleFindOtherBtn, {
 			onTimerClick: () => {
 				this.runCoordinator.handleToolbarTimer();
 			},
@@ -135,7 +138,7 @@ export class BrewingView extends ItemView {
 		});
 
 		this.bindServiceEvents();
-		this.scaleDisplay.updateHeader(svc.state, svc.scaleName);
+		this.scaleDisplay.updateHeader(svc.state, this.displayScaleName());
 		this.renderContent();
 	}
 
@@ -208,6 +211,12 @@ export class BrewingView extends ItemView {
 		this.scaleConnectBtn.addEventListener('click', () => {
 			void this.handleConnectClick();
 		});
+
+		this.scaleFindOtherBtn = toolbar.createEl('button', { text: t('scale.findOther'), cls: 'brewing-toolbar-btn' });
+		this.scaleFindOtherBtn.addEventListener('click', () => {
+			void this.handleFindOtherClick();
+		});
+		this.scaleFindOtherBtn.setCssProps({ display: 'none' });
 
 		this.scalePowerOffBtn = toolbar.createEl('button', {
 			text: t('toolbar.powerOff'),
@@ -289,7 +298,7 @@ export class BrewingView extends ItemView {
 		this.listen('state', (state: AcaiaState) => {
 			this.log(`state → ${state}`);
 			this.runCoordinator.handleScaleState(state);
-			this.scaleDisplay.updateHeader(state, this.plugin.acaiaService?.scaleName);
+			this.scaleDisplay.updateHeader(state, this.displayScaleName());
 			this.scaleDisplay.updateControls(state, () => {
 				if (!this.runCoordinator.hasActiveRun()) this.timerController.resetToIdle();
 			});
@@ -328,6 +337,31 @@ export class BrewingView extends ItemView {
 		return this.handleConnectClick();
 	}
 
+	private startConnect(): void {
+		const service = this.plugin.acaiaService!;
+		const addresses = registeredAddresses(this.plugin.equipment.scales);
+		if (addresses.length === 0) {
+			this.log('no registered scale — opening picker');
+			new ScalePickerModal(this.app, service, this.plugin.equipment.scales).open();
+			return;
+		}
+		this.log('connect');
+		void service.connect(addresses);
+	}
+
+	private async handleFindOtherClick(): Promise<void> {
+		const service = this.plugin.acaiaService!;
+		await service.cancelConnect();
+		new ScalePickerModal(this.app, service, this.plugin.equipment.scales).open();
+	}
+
+	private displayScaleName(): string | null {
+		const service = this.plugin.acaiaService;
+		if (!service) return null;
+		const registered = findRegisteredScale(this.plugin.equipment.scales, service.scaleAddress);
+		return registered?.name ?? service.scaleName;
+	}
+
 	private async handleConnectClick(): Promise<void> {
 		const service = this.plugin.acaiaService!;
 		if (service.state === 'scanning' || service.state === 'connecting' || service.state === 'reconnecting') {
@@ -357,7 +391,7 @@ export class BrewingView extends ItemView {
 								this.nobleConnectGateInFlight = false;
 								if (installed) {
 									this.log('connect after noble install');
-									void service.connect();
+									this.startConnect();
 								}
 							},
 						}).open();
@@ -368,8 +402,7 @@ export class BrewingView extends ItemView {
 				}
 				this.nobleConnectGateInFlight = false;
 			}
-			this.log('connect');
-			await service.connect();
+			this.startConnect();
 		}
 	}
 

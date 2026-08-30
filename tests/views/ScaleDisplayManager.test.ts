@@ -15,11 +15,15 @@ vi.mock('../../src/i18n/index', () => ({
 
 beforeAll(() => installPolyfills());
 
-function buildManager(reconnectAttempt = 0): ScaleDisplayManager {
+function buildManager(reconnectAttempt = 0): {
+	manager: ScaleDisplayManager;
+	findOtherBtn: HTMLButtonElement;
+} {
 	const host = createContainer();
 	const connectBtn = host.createEl('button');
 	const powerOffBtn = host.createEl('button');
-	const manager = new ScaleDisplayManager(connectBtn, powerOffBtn, {
+	const findOtherBtn = host.createEl('button');
+	const manager = new ScaleDisplayManager(connectBtn, powerOffBtn, findOtherBtn, {
 		onTimerClick: vi.fn(),
 		onTare: vi.fn(),
 		isConnected: () => true,
@@ -27,12 +31,12 @@ function buildManager(reconnectAttempt = 0): ScaleDisplayManager {
 	});
 	manager.buildHeader(host.createDiv());
 	manager.buildData(host.createDiv());
-	return manager;
+	return { manager, findOtherBtn };
 }
 
 describe('ScaleDisplayManager stale weight clearing', () => {
 	it('clears the weight sample on disconnect', () => {
-		const manager = buildManager();
+		const { manager } = buildManager();
 		manager.updateWeight(15.4, true);
 		expect(manager.getWeightText()).toBe('15.4');
 		manager.updateControls('disconnected', vi.fn());
@@ -40,7 +44,7 @@ describe('ScaleDisplayManager stale weight clearing', () => {
 	});
 
 	it('clears the weight sample when reconnecting starts', () => {
-		const manager = buildManager();
+		const { manager } = buildManager();
 		manager.updateWeight(21.0, true);
 		manager.updateControls('reconnecting', vi.fn());
 		expect(manager.getWeightText()).toBe('--');
@@ -49,7 +53,7 @@ describe('ScaleDisplayManager stale weight clearing', () => {
 
 describe('ScaleDisplayManager reconnect status', () => {
 	it('passes the current attempt and maximum attempt count to i18n', () => {
-		const manager = buildManager(4);
+		const { manager } = buildManager(4);
 		tMock.mockClear();
 
 		manager.updateHeader('reconnecting');
@@ -58,5 +62,19 @@ describe('ScaleDisplayManager reconnect status', () => {
 			attempt: 4,
 			max: MAX_RECONNECT_ATTEMPTS,
 		});
+	});
+});
+
+describe('ScaleDisplayManager find-other visibility', () => {
+	it('shows the find-other button only while scanning or reconnecting', () => {
+		const { manager, findOtherBtn } = buildManager();
+		manager.updateHeader('scanning');
+		expect(findOtherBtn.style.display).not.toBe('none');
+		manager.updateHeader('reconnecting');
+		expect(findOtherBtn.style.display).not.toBe('none');
+		for (const state of ['idle', 'connecting', 'connected', 'disconnected'] as const) {
+			manager.updateHeader(state);
+			expect(findOtherBtn.style.display).toBe('none');
+		}
 	});
 });
