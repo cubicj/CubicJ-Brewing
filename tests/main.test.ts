@@ -33,6 +33,10 @@ vi.mock('../src/acaia/AcaiaService', () => ({
 			desktopMocks.acaiaOptions.push(options);
 		}
 
+		on(): this {
+			return this;
+		}
+
 		destroy(): void {
 			desktopMocks.teardown.push('acaia');
 		}

@@ -3,6 +3,7 @@ import type { BleLogger } from './acaia/AcaiaService';
 import type CubicJBrewingPlugin from './main';
 import { t } from './i18n/index';
 import { nodeRequire } from './nodeRequire';
+import { upsertScaleRegistration } from './services/scaleRegistry';
 
 export class DesktopRuntime {
 	private beforeUnloadHandler: (() => void) | null = null;
@@ -28,6 +29,18 @@ export class DesktopRuntime {
 		}
 
 		this.plugin.acaiaService = new AcaiaService({ logger, noblePath });
+		this.plugin.acaiaService.on('state', (state) => {
+			if (state !== 'connected') return;
+			const service = this.plugin.acaiaService;
+			if (!service?.scaleAddress) return;
+			upsertScaleRegistration(
+				this.plugin.equipment.scales,
+				service.scaleName ?? service.scaleAddress,
+				service.scaleAddress,
+				new Date().toISOString(),
+			);
+			void this.plugin.saveEquipment().catch((error) => console.warn('[CubicJ-Brewing] scale registration save failed:', error));
+		});
 
 		const getScaleWeight = (): number | null => {
 			if (this.plugin.acaiaService?.state !== 'connected') return null;
