@@ -30,6 +30,6 @@
     "vitest": "^4.0.18"
   },
   "optionalDependencies": {
-    "@stoprocent/noble": "^2.3.16"
+    "@stoprocent/noble": "^2.8.0"
   }
 }
