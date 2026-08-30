@@ -13,7 +13,7 @@ import { BrewCodeBlock } from '../../src/views/BrewCodeBlock';
 
 beforeAll(() => installPolyfills());
 
-const emptyEquipment = () => ({ grinders: [], drippers: [], filters: [], baskets: [], accessories: [] });
+const emptyEquipment = () => ({ grinders: [], drippers: [], filters: [], baskets: [], accessories: [], scales: [] });
 
 const makeFilter = (overrides: Partial<FilterRecord> = {}): FilterRecord => ({
 	id: 'record-1',

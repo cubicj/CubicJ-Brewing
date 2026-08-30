@@ -9,7 +9,7 @@ vi.mock('../../../src/i18n/index', () => ({ t: (key: string) => key, initI18n: v
 beforeAll(() => installPolyfills());
 
 function equipment(): EquipmentSettings {
-	return { grinders: [], drippers: [], filters: [], baskets: [], accessories: [] };
+	return { grinders: [], drippers: [], filters: [], baskets: [], accessories: [], scales: [] };
 }
 
 function findList(container: HTMLElement, label: string): HTMLElement {

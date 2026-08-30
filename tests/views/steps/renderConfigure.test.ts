@@ -65,7 +65,7 @@ function makeContext(flowState: BrewFlowState): StepRenderContext {
 		resetFlow: vi.fn(),
 		recorder: { getPoints: () => [] },
 		profileStorage: {},
-		equipment: { grinders: [], drippers: [], filters: ['V60'], baskets: [], accessories: [] },
+		equipment: { grinders: [], drippers: [], filters: ['V60'], baskets: [], accessories: [], scales: [] },
 		registerCleanup: vi.fn(),
 	} as unknown as StepRenderContext;
 }
@@ -109,6 +109,7 @@ describe('renderConfigure phase gating', () => {
 			filters: ['V60'],
 			baskets: [],
 			accessories: [],
+			scales: [],
 		};
 		renderConfigure(container, ctx);
 		const grinderSelect = Array.from(container.querySelectorAll('select')).find(

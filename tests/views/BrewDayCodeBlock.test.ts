@@ -36,6 +36,7 @@ const emptyEquipment = () => ({
 	filters: [],
 	baskets: [],
 	accessories: [],
+	scales: [],
 });
 
 async function renderRecords(
@@ -134,6 +135,7 @@ describe('BrewDayCodeBlock', () => {
 				filters: [],
 				baskets: [],
 				accessories: [],
+				scales: [],
 			}),
 		);
 		let handler!: (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void;

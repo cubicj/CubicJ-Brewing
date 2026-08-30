@@ -35,6 +35,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 		filters: [],
 		baskets: [],
 		accessories: [],
+		scales: [],
 	};
 	private desktopRuntime: DesktopRuntime | null = null;
 	private dataStore = new PluginDataStore({
@@ -57,6 +58,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 		this.equipmentState.filters.splice(0, this.equipmentState.filters.length, ...equipment.filters);
 		this.equipmentState.baskets.splice(0, this.equipmentState.baskets.length, ...equipment.baskets);
 		this.equipmentState.accessories.splice(0, this.equipmentState.accessories.length, ...equipment.accessories);
+		this.equipmentState.scales.splice(0, this.equipmentState.scales.length, ...equipment.scales);
 	}
 
 	async onload() {

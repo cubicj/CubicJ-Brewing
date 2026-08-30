@@ -93,6 +93,7 @@ const defaultEquipment: EquipmentSettings = {
 	filters: [],
 	baskets: [],
 	accessories: [],
+	scales: [],
 };
 
 interface OnloadHarness {

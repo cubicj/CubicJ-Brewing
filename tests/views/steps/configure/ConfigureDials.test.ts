@@ -17,7 +17,7 @@ function makePlainGrinder(): GrinderConfig {
 }
 
 function makeEquipment(grinders: GrinderConfig[]): EquipmentSettings {
-	return { grinders, drippers: [], filters: [], baskets: [], accessories: [] };
+	return { grinders, drippers: [], filters: [], baskets: [], accessories: [], scales: [] };
 }
 
 function makeRecord(rpm?: number): FilterRecord {

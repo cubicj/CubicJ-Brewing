@@ -55,12 +55,19 @@ export interface GrinderConfig {
 	rpm?: GrinderRpmConfig;
 }
 
+export interface ScaleConfig {
+	name: string;
+	address: string;
+	lastConnectedAt: string;
+}
+
 export interface EquipmentSettings {
 	grinders: GrinderConfig[];
 	drippers: string[];
 	filters: string[];
 	baskets: string[];
 	accessories: string[];
+	scales: ScaleConfig[];
 }
 
 interface BrewRecordBase {

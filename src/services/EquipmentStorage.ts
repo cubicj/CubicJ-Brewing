@@ -1,4 +1,4 @@
-import type { EquipmentSettings, GrinderConfig, GrinderRpmConfig } from '../brew/types';
+import type { EquipmentSettings, GrinderConfig, GrinderRpmConfig, ScaleConfig } from '../brew/types';
 import type { FileAdapter } from './FileAdapter';
 
 export function parseEquipmentSettings(value: unknown): EquipmentSettings | null {
@@ -25,6 +25,12 @@ export function parseEquipmentSettings(value: unknown): EquipmentSettings | null
 		grinder.rpm === undefined || isRpm(grinder.rpm)
 			? grinder
 			: { name: grinder.name, step: grinder.step, min: grinder.min, max: grinder.max };
+	const isScale = (scale: unknown): scale is ScaleConfig =>
+		scale != null &&
+		typeof scale === 'object' &&
+		typeof (scale as ScaleConfig).name === 'string' &&
+		typeof (scale as ScaleConfig).address === 'string' &&
+		typeof (scale as ScaleConfig).lastConnectedAt === 'string';
 	const isString = (item: unknown): item is string => typeof item === 'string';
 
 	return {
@@ -33,6 +39,7 @@ export function parseEquipmentSettings(value: unknown): EquipmentSettings | null
 		filters: (equipment.filters as unknown[]).filter(isString),
 		baskets: (equipment.baskets as unknown[]).filter(isString),
 		accessories: (equipment.accessories as unknown[]).filter(isString),
+		scales: Array.isArray(equipment.scales) ? (equipment.scales as unknown[]).filter(isScale) : [],
 	};
 }
 

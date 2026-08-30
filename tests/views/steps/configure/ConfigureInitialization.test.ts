@@ -34,6 +34,7 @@ const equipment: EquipmentSettings = {
 	drippers: ['V60'],
 	baskets: ['18g'],
 	accessories: ['Puck screen'],
+	scales: [],
 };
 
 const filterRecord = (id: string, overrides: Partial<FilterRecord> = {}): FilterRecord => ({

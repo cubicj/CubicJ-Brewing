@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EquipmentSettings, GrinderConfig } from '../../src/brew/types';
-import { EquipmentStorage } from '../../src/services/EquipmentStorage';
+import { EquipmentStorage, parseEquipmentSettings } from '../../src/services/EquipmentStorage';
 import type { FileAdapter } from '../../src/services/FileAdapter';
 
 class InMemoryFileAdapter implements FileAdapter {
@@ -33,6 +33,7 @@ const equipment: EquipmentSettings = {
 	filters: ['HF'],
 	baskets: ['18g'],
 	accessories: ['WDT'],
+	scales: [],
 };
 
 describe('EquipmentStorage', () => {
@@ -52,6 +53,36 @@ describe('EquipmentStorage', () => {
 		adapter.files.set('cubicj-brewing/equipment.json', JSON.stringify(equipment));
 
 		expect(await storage.load()).toEqual(equipment);
+	});
+
+	it('loads a legacy file without scales as scales: [] and does not back it up', async () => {
+		const legacy = JSON.stringify({ grinders: [], drippers: ['V60'], filters: [], baskets: [], accessories: [] });
+		adapter.files.set('cubicj-brewing/equipment.json', legacy);
+
+		const result = await storage.load();
+
+		expect(result).not.toBeNull();
+		expect(result!.scales).toEqual([]);
+		expect([...adapter.files.keys()].some((key) => key.includes('.bak'))).toBe(false);
+	});
+
+	it('filters invalid scales entries and keeps valid ones', () => {
+		const parsed = parseEquipmentSettings({
+			grinders: [],
+			drippers: [],
+			filters: [],
+			baskets: [],
+			accessories: [],
+			scales: [
+				{ name: 'My Pearl', address: 'aa:bb:cc:dd:ee:ff', lastConnectedAt: '2026-08-30T00:00:00.000Z' },
+				{ name: 'broken' },
+				'not-an-object',
+			],
+		});
+
+		expect(parsed!.scales).toEqual([
+			{ name: 'My Pearl', address: 'aa:bb:cc:dd:ee:ff', lastConnectedAt: '2026-08-30T00:00:00.000Z' },
+		]);
 	});
 
 	it('returns null when equipment.json is absent', async () => {
@@ -118,6 +149,7 @@ describe('EquipmentStorage', () => {
 			filters: ['HF'],
 			baskets: ['18g'],
 			accessories: ['WDT'],
+			scales: [],
 		});
 	});
 });

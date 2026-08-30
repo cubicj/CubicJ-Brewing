@@ -51,6 +51,7 @@ describe('PluginDataStore legacy equipment', () => {
 			filters: ['HF'],
 			baskets: ['18g'],
 			accessories: ['WDT'],
+			scales: [],
 		});
 	});
 
@@ -132,6 +133,7 @@ describe('PluginDataStore legacy equipment', () => {
 			filters: [],
 			baskets: [],
 			accessories: [],
+			scales: [],
 		};
 		const { port, getData, saveData } = makePort({
 			equipment: legacyEquipment,

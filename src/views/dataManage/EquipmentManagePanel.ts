@@ -9,7 +9,7 @@ export interface EquipmentManagePanelDeps {
 	saveEquipment: () => Promise<void>;
 }
 
-type StringEquipmentKey = Exclude<keyof EquipmentSettings, 'grinders'>;
+type StringEquipmentKey = Exclude<keyof EquipmentSettings, 'grinders' | 'scales'>;
 
 type EquipmentList =
 	| { label: string; items: GrinderConfig[]; key: 'grinders' }
