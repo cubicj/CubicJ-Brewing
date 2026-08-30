@@ -76,6 +76,12 @@
 	"scale.disconnected": "연결 끊김",
 	"scale.reconnect": "재연결",
 	"scale.reconnecting": "재연결 중 ({{attempt}}/{{max}})",
+	"scale.findOther": "다른 저울 찾기",
+	"scalePicker.title": "저울 선택",
+	"scalePicker.searching": "저울을 찾는 중...",
+	"scalePicker.empty": "아직 발견된 저울이 없습니다",
+	"scalePicker.registered": "등록됨",
+	"scalePicker.scanFailed": "스캔을 시작할 수 없습니다 — 블루투스를 확인하세요",
 
 	"settings.openView": "브루잉 뷰 열기",
 	"settings.openViewDesc": "사이드바에 브루잉 패널을 표시합니다.",

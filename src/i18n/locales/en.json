@@ -76,6 +76,12 @@
 	"scale.disconnected": "Disconnected",
 	"scale.reconnect": "Reconnect",
 	"scale.reconnecting": "Reconnecting ({{attempt}}/{{max}})",
+	"scale.findOther": "Find other scale",
+	"scalePicker.title": "Select a scale",
+	"scalePicker.searching": "Searching for scales...",
+	"scalePicker.empty": "No scales found yet",
+	"scalePicker.registered": "Registered",
+	"scalePicker.scanFailed": "Scan could not start — check Bluetooth",
 
 	"settings.openView": "Open brewing view",
 	"settings.openViewDesc": "Show brewing panel in the sidebar.",

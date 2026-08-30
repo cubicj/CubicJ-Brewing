@@ -1301,6 +1301,33 @@ body.is-mobile .brew-profile-chart-mode .brew-profile-footer {
 	cursor: grab;
 	touch-action: none;
 }
+.cubicj-scale-picker .scale-picker-status {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	margin-bottom: 8px;
+}
+.cubicj-scale-picker .scale-picker-list {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.cubicj-scale-picker .scale-picker-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	height: auto;
+	padding: 8px 12px;
+	cursor: pointer;
+}
+.cubicj-scale-picker .scale-picker-address {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+.cubicj-scale-picker .scale-picker-badge {
+	margin-left: auto;
+	color: var(--text-accent);
+	font-size: var(--font-ui-smaller);
+}
 .dm-equip-row:hover {
 	background: var(--background-modifier-hover);
 }

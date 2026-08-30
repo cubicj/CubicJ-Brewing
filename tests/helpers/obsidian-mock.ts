@@ -17,6 +17,8 @@ export class Modal {
 	app: any;
 	contentEl: any = {};
 	modalEl: any = {};
+	titleEl: any = { setText(_t: string) {} };
+	scope: any;
 	constructor(app: any) {
 		this.app = app;
 	}
@@ -24,6 +26,10 @@ export class Modal {
 	close() {}
 	onOpen() {}
 	onClose() {}
+}
+export class Scope {
+	constructor(_parent?: any) {}
+	register(_modifiers: any, _key: any, _fn: any) {}
 }
 export class Plugin {}
 export class PluginSettingTab {
