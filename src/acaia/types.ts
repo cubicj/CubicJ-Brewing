@@ -60,6 +60,10 @@ export interface Noble {
 
 export const SCALE_PREFIXES = ['PEARL', 'ACAIA', 'PROCH', 'PYXIS', 'LUNAR'];
 
+export function normalizeScaleAddress(value: string): string {
+	return value.toLowerCase().replace(/[:\-\s]/g, '');
+}
+
 const MODEL_NAMES: [string, string][] = [
 	['PEARLS', 'Acaia Pearl S'],
 	['LUNAR', 'Acaia Lunar'],

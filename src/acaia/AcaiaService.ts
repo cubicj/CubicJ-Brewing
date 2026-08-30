@@ -11,6 +11,7 @@ import {
 	PacketBuffer,
 } from './protocol';
 import { NobleTransport } from './NobleTransport';
+import type { DiscoveredScale } from './NobleTransport';
 import { TypedEmitter } from './TypedEmitter';
 import { decodePacket } from './packetDecoder';
 
@@ -64,6 +65,9 @@ export class AcaiaService extends TypedEmitter<AcaiaEvents> {
 	private reconnectTimer: number | null = null;
 	private connectId = 0;
 	private _scaleName: string | null = null;
+	private targetAddresses: string[] = [];
+	private _scaleAddress: string | null = null;
+	private pickerOperation = 0;
 	private logger?: BleLogger;
 	private _lastWeight = 0;
 
@@ -104,6 +108,10 @@ export class AcaiaService extends TypedEmitter<AcaiaEvents> {
 		return this._scaleName;
 	}
 
+	get scaleAddress(): string | null {
+		return this._scaleAddress;
+	}
+
 	get lastWeight(): number {
 		return this._lastWeight;
 	}
@@ -112,13 +120,20 @@ export class AcaiaService extends TypedEmitter<AcaiaEvents> {
 		return this.reconnectAttempt;
 	}
 
-	async connect(): Promise<void> {
+	async connect(targetAddresses?: string[]): Promise<void> {
+		this.pickerOperation++;
 		if (this.connecting) {
 			this.log('connect() skipped — already connecting');
 			return;
 		}
 		if (this._state !== 'idle' && this._state !== 'disconnected' && this._state !== 'reconnecting') {
 			this.log(`connect() skipped — state=${this._state}`);
+			return;
+		}
+		if (targetAddresses && targetAddresses.length > 0) this.targetAddresses = [...targetAddresses];
+		if (this.targetAddresses.length === 0) {
+			this.log('connect() skipped — no registered scale');
+			this.emitError('No registered scale');
 			return;
 		}
 
@@ -133,20 +148,7 @@ export class AcaiaService extends TypedEmitter<AcaiaEvents> {
 
 			await this.waitForPoweredOnOrThrow(myId);
 			const scale = await this.scanForScaleOrThrow(myId);
-
-			const localName = scale.localName;
-			this._scaleName = localName ? resolveModelName(localName) : null;
-			this.setState('connecting');
-
-			await this.establishConnection(myId);
-			await this.setupNotifications(myId);
-			await this.performHandshake(myId);
-
-			this.startHeartbeat();
-			this.reconnectAttempt = 0;
-			this.userDisconnected = false;
-			this.setState('connected');
-			this.log('connection complete');
+			await this.finalizeConnection(myId, scale);
 		} catch (err: unknown) {
 			if (err instanceof StaleConnectionError && this.connectId !== myId) {
 				this.log(`stale connect (id=${myId}, current=${this.connectId})`);
@@ -164,6 +166,21 @@ export class AcaiaService extends TypedEmitter<AcaiaEvents> {
 			if (this.connectId === myId) this.connecting = false;
 			this.log(`connect() finally — id=${myId}, current=${this.connectId}, state=${this._state}`);
 		}
+	}
+
+	private async finalizeConnection(myId: number, scale: DiscoveredScale): Promise<void> {
+		this._scaleName = scale.localName ? resolveModelName(scale.localName) : null;
+		this._scaleAddress = scale.address;
+		this.setState('connecting');
+		await this.establishConnection(myId);
+		await this.setupNotifications(myId);
+		await this.performHandshake(myId);
+		this.startHeartbeat();
+		this.reconnectAttempt = 0;
+		this.userDisconnected = false;
+		this.targetAddresses = [scale.address, scale.id];
+		this.setState('connected');
+		this.log('connection complete');
 	}
 
 	private initNoble(): void {
@@ -191,18 +208,77 @@ export class AcaiaService extends TypedEmitter<AcaiaEvents> {
 		this.log('poweredOn ready');
 	}
 
-	private async scanForScaleOrThrow(myId: number): Promise<{ localName: string; address: string }> {
+	private async scanForScaleOrThrow(myId: number): Promise<DiscoveredScale> {
 		this.log('scanning for scale...');
-		const scale = await this.transport.scanForScale();
+		const scale = await this.transport.scanForScale(this.targetAddresses);
 		this.assertNotStale(myId);
 		if (!scale) {
 			this.log('scan done — no scale found');
-			this.emitError('No scale found (10s timeout)');
+			this.emitError('Registered scale not found (10s timeout)');
 			this.setState('idle');
 			throw new StaleConnectionError();
 		}
 		this.log(`scale found: ${scale.localName} (${scale.address})`);
 		return scale;
+	}
+
+	async startPickerScan(onScale: (scale: DiscoveredScale) => void): Promise<boolean> {
+		if (this.connecting) return false;
+		if (this._state !== 'idle' && this._state !== 'disconnected') return false;
+		const operation = ++this.pickerOperation;
+		try {
+			this.initNoble();
+		} catch {
+			return false;
+		}
+		this.setState('scanning');
+		const ready = await this.transport.waitForPoweredOn();
+		if (operation !== this.pickerOperation) return false;
+		if (!ready) {
+			this.emitError('BLE adapter not ready');
+			this.setState('idle');
+			return false;
+		}
+		if (!this.transport.startCollectScan(onScale)) {
+			this.setState('idle');
+			return false;
+		}
+		return true;
+	}
+
+	cancelPickerScan(): void {
+		this.pickerOperation++;
+		this.transport.stopCollectScan();
+		if (this._state === 'scanning') this.setState('idle');
+	}
+
+	async connectToScale(scale: DiscoveredScale): Promise<void> {
+		this.pickerOperation++;
+		if (this.connecting) return;
+		this.transport.stopCollectScan();
+		if (!this.transport.selectScale(scale.id)) {
+			this.emitError('Selected scale unavailable');
+			this.setState('idle');
+			return;
+		}
+		this.connecting = true;
+		this.connectAborted = false;
+		const myId = ++this.connectId;
+		this.log(`connectToScale() start — id=${myId}, scale=${scale.localName} (${scale.address})`);
+		try {
+			await this.finalizeConnection(myId, scale);
+		} catch (err: unknown) {
+			if (err instanceof StaleConnectionError && this.connectId !== myId) return;
+			if (!(err instanceof StaleConnectionError)) {
+				const msg = err instanceof Error ? err.message : String(err);
+				this.log(`connectToScale() caught: ${msg}`);
+				this.emitError(msg || 'Connection failed');
+				this.cleanupConnection();
+				this.setState('idle');
+			}
+		} finally {
+			if (this.connectId === myId) this.connecting = false;
+		}
 	}
 
 	private async establishConnection(myId: number): Promise<void> {
@@ -343,6 +419,7 @@ export class AcaiaService extends TypedEmitter<AcaiaEvents> {
 		this.transport.dispose();
 		this.removeAllListeners();
 		this._state = 'idle';
+		this._scaleAddress = null;
 	}
 
 	private handlePacket(packet: Buffer): void {
@@ -469,6 +546,7 @@ export class AcaiaService extends TypedEmitter<AcaiaEvents> {
 
 	private cleanupConnection(disconnectTransport = true): void {
 		this.log('cleanupConnection()');
+		this.pickerOperation++;
 		this.stopTimers();
 		this.packetBuffer.reset();
 		this.queueGeneration++;

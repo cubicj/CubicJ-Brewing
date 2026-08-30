@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { AcaiaService } from '../../src/acaia/AcaiaService';
+import type { DiscoveredScale } from '../../src/acaia/NobleTransport';
 import { encodeTare, encodeHeartbeat, encodeIdentify, encodeGetSettings } from '../../src/acaia/protocol';
 import { AcaiaState, Noble } from '../../src/acaia/types';
 
@@ -65,11 +66,12 @@ function createMockPeripheral(writeChar = createMockWriteChar(), notifyChar = cr
 
 function createMockNoble(peripheral: ReturnType<typeof createMockPeripheral>) {
 	const listeners: Record<string, ((...args: unknown[]) => void)[]> = {};
-	return {
+	const noble = {
 		state: 'poweredOn',
 		on: vi.fn((event: string, cb: (...args: unknown[]) => void) => {
 			if (!listeners[event]) listeners[event] = [];
 			listeners[event].push(cb);
+			return noble;
 		}),
 		startScanning: vi.fn(function () {
 			const cbs = listeners['discover'] || [];
@@ -78,10 +80,17 @@ function createMockNoble(peripheral: ReturnType<typeof createMockPeripheral>) {
 		stopScanning: vi.fn(),
 		startScanningAsync: vi.fn().mockResolvedValue(undefined),
 		stopScanningAsync: vi.fn().mockResolvedValue(undefined),
-		removeAllListeners: vi.fn(),
-		removeListener: vi.fn(),
+		removeAllListeners: vi.fn(() => {
+			for (const event of Object.keys(listeners)) delete listeners[event];
+			return noble;
+		}),
+		removeListener: vi.fn((event: string, cb: (...args: unknown[]) => void) => {
+			listeners[event] = (listeners[event] || []).filter((candidate) => candidate !== cb);
+			return noble;
+		}),
 		_listeners: listeners,
 	} as unknown as Noble & { _listeners: Record<string, ((...args: unknown[]) => void)[]> };
+	return noble;
 }
 
 function collectStates(service: AcaiaService): AcaiaState[] {
@@ -95,6 +104,111 @@ function triggerDisconnect(peripheral: ReturnType<typeof createMockPeripheral>):
 	if (cb) cb();
 }
 
+describe('AcaiaService targeted connect', () => {
+	it('emits an error and stays idle when no targets are known', async () => {
+		const noble = createMockNoble(createMockPeripheral());
+		const service = new AcaiaService({ nobleFactory: () => noble });
+		const errors: string[] = [];
+		service.on('error', (error) => errors.push(error.message));
+
+		await service.connect();
+
+		expect(errors).toContain('No registered scale');
+		expect(service.state).toBe('idle');
+		service.destroy();
+	});
+
+	it('locks reconnect to the connected scale address', async () => {
+		vi.useFakeTimers();
+		const mine = createMockPeripheral();
+		const other = createMockPeripheral();
+		other.uuid = 'other-uuid';
+		other.address = '11:11:11:11:11:11';
+		other.advertisement = { localName: 'PEARLS-OTHER' };
+		const noble = createMockNoble(mine);
+		const service = new AcaiaService({ nobleFactory: () => noble });
+		try {
+			const connectPromise = service.connect(['00:00:00:00:00:00', '11:11:11:11:11:11']);
+			await vi.advanceTimersByTimeAsync(200);
+			await connectPromise;
+			expect(service.scaleAddress).toBe('00:00:00:00:00:00');
+
+			noble.startScanning = vi.fn(function () {
+				(noble._listeners['discover'] || []).forEach((callback) => callback(other));
+			});
+			triggerDisconnect(mine);
+			await vi.advanceTimersByTimeAsync(2000);
+			expect(service.state).not.toBe('connected');
+		} finally {
+			service.destroy();
+			vi.useRealTimers();
+		}
+	});
+});
+
+describe('AcaiaService picker flow', () => {
+	it('collects scales and connects to the selected one', async () => {
+		const peripheral = createMockPeripheral();
+		const noble = createMockNoble(peripheral);
+		const service = new AcaiaService({ nobleFactory: () => noble });
+		const found: DiscoveredScale[] = [];
+
+		await expect(service.startPickerScan((scale) => found.push(scale))).resolves.toBe(true);
+		expect(service.state).toBe('scanning');
+		expect(found).toHaveLength(1);
+		await service.connectToScale(found[0]);
+		expect(service.state).toBe('connected');
+		expect(service.scaleName).toBe('Acaia Pearl S');
+		service.destroy();
+	});
+
+	it('cancelPickerScan returns to idle', async () => {
+		const noble = createMockNoble(createMockPeripheral());
+		const service = new AcaiaService({ nobleFactory: () => noble });
+
+		await service.startPickerScan(() => {});
+		service.cancelPickerScan();
+
+		expect(service.state).toBe('idle');
+		service.destroy();
+	});
+
+	it('does not restart collection when canceled while waiting for poweredOn', async () => {
+		const noble = createMockNoble(createMockPeripheral());
+		(noble as unknown as { state: string }).state = 'unknown';
+		const service = new AcaiaService({ nobleFactory: () => noble });
+		const scanPromise = service.startPickerScan(() => {});
+		expect(service.state).toBe('scanning');
+
+		service.cancelPickerScan();
+		for (const callback of noble._listeners['stateChange'] || []) callback('poweredOn');
+
+		await expect(scanPromise).resolves.toBe(false);
+		expect(noble.startScanning).not.toHaveBeenCalled();
+		expect(service.state).toBe('idle');
+		service.destroy();
+	});
+
+	it('does not let a canceled picker continuation interfere with targeted connect', async () => {
+		const noble = createMockNoble(createMockPeripheral());
+		(noble as unknown as { state: string }).state = 'unknown';
+		const service = new AcaiaService({ nobleFactory: () => noble });
+		const pickerPromise = service.startPickerScan(() => {});
+		const staleStateListeners = [...(noble._listeners['stateChange'] || [])];
+
+		service.cancelPickerScan();
+		(noble as unknown as { state: string }).state = 'poweredOn';
+		const connectPromise = service.connect(['00:00:00:00:00:00']);
+		for (const callback of staleStateListeners) callback('poweredOn');
+
+		await expect(pickerPromise).resolves.toBe(false);
+		await connectPromise;
+		expect(noble.startScanning).toHaveBeenCalledOnce();
+		expect(service.state).toBe('connected');
+		service.destroy();
+	});
+});
+
 describe('AcaiaService connect', () => {
 	it('transitions idle → scanning → connecting → connected', async () => {
 		const peripheral = createMockPeripheral();
@@ -102,7 +216,7 @@ describe('AcaiaService connect', () => {
 		const service = new AcaiaService({ nobleFactory: () => noble });
 		const states = collectStates(service);
 
-		await service.connect();
+		await service.connect(['00:00:00:00:00:00']);
 
 		expect(states).toEqual(['scanning', 'connecting', 'connected']);
 		expect(service.state).toBe('connected');
@@ -117,7 +231,7 @@ describe('AcaiaService reconnect', () => {
 		const noble = createMockNoble(peripheral);
 		const service = new AcaiaService({ nobleFactory: () => noble });
 
-		await service.connect();
+		await service.connect(['00:00:00:00:00:00']);
 		const states = collectStates(service);
 
 		triggerDisconnect(peripheral);
@@ -134,7 +248,7 @@ describe('AcaiaService reconnect', () => {
 		const noble = createMockNoble(peripheral);
 		const service = new AcaiaService({ nobleFactory: () => noble });
 
-		await service.connect();
+		await service.connect(['00:00:00:00:00:00']);
 
 		const states = collectStates(service);
 		service.disconnect();
@@ -150,7 +264,7 @@ describe('AcaiaService reconnect', () => {
 		const noble = createMockNoble(peripheral);
 		const service = new AcaiaService({ nobleFactory: () => noble });
 
-		await service.connect();
+		await service.connect(['00:00:00:00:00:00']);
 		triggerDisconnect(peripheral);
 
 		expect(service.state).toBe('reconnecting');
@@ -166,7 +280,7 @@ describe('AcaiaService reconnect', () => {
 		const noble = createMockNoble(peripheral);
 		const service = new AcaiaService({ nobleFactory: () => noble });
 
-		await service.connect();
+		await service.connect(['00:00:00:00:00:00']);
 		triggerDisconnect(peripheral);
 
 		expect(service.state).toBe('reconnecting');
@@ -181,7 +295,7 @@ describe('AcaiaService reconnect', () => {
 		const noble = createMockNoble(peripheral);
 		const service = new AcaiaService({ nobleFactory: () => noble });
 		try {
-			const connectPromise = service.connect();
+			const connectPromise = service.connect(['00:00:00:00:00:00']);
 			await vi.advanceTimersByTimeAsync(200);
 			await connectPromise;
 			expect(service.state).toBe('connected');
@@ -207,7 +321,7 @@ describe('AcaiaService reconnect', () => {
 		const noble = createMockNoble(peripheral);
 		const service = new AcaiaService({ nobleFactory: () => noble });
 		try {
-			const connectPromise = service.connect();
+			const connectPromise = service.connect(['00:00:00:00:00:00']);
 			await vi.advanceTimersByTimeAsync(200);
 			await connectPromise;
 
@@ -236,7 +350,7 @@ describe('AcaiaService reconnect', () => {
 		const noble = createMockNoble(peripheral);
 		const service = new AcaiaService({ nobleFactory: () => noble });
 		try {
-			const connectPromise = service.connect();
+			const connectPromise = service.connect(['00:00:00:00:00:00']);
 			await vi.advanceTimersByTimeAsync(200);
 			await connectPromise;
 
@@ -267,7 +381,7 @@ describe('AcaiaService reconnect', () => {
 		(noble as unknown as { startScanning: () => void }).startScanning = vi.fn();
 		const service = new AcaiaService({ nobleFactory: () => noble });
 		try {
-			const connectPromise = service.connect();
+			const connectPromise = service.connect(['00:00:00:00:00:00']);
 			await vi.advanceTimersByTimeAsync(10000);
 			await connectPromise;
 
@@ -290,7 +404,7 @@ describe('AcaiaService destroy during connect', () => {
 		(noble as unknown as { state: string }).state = 'unknown';
 		const service = new AcaiaService({ nobleFactory: () => noble });
 		try {
-			const connectPromise = service.connect();
+			const connectPromise = service.connect(['00:00:00:00:00:00']);
 			service.destroy();
 			await vi.advanceTimersByTimeAsync(11000);
 			await connectPromise;
@@ -307,7 +421,7 @@ describe('AcaiaService destroy during connect', () => {
 		(noble as unknown as { startScanning: () => void }).startScanning = vi.fn();
 		const service = new AcaiaService({ nobleFactory: () => noble });
 		try {
-			const connectPromise = service.connect();
+			const connectPromise = service.connect(['00:00:00:00:00:00']);
 			service.destroy();
 			await vi.advanceTimersByTimeAsync(11000);
 			await connectPromise;
@@ -325,7 +439,7 @@ describe('AcaiaService heartbeat silence', () => {
 		const noble = createMockNoble(peripheral);
 		const service = new AcaiaService({ nobleFactory: () => noble });
 		try {
-			const connectPromise = service.connect();
+			const connectPromise = service.connect(['00:00:00:00:00:00']);
 			await vi.advanceTimersByTimeAsync(200);
 			await connectPromise;
 			expect(service.state).toBe('connected');
@@ -344,7 +458,7 @@ describe('AcaiaService heartbeat silence', () => {
 		const noble = createMockNoble(peripheral);
 		const service = new AcaiaService({ nobleFactory: () => noble });
 		try {
-			const connectPromise = service.connect();
+			const connectPromise = service.connect(['00:00:00:00:00:00']);
 			await vi.advanceTimersByTimeAsync(200);
 			await connectPromise;
 			expect(service.state).toBe('connected');
@@ -511,7 +625,7 @@ describe('AcaiaService write health', () => {
 		const noble = createMockNoble(peripheral);
 		const service = new AcaiaService({ nobleFactory: () => noble });
 
-		await service.connect();
+		await service.connect(['00:00:00:00:00:00']);
 		expect(service.state).toBe('connected');
 
 		const internals = service as unknown as QueueInternals;
@@ -537,7 +651,7 @@ describe('AcaiaService write health', () => {
 		const noble = createMockNoble(peripheral);
 		const service = new AcaiaService({ nobleFactory: () => noble });
 
-		await service.connect();
+		await service.connect(['00:00:00:00:00:00']);
 		expect(service.state).toBe('connected');
 
 		(service as unknown as QueueInternals).stopTimers();
@@ -561,7 +675,7 @@ describe('AcaiaService write health', () => {
 		const noble = createMockNoble(peripheral);
 		const service = new AcaiaService({ nobleFactory: () => noble });
 
-		await service.connect();
+		await service.connect(['00:00:00:00:00:00']);
 
 		(service as unknown as QueueInternals).stopTimers();
 
@@ -594,7 +708,7 @@ describe('AcaiaService write health', () => {
 		const noble = createMockNoble(peripheral);
 		const service = new AcaiaService({ nobleFactory: () => noble });
 		try {
-			const connectPromise = service.connect();
+			const connectPromise = service.connect(['00:00:00:00:00:00']);
 			await vi.advanceTimersByTimeAsync(200);
 			await connectPromise;
 			expect(service.state).toBe('connected');
@@ -653,7 +767,7 @@ describe('AcaiaService write queue', () => {
 		const peripheral = createMockPeripheral(writeChar);
 		const noble = createMockNoble(peripheral);
 		const service = new AcaiaService({ nobleFactory: () => noble });
-		await service.connect();
+		await service.connect(['00:00:00:00:00:00']);
 		(service as unknown as QueueInternals).stopTimers();
 
 		writeChar.writeAsync = vi
@@ -684,7 +798,7 @@ describe('AcaiaService write queue', () => {
 		const peripheral = createMockPeripheral(writeChar);
 		const noble = createMockNoble(peripheral);
 		const service = new AcaiaService({ nobleFactory: () => noble });
-		await service.connect();
+		await service.connect(['00:00:00:00:00:00']);
 		const internals = service as unknown as QueueInternals;
 		internals.stopTimers();
 

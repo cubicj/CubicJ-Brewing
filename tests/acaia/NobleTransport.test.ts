@@ -1,14 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
 import { NobleTransport } from '../../src/acaia/NobleTransport';
+import { normalizeScaleAddress } from '../../src/acaia/types';
 import type { Noble, NobleCharacteristic, NoblePeripheral } from '../../src/acaia/types';
 
 vi.stubGlobal('window', globalThis);
 
-function createPeripheral(localName: string): NoblePeripheral & { disconnect: ReturnType<typeof vi.fn> } {
+function createPeripheral(
+	localName: string,
+	address = `${localName}-address`,
+): NoblePeripheral & { disconnect: ReturnType<typeof vi.fn> } {
 	return {
 		uuid: `${localName}-uuid`,
 		id: `${localName}-id`,
-		address: `${localName}-address`,
+		address,
 		state: 'disconnected',
 		advertisement: { localName },
 		connectAsync: vi.fn().mockResolvedValue(undefined),
@@ -54,6 +58,10 @@ function createNoble(initialListeners: Record<string, ((...args: unknown[]) => v
 }
 
 describe('NobleTransport', () => {
+	it('normalizes scale addresses', () => {
+		expect(normalizeScaleAddress('AA:BB-cc dd')).toBe('aabbccdd');
+	});
+
 	it('resets the process-wide noble singleton before subscribing to state changes', () => {
 		const stalePoweredOff = vi.fn();
 		const poweredOff = vi.fn();
@@ -74,7 +82,7 @@ describe('NobleTransport', () => {
 		expect(poweredOff).toHaveBeenCalledOnce();
 	});
 
-	it('discovers only a supported scale and stops scanning', async () => {
+	it('discovers only a targeted scale and stops scanning', async () => {
 		const unsupported = createPeripheral('OTHER');
 		const scale = createPeripheral('PEARLS-TEST');
 		const noble = createNoble();
@@ -91,11 +99,92 @@ describe('NobleTransport', () => {
 			noble.emit('discover', scale);
 		});
 
-		await expect(transport.scanForScale()).resolves.toEqual({
+		await expect(transport.scanForScale(['PEARLS-TEST-address'])).resolves.toEqual({
+			id: 'PEARLS-TEST-id',
 			localName: 'PEARLS-TEST',
 			address: 'PEARLS-TEST-address',
 		});
 		expect(noble.stopScanning).toHaveBeenCalledOnce();
+	});
+
+	it('targeted scan resolves on address match without waiting for localName', async () => {
+		const scale = createPeripheral('', 'AA:BB:CC:DD:EE:FF');
+		scale.advertisement = {};
+		const noble = createNoble();
+		const transport = new NobleTransport({
+			nobleFactory: () => noble,
+			onPoweredOff: vi.fn(),
+			onDisconnect: vi.fn(),
+			onData: vi.fn(),
+		});
+		transport.initialize();
+		noble.startScanning.mockImplementation(() => noble.emit('discover', scale));
+
+		await expect(transport.scanForScale(['aabbccddeeff'])).resolves.toMatchObject({
+			address: 'AA:BB:CC:DD:EE:FF',
+		});
+	});
+
+	it('targeted scan skips a prefix-matching scale whose address is not registered', async () => {
+		const other = createPeripheral('PEARLS-OTHER', '11:11:11:11:11:11');
+		const mine = createPeripheral('PEARLS-MINE', '22:22:22:22:22:22');
+		const noble = createNoble();
+		const transport = new NobleTransport({
+			nobleFactory: () => noble,
+			onPoweredOff: vi.fn(),
+			onDisconnect: vi.fn(),
+			onData: vi.fn(),
+		});
+		transport.initialize();
+		noble.startScanning.mockImplementation(() => {
+			noble.emit('discover', other);
+			noble.emit('discover', mine);
+		});
+
+		await expect(transport.scanForScale(['22:22:22:22:22:22'])).resolves.toMatchObject({
+			localName: 'PEARLS-MINE',
+		});
+	});
+
+	it('collect scan emits each prefix-matching scale once and selectScale picks it', () => {
+		const scale = createPeripheral('PEARLS-TEST');
+		const noise = createPeripheral('OTHER');
+		const noble = createNoble();
+		const transport = new NobleTransport({
+			nobleFactory: () => noble,
+			onPoweredOff: vi.fn(),
+			onDisconnect: vi.fn(),
+			onData: vi.fn(),
+		});
+		transport.initialize();
+		const seen: unknown[] = [];
+
+		expect(transport.startCollectScan((discovered) => seen.push(discovered))).toBe(true);
+		noble.emit('discover', scale);
+		noble.emit('discover', scale);
+		noble.emit('discover', noise);
+		expect(seen).toHaveLength(1);
+		transport.stopCollectScan();
+		expect(transport.selectScale((seen[0] as { id: string }).id)).toBe(true);
+		expect(transport.selectScale('missing')).toBe(false);
+	});
+
+	it('does not retain a collected scale discovered after synchronous cleanup', () => {
+		const scale = createPeripheral('PEARLS-TEST');
+		const noble = createNoble();
+		const transport = new NobleTransport({
+			nobleFactory: () => noble,
+			onPoweredOff: vi.fn(),
+			onDisconnect: vi.fn(),
+			onData: vi.fn(),
+		});
+		transport.initialize();
+		expect(transport.startCollectScan(vi.fn())).toBe(true);
+
+		transport.disconnectSync();
+		noble.emit('discover', scale);
+
+		expect(transport.selectScale(scale.id!)).toBe(false);
 	});
 
 	it('disconnects the owned peripheral synchronously', async () => {
@@ -109,7 +198,7 @@ describe('NobleTransport', () => {
 		});
 		transport.initialize();
 		noble.startScanning.mockImplementation(() => noble.emit('discover', scale));
-		await transport.scanForScale();
+		await transport.scanForScale(['PEARLS-TEST-address']);
 
 		transport.disconnectSync();
 
@@ -127,7 +216,7 @@ describe('NobleTransport', () => {
 			onData: vi.fn(),
 		});
 		transport.initialize();
-		const scanPromise = transport.scanForScale();
+		const scanPromise = transport.scanForScale(['PEARLS-TEST-address']);
 
 		transport.disconnectSync();
 		noble.emit('discover', scale);
@@ -147,7 +236,7 @@ describe('NobleTransport', () => {
 		});
 		transport.initialize();
 		noble.startScanning.mockImplementation(() => noble.emit('discover', scale));
-		await transport.scanForScale();
+		await transport.scanForScale(['PEARLS-TEST-address']);
 
 		let resolveDiscovery!: (value: { characteristics: NobleCharacteristic[] }) => void;
 		const writeChar = {

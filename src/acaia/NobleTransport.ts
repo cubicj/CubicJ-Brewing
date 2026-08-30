@@ -1,5 +1,5 @@
 import type { Buffer, Noble, NobleCharacteristic, NoblePeripheral } from './types';
-import { NOTIFY_UUID, SCALE_PREFIXES, WRITE_UUID } from './types';
+import { normalizeScaleAddress, NOTIFY_UUID, SCALE_PREFIXES, WRITE_UUID } from './types';
 import { nodeRequire } from '../nodeRequire';
 
 export interface NobleTransportOptions {
@@ -12,6 +12,7 @@ export interface NobleTransportOptions {
 }
 
 export interface DiscoveredScale {
+	id: string;
 	localName: string;
 	address: string;
 }
@@ -35,6 +36,8 @@ export class NobleTransport {
 	private writeChar: NobleCharacteristic | null = null;
 	private notifyChar: NobleCharacteristic | null = null;
 	private generation = 0;
+	private collectListener: ((peripheral: NoblePeripheral) => void) | null = null;
+	private collected = new Map<string, NoblePeripheral>();
 
 	constructor(options: NobleTransportOptions) {
 		const noblePath = options.noblePath ?? '@stoprocent/noble';
@@ -105,10 +108,11 @@ export class NobleTransport {
 		});
 	}
 
-	scanForScale(timeoutMs = 10000): Promise<DiscoveredScale | null> {
+	scanForScale(targetAddresses: string[], timeoutMs = 10000): Promise<DiscoveredScale | null> {
 		const noble = this.noble;
 		if (!noble) return Promise.resolve(null);
 		const generation = this.generation;
+		const targets = new Set(targetAddresses.map(normalizeScaleAddress));
 
 		return new Promise((resolve) => {
 			let discoverCount = 0;
@@ -129,7 +133,10 @@ export class NobleTransport {
 				discoverCount++;
 				const localName = peripheral.advertisement?.localName || '';
 				const address = peripheral.address || peripheral.id || '??';
-				if (SCALE_PREFIXES.includes(localName.substring(0, 5).toUpperCase())) {
+				const candidates = [peripheral.address, peripheral.id, peripheral.uuid]
+					.filter((value): value is string => !!value)
+					.map(normalizeScaleAddress);
+				if (candidates.some((candidate) => targets.has(candidate))) {
 					window.clearTimeout(timer);
 					cleanup();
 					if (generation !== this.generation) {
@@ -137,7 +144,9 @@ export class NobleTransport {
 						return;
 					}
 					this.peripheral = peripheral;
-					resolve({ localName, address });
+					resolve({ id: peripheral.id || peripheral.uuid, localName, address });
+				} else if (SCALE_PREFIXES.includes(localName.substring(0, 5).toUpperCase())) {
+					this.log(`scan: unregistered scale skipped "${localName}" (${address})`);
 				} else {
 					this.log(`scan: skipped "${localName}" (${address})`);
 				}
@@ -154,6 +163,47 @@ export class NobleTransport {
 				resolve(null);
 			}
 		});
+	}
+
+	startCollectScan(onScale: (scale: DiscoveredScale) => void): boolean {
+		const noble = this.noble;
+		if (!noble) return false;
+		this.stopCollectScan();
+		this.collected.clear();
+		const generation = this.generation;
+		const listener = (peripheral: NoblePeripheral) => {
+			if (generation !== this.generation) return;
+			const localName = peripheral.advertisement?.localName || '';
+			if (!SCALE_PREFIXES.includes(localName.substring(0, 5).toUpperCase())) return;
+			const id = peripheral.id || peripheral.uuid;
+			if (this.collected.has(id)) return;
+			this.collected.set(id, peripheral);
+			onScale({ id, localName, address: peripheral.address || id });
+		};
+		this.collectListener = listener;
+		noble.on('discover', listener);
+		try {
+			noble.startScanning([], false);
+		} catch (error: unknown) {
+			const message = error instanceof Error ? error.message : String(error);
+			this.log(`collect scan error: ${message}`);
+			this.stopCollectScan();
+			return false;
+		}
+		return true;
+	}
+
+	stopCollectScan(): void {
+		if (this.collectListener && this.noble) this.noble.removeListener('discover', this.collectListener);
+		this.collectListener = null;
+		this.stopScanning();
+	}
+
+	selectScale(id: string): boolean {
+		const peripheral = this.collected.get(id);
+		if (!peripheral) return false;
+		this.peripheral = peripheral;
+		return true;
 	}
 
 	async disconnectPeripheralAsync(): Promise<void> {
@@ -241,6 +291,8 @@ export class NobleTransport {
 
 	disconnectSync(): void {
 		this.generation++;
+		this.stopCollectScan();
+		this.collected.clear();
 		if (this.notifyChar) {
 			this.notifyChar.removeAllListeners('data');
 			this.notifyChar = null;
@@ -259,6 +311,7 @@ export class NobleTransport {
 
 	dispose(): void {
 		this.disconnectSync();
+		this.stopCollectScan();
 		this.stopScanning();
 		this.noble?.removeAllListeners();
 		this.noble = null;
