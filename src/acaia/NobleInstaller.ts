@@ -30,7 +30,10 @@ export class NobleInstallError extends Error {
 export interface InstallerFilePort {
 	exists(path: string): Promise<boolean>;
 	read(path: string): Promise<string | null>;
+	list(path: string): Promise<{ files: string[]; folders: string[] }>;
 	mkdir(path: string): Promise<void>;
+	remove(path: string): Promise<void>;
+	rmdir(path: string): Promise<void>;
 	writeBinary(path: string, data: ArrayBuffer): Promise<void>;
 }
 
@@ -57,6 +60,13 @@ async function sha256Hex(buf: ArrayBuffer): Promise<string> {
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
 	return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}
+
+function isStrictDescendant(path: string, root: string): boolean {
+	const prefix = `${root}/`;
+	if (!path.startsWith(prefix)) return false;
+	const parts = path.slice(prefix.length).split('/');
+	return parts.every((part) => part !== '' && part !== '.' && part !== '..');
 }
 
 export function isNobleModuleLoaded(noblePath: string, cache?: Record<string, unknown>): boolean {
@@ -145,15 +155,48 @@ export class NobleInstaller {
 			throw new NobleInstallError('extract', err instanceof Error ? err.message : String(err));
 		}
 
+		const packagePath = `${this.nobleDir}/package.json`;
+		const targetedEntries = entries.map((entry) => ({
+			entry,
+			target: `${this.options.pluginDir}/${entry.path}`.replace(/\/$/, ''),
+		}));
+		const targetPaths = new Set(targetedEntries.map(({ target }) => target));
+		try {
+			if (await this.options.files.exists(packagePath)) {
+				await this.options.files.remove(packagePath);
+			}
+			if (await this.options.files.exists(this.nobleDir)) {
+				const existingFiles: string[] = [];
+				const existingDirs: string[] = [];
+				const collect = async (dir: string): Promise<void> => {
+					const listed = await this.options.files.list(dir);
+					for (const file of listed.files) {
+						if (isStrictDescendant(file, this.nobleDir)) existingFiles.push(file);
+					}
+					for (const folder of listed.folders) {
+						if (!isStrictDescendant(folder, this.nobleDir)) continue;
+						existingDirs.push(folder);
+						await collect(folder);
+					}
+				};
+				await collect(this.nobleDir);
+				for (const file of existingFiles) {
+					if (!targetPaths.has(file)) await this.options.files.remove(file);
+				}
+				existingDirs.sort((a, b) => b.split('/').length - a.split('/').length);
+				for (const dir of existingDirs) {
+					if (!targetPaths.has(dir)) await this.options.files.rmdir(dir);
+				}
+			}
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err);
+			throw new NobleInstallError('write', `prune: ${message}`);
+		}
+
 		try {
 			if (!(await this.options.files.exists(this.nobleDir))) {
 				await this.options.files.mkdir(this.nobleDir);
 			}
-			const packagePath = `${this.nobleDir}/package.json`;
-			const targetedEntries = entries.map((entry) => ({
-				entry,
-				target: `${this.options.pluginDir}/${entry.path}`.replace(/\/$/, ''),
-			}));
 			const orderedEntries = [
 				...targetedEntries.filter(({ target }) => target !== packagePath),
 				...targetedEntries.filter(({ target }) => target === packagePath),
@@ -182,7 +225,10 @@ export function createNobleInstaller(
 	const files: InstallerFilePort = {
 		exists: (p) => adapter.exists(p),
 		read: async (p) => ((await adapter.exists(p)) ? adapter.read(p) : null),
+		list: (p) => adapter.list(p),
 		mkdir: (p) => adapter.mkdir(p),
+		remove: (p) => adapter.remove(p),
+		rmdir: (p) => adapter.rmdir(p, false),
 		writeBinary: (p, data) => adapter.writeBinary(p, data),
 	};
 	const http: InstallerHttpPort = {

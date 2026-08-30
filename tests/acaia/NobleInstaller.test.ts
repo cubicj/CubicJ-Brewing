@@ -59,10 +59,33 @@ function makeFiles(): Fake {
 			fileCalls.push(`read:${p}`);
 			return existing.get(p) ?? null;
 		},
+		list: async (p) => {
+			fileCalls.push(`list:${p}`);
+			const prefix = `${p}/`;
+			const isImmediate = (path: string) =>
+				path.startsWith(prefix) && !path.slice(prefix.length).includes('/');
+			return {
+				files: [...existing.keys()].filter(isImmediate),
+				folders: [...existingDirs].filter(isImmediate),
+			};
+		},
 		mkdir: async (p) => {
 			fileCalls.push(`mkdir:${p}`);
 			dirs.push(p);
 			existingDirs.add(p);
+		},
+		remove: async (p) => {
+			fileCalls.push(`remove:${p}`);
+			existing.delete(p);
+			written.delete(p);
+		},
+		rmdir: async (p) => {
+			fileCalls.push(`rmdir:${p}`);
+			const prefix = `${p}/`;
+			if ([...existing.keys(), ...existingDirs].some((path) => path.startsWith(prefix))) {
+				throw new Error(`directory not empty: ${p}`);
+			}
+			existingDirs.delete(p);
 		},
 		writeBinary: async (p, data) => {
 			fileCalls.push(`writeBinary:${p}`);
@@ -155,7 +178,7 @@ describe('NobleInstaller.install', () => {
 		expect(fake.fileCalls).toEqual([]);
 	});
 
-	it('overwrites an existing noble tree without deleting its other files', async () => {
+	it('overwrites tar-covered files and removes other files', async () => {
 		const bundle = makeBundle();
 		const sha = await sha256Hex(toArrayBuffer(bundle));
 		const nobleDir = '.obsidian/plugins/cubicj-brewing/noble';
@@ -170,8 +193,110 @@ describe('NobleInstaller.install', () => {
 
 		expect(fake.existing.get(`${nobleDir}/package.json`)).toBe('{"version":"9.9.9"}');
 		expect(fake.existing.get(`${nobleDir}/lib/index.js`)).toBe('module.exports = 1;');
-		expect(fake.existing.get(`${nobleDir}/locked.node`)).toBe('native');
+		expect(fake.existing.has(`${nobleDir}/locked.node`)).toBe(false);
 		expect(fake.dirs).toEqual([]);
+	});
+
+	it('removes a stale prebuild while writing tar-covered files', async () => {
+		const bundle = makeBundle();
+		const sha = await sha256Hex(toArrayBuffer(bundle));
+		const nobleDir = '.obsidian/plugins/cubicj-brewing/noble';
+		const stalePrebuild = `${nobleDir}/prebuilds/win32-x64/@stoprocent+noble.node`;
+		fake.existingDirs.add(nobleDir);
+		fake.existingDirs.add(`${nobleDir}/prebuilds`);
+		fake.existingDirs.add(`${nobleDir}/prebuilds/win32-x64`);
+		fake.existing.set(stalePrebuild, 'old native addon');
+		const installer = makeInstaller(fake, makeHttp(200, bundle), sha);
+
+		await installer.install(() => {});
+
+		expect(fake.existing.has(stalePrebuild)).toBe(false);
+		expect(fake.existing.get(`${nobleDir}/lib/index.js`)).toBe('module.exports = 1;');
+	});
+
+	it('prunes stale nested directories after their files', async () => {
+		const bundle = makeBundle();
+		const sha = await sha256Hex(toArrayBuffer(bundle));
+		const nobleDir = '.obsidian/plugins/cubicj-brewing/noble';
+		const staleDir = `${nobleDir}/stale`;
+		const nestedDir = `${staleDir}/nested`;
+		const staleFile = `${nestedDir}/old.node`;
+		fake.existingDirs.add(nobleDir);
+		fake.existingDirs.add(staleDir);
+		fake.existingDirs.add(nestedDir);
+		fake.existing.set(staleFile, 'old native addon');
+		const installer = makeInstaller(fake, makeHttp(200, bundle), sha);
+
+		await installer.install(() => {});
+
+		expect(fake.existing.has(staleFile)).toBe(false);
+		expect(fake.existingDirs.has(nestedDir)).toBe(false);
+		expect(fake.existingDirs.has(staleDir)).toBe(false);
+		expect(fake.fileCalls.indexOf(`remove:${staleFile}`)).toBeLessThan(
+			fake.fileCalls.indexOf(`rmdir:${nestedDir}`),
+		);
+		expect(fake.fileCalls.indexOf(`rmdir:${nestedDir}`)).toBeLessThan(fake.fileCalls.indexOf(`rmdir:${staleDir}`));
+	});
+
+	it('removes the old package.json before writing new files', async () => {
+		const bundle = gzipSync(
+			buildTar([
+				{ path: 'noble/', type: 'dir' },
+				{ path: 'noble/package.json', type: 'file', data: text('{"version":"9.9.9"}') },
+				{ path: 'noble/lib/', type: 'dir' },
+				{ path: 'noble/lib/index.js', type: 'file', data: text('module.exports = 1;') },
+				{ path: 'noble/lib/native.node', type: 'file', data: text('new native addon') },
+			]),
+		);
+		const sha = await sha256Hex(toArrayBuffer(bundle));
+		const nobleDir = '.obsidian/plugins/cubicj-brewing/noble';
+		const packagePath = `${nobleDir}/package.json`;
+		fake.existingDirs.add(nobleDir);
+		fake.existing.set(packagePath, '{"version":"1.0.0"}');
+		const writeBinary = fake.files.writeBinary;
+		fake.files.writeBinary = async (path, data) => {
+			if (path === `${nobleDir}/lib/native.node`) throw new Error('disk full');
+			await writeBinary(path, data);
+		};
+		const installer = makeInstaller(fake, makeHttp(200, bundle), sha);
+
+		await expect(installer.install(() => {})).rejects.toMatchObject({ code: 'write' });
+
+		expect(fake.fileCalls.indexOf(`remove:${packagePath}`)).toBeLessThan(
+			fake.fileCalls.indexOf(`writeBinary:${nobleDir}/lib/index.js`),
+		);
+		expect(await installer.status()).toEqual({ kind: 'not-installed' });
+	});
+
+	it('maps remove failures during pruning to write errors', async () => {
+		const bundle = makeBundle();
+		const sha = await sha256Hex(toArrayBuffer(bundle));
+		const nobleDir = '.obsidian/plugins/cubicj-brewing/noble';
+		const staleFile = `${nobleDir}/stale.node`;
+		fake.existingDirs.add(nobleDir);
+		fake.existing.set(staleFile, 'old native addon');
+		fake.files.remove = async (path) => {
+			throw new Error(`cannot remove ${path}`);
+		};
+		const installer = makeInstaller(fake, makeHttp(200, bundle), sha);
+
+		await expect(installer.install(() => {})).rejects.toMatchObject({
+			code: 'write',
+			message: `prune: cannot remove ${staleFile}`,
+		});
+	});
+
+	it('installs when the noble directory does not exist', async () => {
+		const bundle = makeBundle();
+		const sha = await sha256Hex(toArrayBuffer(bundle));
+		const nobleDir = '.obsidian/plugins/cubicj-brewing/noble';
+		const installer = makeInstaller(fake, makeHttp(200, bundle), sha);
+
+		await installer.install(() => {});
+
+		expect(fake.existingDirs.has(nobleDir)).toBe(true);
+		expect(fake.fileCalls).not.toContain(`list:${nobleDir}`);
+		expect(await installer.status()).toEqual({ kind: 'installed', version: '9.9.9' });
 	});
 
 	it('writes package.json after every other file', async () => {
