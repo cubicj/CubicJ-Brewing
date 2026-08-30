@@ -106,8 +106,10 @@
 	"equip.rpmVariable": "Variable RPM",
 	"equip.rpmRange": "RPM range",
 	"equip.rpmCurrent": "Current RPM",
+	"equip.scaleEmpty": "Connect a scale to register it",
 
 	"equipment.grinder": "Grinder",
+	"equipment.scale": "Scale",
 	"equipment.filter": "Filter",
 	"equipment.dripper": "Dripper",
 	"equipment.basket": "Basket",

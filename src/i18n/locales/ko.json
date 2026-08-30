@@ -106,8 +106,10 @@
 	"equip.rpmVariable": "RPM 가변",
 	"equip.rpmRange": "RPM 범위",
 	"equip.rpmCurrent": "현재 RPM",
+	"equip.scaleEmpty": "저울을 연결하면 등록됩니다",
 
 	"equipment.grinder": "그라인더",
+	"equipment.scale": "저울",
 	"equipment.filter": "필터",
 	"equipment.dripper": "드리퍼",
 	"equipment.basket": "바스켓",

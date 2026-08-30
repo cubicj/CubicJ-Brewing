@@ -1,5 +1,5 @@
 import { Notice, setIcon } from 'obsidian';
-import type { EquipmentSettings, GrinderConfig } from '../../brew/types';
+import type { EquipmentSettings, GrinderConfig, ScaleConfig } from '../../brew/types';
 import { t } from '../../i18n/index';
 import { renderGrinderForm, type GrinderFormOptions } from '../GrinderForm';
 import { SortableListController } from './SortableListController';
@@ -13,6 +13,7 @@ type StringEquipmentKey = Exclude<keyof EquipmentSettings, 'grinders' | 'scales'
 
 type EquipmentList =
 	| { label: string; items: GrinderConfig[]; key: 'grinders' }
+	| { label: string; items: ScaleConfig[]; key: 'scales' }
 	| { label: string; items: string[]; key: StringEquipmentKey };
 
 export class EquipmentManagePanel {
@@ -26,6 +27,7 @@ export class EquipmentManagePanel {
 
 		this.renderEquipSection(container, t('equip.shared'), [
 			{ label: t('equipment.grinder'), items: equipment.grinders, key: 'grinders' },
+			{ label: t('equipment.scale'), items: equipment.scales, key: 'scales' },
 		]);
 		this.renderEquipSection(container, t('equip.filterBrewing'), [
 			{ label: t('equipment.dripper'), items: equipment.drippers, key: 'drippers' },
@@ -52,6 +54,8 @@ export class EquipmentManagePanel {
 		for (const list of lists) {
 			if (list.key === 'grinders') {
 				this.renderGrinderList(section, list.label);
+			} else if (list.key === 'scales') {
+				this.renderScaleList(section, list.label);
 			} else {
 				this.renderStringList(section, list.label, list.key);
 			}
@@ -234,6 +238,74 @@ export class EquipmentManagePanel {
 					});
 				},
 			});
+		});
+	}
+
+	private renderScaleList(container: HTMLElement, label: string): void {
+		const section = container.createDiv({ cls: 'dm-equip-list' });
+		const header = section.createDiv({ cls: 'dm-equip-list-header' });
+		header.createSpan({ text: label });
+		const listEl = section.createDiv({ cls: 'dm-equip-items' });
+		const scales = this.deps.equipment.scales;
+		const renderItems = () => {
+			listEl.empty();
+			if (scales.length === 0) {
+				listEl.createDiv({ cls: 'dm-empty', text: t('equip.scaleEmpty') });
+				return;
+			}
+			for (let i = 0; i < scales.length; i++) {
+				const scale = scales[i];
+				const row = listEl.createDiv({ cls: 'dm-equip-row' });
+				row.createSpan({ cls: 'dm-equip-grinder-name', text: scale.name });
+				row.createSpan({ cls: 'dm-equip-grinder-meta', text: scale.address });
+				const editBtn = row.createEl('button', { text: '✎', cls: 'dm-btn dm-equip-edit-btn dm-scale-edit-btn' });
+				editBtn.addEventListener('click', () => this.openScaleRenameForm(section, scale, renderItems));
+				const delBtn = row.createEl('button', { text: '✕', cls: 'dm-btn dm-equip-del-btn dm-scale-del-btn' });
+				delBtn.addEventListener('click', () => {
+					void this.submitGrinder(() => {
+						scales.splice(i, 1);
+					}).then((saved) => {
+						if (saved) renderItems();
+					});
+				});
+			}
+		};
+		renderItems();
+	}
+
+	private openScaleRenameForm(container: HTMLElement, scale: ScaleConfig, renderItems: () => void): void {
+		container.querySelector('.dm-equip-grinder-form')?.remove();
+		const formEl = container.createDiv({ cls: 'dm-equip-grinder-form' });
+		const input = formEl.createEl('input', {
+			type: 'text',
+			cls: 'dm-equip-input',
+			attr: { spellcheck: 'false' },
+		});
+		input.value = scale.name;
+		const btnRow = formEl.createDiv({ cls: 'dm-equip-grinder-actions' });
+		const saveBtn = btnRow.createEl('button', { text: t('form.save'), cls: 'dm-btn dm-btn-accent' });
+		const cancelBtn = btnRow.createEl('button', { text: t('common.cancel'), cls: 'dm-btn dm-btn-muted' });
+		input.focus();
+		const saveName = async () => {
+			const value = input.value.trim();
+			if (!value) {
+				formEl.remove();
+				return;
+			}
+			const saved = await this.submitGrinder(() => {
+				scale.name = value;
+			});
+			if (!saved) return;
+			formEl.remove();
+			renderItems();
+		};
+		saveBtn.addEventListener('click', () => {
+			void saveName();
+		});
+		cancelBtn.addEventListener('click', () => formEl.remove());
+		input.addEventListener('keydown', (event) => {
+			if (event.key === 'Enter') saveBtn.click();
+			if (event.key === 'Escape') formEl.remove();
 		});
 	}
 

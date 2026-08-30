@@ -86,4 +86,77 @@ describe('EquipmentManagePanel', () => {
 		expect(saveEquipment).toHaveBeenCalledTimes(3);
 		panel.dispose();
 	});
+
+	it('renames a registered scale in place and persists', async () => {
+		const injected = equipment();
+		injected.scales.push({
+			name: 'Acaia Pearl S',
+			address: 'aa:bb',
+			lastConnectedAt: '2026-08-30T00:00:00.000Z',
+		});
+		const scale = injected.scales[0];
+		const saveEquipment = vi.fn().mockResolvedValue(undefined);
+		const container = createContainer();
+		const panel = new EquipmentManagePanel({ equipment: injected, saveEquipment });
+		panel.render(container);
+		const list = findList(container, 'equipment.scale');
+
+		list.querySelector<HTMLButtonElement>('.dm-scale-edit-btn')!.click();
+		const input = list.querySelector<HTMLInputElement>('.dm-equip-input')!;
+		input.value = 'Kitchen Pearl';
+		list.querySelector<HTMLButtonElement>('.dm-btn-accent')!.click();
+		await flushPromises();
+
+		expect(injected.scales[0]).toBe(scale);
+		expect(injected.scales[0].name).toBe('Kitchen Pearl');
+		expect(saveEquipment).toHaveBeenCalledOnce();
+		panel.dispose();
+	});
+
+	it('keeps the old name when the rename input is emptied', async () => {
+		const injected = equipment();
+		injected.scales.push({
+			name: 'Acaia Pearl S',
+			address: 'aa:bb',
+			lastConnectedAt: '2026-08-30T00:00:00.000Z',
+		});
+		const saveEquipment = vi.fn().mockResolvedValue(undefined);
+		const container = createContainer();
+		const panel = new EquipmentManagePanel({ equipment: injected, saveEquipment });
+		panel.render(container);
+		const list = findList(container, 'equipment.scale');
+
+		list.querySelector<HTMLButtonElement>('.dm-scale-edit-btn')!.click();
+		const input = list.querySelector<HTMLInputElement>('.dm-equip-input')!;
+		input.value = '   ';
+		list.querySelector<HTMLButtonElement>('.dm-btn-accent')!.click();
+		await flushPromises();
+
+		expect(injected.scales[0].name).toBe('Acaia Pearl S');
+		expect(saveEquipment).not.toHaveBeenCalled();
+		panel.dispose();
+	});
+
+	it('deletes a registered scale', async () => {
+		const injected = equipment();
+		const scales = injected.scales;
+		injected.scales.push({
+			name: 'Acaia Pearl S',
+			address: 'aa:bb',
+			lastConnectedAt: '2026-08-30T00:00:00.000Z',
+		});
+		const saveEquipment = vi.fn().mockResolvedValue(undefined);
+		const container = createContainer();
+		const panel = new EquipmentManagePanel({ equipment: injected, saveEquipment });
+		panel.render(container);
+		const list = findList(container, 'equipment.scale');
+
+		list.querySelector<HTMLButtonElement>('.dm-scale-del-btn')!.click();
+		await flushPromises();
+
+		expect(injected.scales).toBe(scales);
+		expect(injected.scales).toHaveLength(0);
+		expect(saveEquipment).toHaveBeenCalledOnce();
+		panel.dispose();
+	});
 });
