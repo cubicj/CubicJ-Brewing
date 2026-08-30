@@ -77,6 +77,7 @@
 	"scale.reconnect": "재연결",
 	"scale.reconnecting": "재연결 중 ({{attempt}}/{{max}})",
 	"scale.findOther": "다른 저울 찾기",
+	"scale.registeredNotFound": "등록된 저울을 찾지 못했어요",
 	"scalePicker.title": "저울 선택",
 	"scalePicker.searching": "저울을 찾는 중...",
 	"scalePicker.empty": "아직 발견된 저울이 없습니다",

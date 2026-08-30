@@ -11,6 +11,11 @@ const desktopMocks = vi.hoisted(() => ({
 	viewCreations: [] as Array<{ leaf: unknown; plugin: unknown }>,
 	nobleGuards: [] as Array<() => boolean>,
 	loadedNoblePaths: [] as string[],
+	acaiaInstances: [] as Array<{
+		scaleName: string | null;
+		scaleAddress: string | null;
+		emitState(state: string): void;
+	}>,
 }));
 
 vi.mock('../src/acaia/NobleInstaller', () => ({
@@ -28,13 +33,22 @@ vi.mock('../src/acaia/AcaiaService', () => ({
 	AcaiaService: class {
 		state = 'connected';
 		lastWeight = 42;
+		scaleName: string | null = 'Acaia Pearl S';
+		scaleAddress: string | null = 'AA:BB:CC:DD:EE:FF';
+		private stateListeners: Array<(state: string) => void> = [];
 
 		constructor(options: unknown) {
 			desktopMocks.acaiaOptions.push(options);
+			desktopMocks.acaiaInstances.push(this);
 		}
 
-		on(): this {
+		on(event: string, listener: (state: string) => void): this {
+			if (event === 'state') this.stateListeners.push(listener);
 			return this;
+		}
+
+		emitState(state: string): void {
+			for (const listener of this.stateListeners) listener(state);
 		}
 
 		destroy(): void {
@@ -64,6 +78,7 @@ beforeEach(() => {
 	desktopMocks.viewCreations.length = 0;
 	desktopMocks.nobleGuards.length = 0;
 	desktopMocks.loadedNoblePaths.length = 0;
+	desktopMocks.acaiaInstances.length = 0;
 	Platform.isDesktop = true;
 	Platform.isMobile = false;
 });
@@ -236,6 +251,64 @@ describe('equipment storage wiring', () => {
 		expect(JSON.parse(harness.files.get('cubicj-brewing/equipment.json') ?? '')).toEqual(equipment);
 	});
 
+	it('serializes queued equipment saves in invocation order', async () => {
+		Platform.isDesktop = false;
+		Platform.isMobile = true;
+		const harness = makeOnloadHarness(
+			{},
+			{ 'cubicj-brewing/equipment.json': JSON.stringify(defaultEquipment) },
+		);
+		await harness.plugin.onload();
+		const writes: string[] = [];
+		const releaseWrites: Array<() => void> = [];
+		const write = harness.plugin.app.vault.adapter.write as ReturnType<typeof vi.fn>;
+		write.mockImplementation(async (_path: string, content: string) => {
+			writes.push(content);
+			await new Promise<void>((resolve) => releaseWrites.push(resolve));
+		});
+
+		harness.plugin.equipment.drippers.push('V60');
+		const first = harness.plugin.saveEquipment();
+		harness.plugin.equipment.drippers.push('Kalita');
+		const second = harness.plugin.saveEquipment();
+
+		await vi.waitFor(() => expect(writes).toHaveLength(1));
+		expect(JSON.parse(writes[0]).drippers).toEqual(['V60']);
+		releaseWrites.shift()!();
+		await vi.waitFor(() => expect(writes).toHaveLength(2));
+		expect(JSON.parse(writes[1]).drippers).toEqual(['V60', 'Kalita']);
+		releaseWrites.shift()!();
+		await Promise.all([first, second]);
+	});
+
+	it('captures an equipment snapshot before later mutations', async () => {
+		Platform.isDesktop = false;
+		Platform.isMobile = true;
+		const harness = makeOnloadHarness(
+			{},
+			{ 'cubicj-brewing/equipment.json': JSON.stringify(defaultEquipment) },
+		);
+		await harness.plugin.onload();
+		let written = '';
+		let releaseWrite!: () => void;
+		const write = harness.plugin.app.vault.adapter.write as ReturnType<typeof vi.fn>;
+		write.mockImplementation(async (_path: string, content: string) => {
+			written = content;
+			await new Promise<void>((resolve) => {
+				releaseWrite = resolve;
+			});
+		});
+
+		harness.plugin.equipment.filters.push('Sibarist');
+		const save = harness.plugin.saveEquipment();
+		harness.plugin.equipment.filters.push('Abaca');
+
+		await vi.waitFor(() => expect(written).not.toBe(''));
+		expect(JSON.parse(written).filters).toEqual(['Sibarist']);
+		releaseWrite();
+		await save;
+	});
+
 	it('preserves equipment and list identity when an internal save triggers a modify event', async () => {
 		Platform.isDesktop = false;
 		Platform.isMobile = true;
@@ -393,6 +466,7 @@ interface RuntimeHarness {
 	removeEventListener: ReturnType<typeof vi.fn>;
 	setViewState: ReturnType<typeof vi.fn>;
 	revealLeaf: ReturnType<typeof vi.fn>;
+	saveEquipment: ReturnType<typeof vi.fn>;
 }
 
 function makeRuntimeHarness(): RuntimeHarness {
@@ -421,6 +495,7 @@ function makeRuntimeHarness(): RuntimeHarness {
 	const setScaleWeightGetter = vi.fn((getter: () => number | null) => {
 		scaleWeightGetter = getter;
 	});
+	const saveEquipment = vi.fn().mockResolvedValue(undefined);
 	const plugin = {
 		app: {
 			vault: {
@@ -445,6 +520,8 @@ function makeRuntimeHarness(): RuntimeHarness {
 			}),
 		},
 		beanBlock: { setScaleWeightGetter },
+		equipment: { ...defaultEquipment, scales: [] },
+		saveEquipment,
 		getLogConfig: () => ({ enabled: true, categories: ['BLE'] }),
 		registerView,
 		addCommand: vi.fn((command: { id: string; name: string }) => {
@@ -464,6 +541,7 @@ function makeRuntimeHarness(): RuntimeHarness {
 		removeEventListener,
 		setViewState,
 		revealLeaf,
+		saveEquipment,
 	};
 }
 
@@ -506,6 +584,38 @@ describe('DesktopRuntime', () => {
 		expect(desktopMocks.loadedNoblePaths).toEqual([
 			'/vault/.obsidian/plugins/cubicj-brewing/noble',
 		]);
+	});
+
+	it('auto-registers connected scales and contains persistence failures', async () => {
+		const { DesktopRuntime } = await import('../src/DesktopRuntime');
+		const harness = makeRuntimeHarness();
+		harness.plugin.equipment.scales.push({
+			name: 'Kitchen scale',
+			address: 'aa:bb:cc:dd:ee:ff',
+			lastConnectedAt: '2026-08-01T00:00:00.000Z',
+		});
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		harness.saveEquipment.mockRejectedValueOnce(new Error('write failed'));
+		const runtime = new DesktopRuntime(harness.plugin);
+		await runtime.init();
+		const service = desktopMocks.acaiaInstances[0];
+
+		expect(() => service.emitState('connected')).not.toThrow();
+
+		expect(harness.plugin.equipment.scales).toHaveLength(1);
+		expect(harness.plugin.equipment.scales[0]).toMatchObject({
+			name: 'Kitchen scale',
+			address: 'aa:bb:cc:dd:ee:ff',
+		});
+		expect(harness.plugin.equipment.scales[0].lastConnectedAt).not.toBe('2026-08-01T00:00:00.000Z');
+		expect(harness.saveEquipment).toHaveBeenCalledOnce();
+		await vi.waitFor(() =>
+			expect(warn).toHaveBeenCalledWith(
+				'[CubicJ-Brewing] scale registration save failed:',
+				expect.objectContaining({ message: 'write failed' }),
+			),
+		);
+		runtime.destroy();
 	});
 
 	it('activates and reveals the desktop view through the existing workspace flow', async () => {

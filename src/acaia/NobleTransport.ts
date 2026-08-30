@@ -36,6 +36,7 @@ export class NobleTransport {
 	private writeChar: NobleCharacteristic | null = null;
 	private notifyChar: NobleCharacteristic | null = null;
 	private generation = 0;
+	private targetedScanCleanup: (() => void) | null = null;
 	private collectListener: ((peripheral: NoblePeripheral) => void) | null = null;
 	private collected = new Map<string, NoblePeripheral>();
 
@@ -57,6 +58,9 @@ export class NobleTransport {
 	}
 
 	initialize(): boolean {
+		this.stopScanning();
+		this.removeCollectListener();
+		this.collected.clear();
 		this.generation++;
 		const noble = this.nobleFactory();
 		if (!noble) return false;
@@ -111,23 +115,31 @@ export class NobleTransport {
 	scanForScale(targetAddresses: string[], timeoutMs = 10000): Promise<DiscoveredScale | null> {
 		const noble = this.noble;
 		if (!noble) return Promise.resolve(null);
+		this.cancelTargetedScan();
+		if (this.collectListener) this.stopCollectScan();
 		const generation = this.generation;
 		const targets = new Set(targetAddresses.map(normalizeScaleAddress));
 
 		return new Promise((resolve) => {
 			let discoverCount = 0;
-			const cleanup = () => {
+			let settled = false;
+			let timer = 0;
+			const finish = (result: DiscoveredScale | null) => {
+				if (settled) return;
+				settled = true;
+				window.clearTimeout(timer);
 				noble.removeListener('discover', onDiscover);
-				try {
-					noble.stopScanning();
-				} catch (error) {
-					void error;
+				if (this.targetedScanCleanup === cancel) {
+					this.targetedScanCleanup = null;
+					this.stopNobleScanning(noble);
 				}
+				resolve(result);
 			};
-			const timer = window.setTimeout(() => {
-				cleanup();
+			const cancel = () => finish(null);
+			this.targetedScanCleanup = cancel;
+			timer = window.setTimeout(() => {
 				this.log(`scan timeout — ${discoverCount} peripherals seen, no scale`);
-				resolve(null);
+				finish(null);
 			}, timeoutMs);
 			const onDiscover = (peripheral: NoblePeripheral) => {
 				discoverCount++;
@@ -137,14 +149,12 @@ export class NobleTransport {
 					.filter((value): value is string => !!value)
 					.map(normalizeScaleAddress);
 				if (candidates.some((candidate) => targets.has(candidate))) {
-					window.clearTimeout(timer);
-					cleanup();
 					if (generation !== this.generation) {
-						resolve(null);
+						finish(null);
 						return;
 					}
 					this.peripheral = peripheral;
-					resolve({ id: peripheral.id || peripheral.uuid, localName, address });
+					finish({ id: peripheral.id || peripheral.uuid, localName, address });
 				} else if (SCALE_PREFIXES.includes(localName.substring(0, 5).toUpperCase())) {
 					this.log(`scan: unregistered scale skipped "${localName}" (${address})`);
 				} else {
@@ -158,9 +168,7 @@ export class NobleTransport {
 			} catch (error: unknown) {
 				const message = error instanceof Error ? error.message : String(error);
 				this.log(`startScanning error: ${message}`);
-				window.clearTimeout(timer);
-				cleanup();
-				resolve(null);
+				finish(null);
 			}
 		});
 	}
@@ -168,7 +176,8 @@ export class NobleTransport {
 	startCollectScan(onScale: (scale: DiscoveredScale) => void): boolean {
 		const noble = this.noble;
 		if (!noble) return false;
-		this.stopCollectScan();
+		this.cancelTargetedScan();
+		if (this.collectListener) this.stopCollectScan();
 		this.collected.clear();
 		const generation = this.generation;
 		const listener = (peripheral: NoblePeripheral) => {
@@ -194,9 +203,8 @@ export class NobleTransport {
 	}
 
 	stopCollectScan(): void {
-		if (this.collectListener && this.noble) this.noble.removeListener('discover', this.collectListener);
-		this.collectListener = null;
-		this.stopScanning();
+		this.removeCollectListener();
+		this.stopNobleScanning(this.noble);
 	}
 
 	selectScale(id: string): boolean {
@@ -274,12 +282,29 @@ export class NobleTransport {
 	}
 
 	stopScanning(): void {
-		if (!this.noble) return;
+		if (this.cancelTargetedScan()) return;
+		this.stopNobleScanning(this.noble);
+	}
+
+	private cancelTargetedScan(): boolean {
+		const cleanup = this.targetedScanCleanup;
+		if (!cleanup) return false;
+		cleanup();
+		return true;
+	}
+
+	private stopNobleScanning(noble: Noble | null): void {
+		if (!noble) return;
 		try {
-			this.noble.stopScanning();
+			noble.stopScanning();
 		} catch (error) {
 			void error;
 		}
+	}
+
+	private removeCollectListener(): void {
+		if (this.collectListener && this.noble) this.noble.removeListener('discover', this.collectListener);
+		this.collectListener = null;
 	}
 
 	async cancelConnection(): Promise<void> {
@@ -291,6 +316,7 @@ export class NobleTransport {
 
 	disconnectSync(): void {
 		this.generation++;
+		this.stopScanning();
 		this.stopCollectScan();
 		this.collected.clear();
 		if (this.notifyChar) {

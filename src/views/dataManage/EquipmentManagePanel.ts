@@ -259,21 +259,43 @@ export class EquipmentManagePanel {
 				row.createSpan({ cls: 'dm-equip-grinder-name', text: scale.name });
 				row.createSpan({ cls: 'dm-equip-grinder-meta', text: scale.address });
 				const editBtn = row.createEl('button', { text: '✎', cls: 'dm-btn dm-equip-edit-btn dm-scale-edit-btn' });
-				editBtn.addEventListener('click', () => this.openScaleRenameForm(section, scale, renderItems));
 				const delBtn = row.createEl('button', { text: '✕', cls: 'dm-btn dm-equip-del-btn dm-scale-del-btn' });
+				editBtn.addEventListener('click', () =>
+					this.openScaleRenameForm(section, scale, renderItems, [editBtn, delBtn]),
+				);
+				let pendingDelete = false;
 				delBtn.addEventListener('click', () => {
-					void this.submitGrinder(() => {
-						scales.splice(i, 1);
-					}).then((saved) => {
-						if (saved) renderItems();
-					});
+					if (pendingDelete) return;
+					pendingDelete = true;
+					editBtn.disabled = true;
+					delBtn.disabled = true;
+					const index = scales.indexOf(scale);
+					if (index === -1) {
+						renderItems();
+						return;
+					}
+					scales.splice(index, 1);
+					void this.deps.saveEquipment().then(
+						() => renderItems(),
+						(err) => {
+							if (!scales.includes(scale)) scales.splice(Math.min(index, scales.length), 0, scale);
+							console.error('[DataManageModal] scale delete failed:', err);
+							new Notice(t('error.equipSave'));
+							renderItems();
+						},
+					);
 				});
 			}
 		};
 		renderItems();
 	}
 
-	private openScaleRenameForm(container: HTMLElement, scale: ScaleConfig, renderItems: () => void): void {
+	private openScaleRenameForm(
+		container: HTMLElement,
+		scale: ScaleConfig,
+		renderItems: () => void,
+		rowControls: HTMLButtonElement[],
+	): void {
 		container.querySelector('.dm-equip-grinder-form')?.remove();
 		const formEl = container.createDiv({ cls: 'dm-equip-grinder-form' });
 		const input = formEl.createEl('input', {
@@ -286,16 +308,28 @@ export class EquipmentManagePanel {
 		const saveBtn = btnRow.createEl('button', { text: t('form.save'), cls: 'dm-btn dm-btn-accent' });
 		const cancelBtn = btnRow.createEl('button', { text: t('common.cancel'), cls: 'dm-btn dm-btn-muted' });
 		input.focus();
+		let pendingRename = false;
 		const saveName = async () => {
+			if (pendingRename) return;
 			const value = input.value.trim();
 			if (!value) {
 				formEl.remove();
 				return;
 			}
-			const saved = await this.submitGrinder(() => {
-				scale.name = value;
-			});
-			if (!saved) return;
+			pendingRename = true;
+			for (const control of rowControls) control.disabled = true;
+			input.disabled = true;
+			saveBtn.disabled = true;
+			cancelBtn.disabled = true;
+			const previousName = scale.name;
+			scale.name = value;
+			try {
+				await this.deps.saveEquipment();
+			} catch (err) {
+				scale.name = previousName;
+				console.error('[DataManageModal] scale rename failed:', err);
+				new Notice(t('error.equipSave'));
+			}
 			formEl.remove();
 			renderItems();
 		};

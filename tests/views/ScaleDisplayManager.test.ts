@@ -18,6 +18,7 @@ beforeAll(() => installPolyfills());
 function buildManager(reconnectAttempt = 0): {
 	manager: ScaleDisplayManager;
 	findOtherBtn: HTMLButtonElement;
+	host: HTMLElement;
 } {
 	const host = createContainer();
 	const connectBtn = host.createEl('button');
@@ -31,7 +32,7 @@ function buildManager(reconnectAttempt = 0): {
 	});
 	manager.buildHeader(host.createDiv());
 	manager.buildData(host.createDiv());
-	return { manager, findOtherBtn };
+	return { manager, findOtherBtn, host };
 }
 
 describe('ScaleDisplayManager stale weight clearing', () => {
@@ -76,5 +77,17 @@ describe('ScaleDisplayManager find-other visibility', () => {
 			manager.updateHeader(state);
 			expect(findOtherBtn.style.display).toBe('none');
 		}
+	});
+});
+
+describe('ScaleDisplayManager error localization', () => {
+	it('maps the targeted timeout error at the UI boundary', () => {
+		const { manager, host } = buildManager();
+		tMock.mockClear();
+
+		manager.showError('Registered scale not found (10s timeout)');
+
+		expect(tMock).toHaveBeenCalledWith('scale.registeredNotFound');
+		expect(host.querySelector('.brewing-scale-status')?.textContent).toBe('scale.registeredNotFound');
 	});
 });

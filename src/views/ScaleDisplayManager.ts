@@ -168,7 +168,8 @@ export class ScaleDisplayManager {
 	}
 
 	showError(message: string): void {
-		this.scaleStatusEl.textContent = message;
+		this.scaleStatusEl.textContent =
+			message === 'Registered scale not found (10s timeout)' ? t('scale.registeredNotFound') : message;
 		this.scaleStatusEl.addClass('brewing-error');
 		window.setTimeout(() => this.scaleStatusEl.removeClass('brewing-error'), 3000);
 	}

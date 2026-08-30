@@ -38,6 +38,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 		scales: [],
 	};
 	private desktopRuntime: DesktopRuntime | null = null;
+	private equipmentWriteQueue: Promise<void> = Promise.resolve();
 	private dataStore = new PluginDataStore({
 		loadData: () => this.loadData(),
 		saveData: (data) => this.saveData(data),
@@ -84,7 +85,7 @@ export default class CubicJBrewingPlugin extends Plugin {
 			this.equipment = loadedEquipment;
 		} else if (this.dataStore.legacyEquipment) {
 			this.equipment = this.dataStore.legacyEquipment;
-			await this.equipmentStorage.save(this.equipment);
+			await this.saveEquipment();
 			await this.dataStore.clearLegacyEquipment();
 		}
 		initI18n(this.dataStore.locale);
@@ -233,8 +234,12 @@ export default class CubicJBrewingPlugin extends Plugin {
 		await this.dataStore.load();
 	}
 
-	async saveEquipment(): Promise<void> {
-		await this.equipmentStorage.save(this.equipment);
+	saveEquipment(): Promise<void> {
+		const snapshot = JSON.stringify(this.equipment, null, 2);
+		const run = () => this.equipmentStorage.saveSerialized(snapshot);
+		const next = this.equipmentWriteQueue.then(run, run);
+		this.equipmentWriteQueue = next.catch(() => undefined);
+		return next;
 	}
 
 	getBeanFolder(): string {

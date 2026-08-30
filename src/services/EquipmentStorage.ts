@@ -72,8 +72,12 @@ export class EquipmentStorage {
 	}
 
 	async save(equipment: EquipmentSettings): Promise<void> {
+		await this.saveSerialized(JSON.stringify(equipment, null, 2));
+	}
+
+	async saveSerialized(content: string): Promise<void> {
 		await this.adapter.mkdir(this.baseDir);
-		await this.adapter.write(this.path, JSON.stringify(equipment, null, 2));
+		await this.adapter.write(this.path, content);
 	}
 
 	private async backup(content: string): Promise<void> {

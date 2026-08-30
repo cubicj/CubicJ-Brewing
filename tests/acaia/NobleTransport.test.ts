@@ -187,6 +187,57 @@ describe('NobleTransport', () => {
 		expect(transport.selectScale(scale.id!)).toBe(false);
 	});
 
+	it('does not let a canceled targeted timeout stop the replacement collect scan', async () => {
+		vi.useFakeTimers();
+		const scale = createPeripheral('PEARLS-PICKER');
+		const noble = createNoble();
+		const transport = new NobleTransport({
+			nobleFactory: () => noble,
+			onPoweredOff: vi.fn(),
+			onDisconnect: vi.fn(),
+			onData: vi.fn(),
+		});
+		try {
+			transport.initialize();
+			const targeted = transport.scanForScale(['missing'], 10000);
+
+			transport.disconnectSync();
+			await expect(targeted).resolves.toBeNull();
+			transport.initialize();
+			noble.stopScanning.mockClear();
+			const seen: string[] = [];
+			expect(transport.startCollectScan((discovered) => seen.push(discovered.id))).toBe(true);
+
+			await vi.advanceTimersByTimeAsync(11000);
+			noble.emit('discover', scale);
+
+			expect(noble.stopScanning).not.toHaveBeenCalled();
+			expect(seen).toEqual(['PEARLS-PICKER-id']);
+		} finally {
+			transport.dispose();
+			vi.useRealTimers();
+		}
+	});
+
+	it('clears collected scale selections on initialization', () => {
+		const scale = createPeripheral('PEARLS-TEST');
+		const noble = createNoble();
+		const transport = new NobleTransport({
+			nobleFactory: () => noble,
+			onPoweredOff: vi.fn(),
+			onDisconnect: vi.fn(),
+			onData: vi.fn(),
+		});
+		transport.initialize();
+		transport.startCollectScan(vi.fn());
+		noble.emit('discover', scale);
+		transport.stopCollectScan();
+
+		transport.initialize();
+
+		expect(transport.selectScale(scale.id!)).toBe(false);
+	});
+
 	it('disconnects the owned peripheral synchronously', async () => {
 		const scale = createPeripheral('PEARLS-TEST');
 		const noble = createNoble();

@@ -137,6 +137,32 @@ describe('EquipmentManagePanel', () => {
 		panel.dispose();
 	});
 
+	it('restores the old scale name when persistence rejects', async () => {
+		const injected = equipment();
+		injected.scales.push({
+			name: 'Acaia Pearl S',
+			address: 'aa:bb',
+			lastConnectedAt: '2026-08-30T00:00:00.000Z',
+		});
+		const saveEquipment = vi.fn().mockRejectedValue(new Error('save failed'));
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const container = createContainer();
+		const panel = new EquipmentManagePanel({ equipment: injected, saveEquipment });
+		panel.render(container);
+		const list = findList(container, 'equipment.scale');
+
+		list.querySelector<HTMLButtonElement>('.dm-scale-edit-btn')!.click();
+		const input = list.querySelector<HTMLInputElement>('.dm-equip-input')!;
+		input.value = 'Kitchen Pearl';
+		list.querySelector<HTMLButtonElement>('.dm-btn-accent')!.click();
+
+		await vi.waitFor(() => expect(injected.scales[0].name).toBe('Acaia Pearl S'));
+		expect(list.querySelector('.dm-equip-grinder-name')?.textContent).toBe('Acaia Pearl S');
+		expect(saveEquipment).toHaveBeenCalledOnce();
+		consoleError.mockRestore();
+		panel.dispose();
+	});
+
 	it('deletes a registered scale', async () => {
 		const injected = equipment();
 		const scales = injected.scales;
@@ -157,6 +183,60 @@ describe('EquipmentManagePanel', () => {
 		expect(injected.scales).toBe(scales);
 		expect(injected.scales).toHaveLength(0);
 		expect(saveEquipment).toHaveBeenCalledOnce();
+		panel.dispose();
+	});
+
+	it('re-inserts a deleted scale when persistence rejects', async () => {
+		const injected = equipment();
+		const scale = {
+			name: 'Acaia Pearl S',
+			address: 'aa:bb',
+			lastConnectedAt: '2026-08-30T00:00:00.000Z',
+		};
+		injected.scales.push(scale);
+		const saveEquipment = vi.fn().mockRejectedValue(new Error('save failed'));
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const container = createContainer();
+		const panel = new EquipmentManagePanel({ equipment: injected, saveEquipment });
+		panel.render(container);
+		const list = findList(container, 'equipment.scale');
+
+		list.querySelector<HTMLButtonElement>('.dm-scale-del-btn')!.click();
+
+		await vi.waitFor(() => expect(injected.scales).toEqual([scale]));
+		expect(list.querySelector('.dm-equip-grinder-name')?.textContent).toBe('Acaia Pearl S');
+		expect(saveEquipment).toHaveBeenCalledOnce();
+		consoleError.mockRestore();
+		panel.dispose();
+	});
+
+	it('ignores a rapid second delete click for the same scale row', async () => {
+		const injected = equipment();
+		injected.scales.push(
+			{ name: 'First', address: 'aa:bb', lastConnectedAt: '2026-08-30T00:00:00.000Z' },
+			{ name: 'Second', address: 'cc:dd', lastConnectedAt: '2026-08-29T00:00:00.000Z' },
+		);
+		let releaseSave!: () => void;
+		const saveEquipment = vi.fn(
+			() =>
+				new Promise<void>((resolve) => {
+					releaseSave = resolve;
+				}),
+		);
+		const container = createContainer();
+		const panel = new EquipmentManagePanel({ equipment: injected, saveEquipment });
+		panel.render(container);
+		const list = findList(container, 'equipment.scale');
+		const deleteButton = list.querySelector<HTMLButtonElement>('.dm-scale-del-btn')!;
+
+		deleteButton.click();
+		deleteButton.click();
+
+		expect(injected.scales.map((scale) => scale.name)).toEqual(['Second']);
+		expect(saveEquipment).toHaveBeenCalledOnce();
+		releaseSave();
+		await flushPromises();
+		expect(injected.scales.map((scale) => scale.name)).toEqual(['Second']);
 		panel.dispose();
 	});
 });

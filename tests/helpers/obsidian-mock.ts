@@ -31,6 +31,15 @@ export class Scope {
 	constructor(_parent?: any) {}
 	register(_modifiers: any, _key: any, _fn: any) {}
 }
+export class WorkspaceLeaf {}
+export class ItemView {
+	app: any;
+	containerEl: any;
+	constructor(leaf: any) {
+		this.app = leaf.app;
+		this.containerEl = leaf.containerEl;
+	}
+}
 export class Plugin {}
 export class PluginSettingTab {
 	app: any;

@@ -77,6 +77,7 @@
 	"scale.reconnect": "Reconnect",
 	"scale.reconnecting": "Reconnecting ({{attempt}}/{{max}})",
 	"scale.findOther": "Find other scale",
+	"scale.registeredNotFound": "Registered scale not found",
 	"scalePicker.title": "Select a scale",
 	"scalePicker.searching": "Searching for scales...",
 	"scalePicker.empty": "No scales found yet",
