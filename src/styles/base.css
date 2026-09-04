@@ -1023,8 +1023,12 @@ body.is-mobile .cb-bean-weight {
 .block-language-brew-day .brew-records-header-link:hover {
 	text-decoration: underline;
 }
+body.is-mobile .block-language-brews .brew-record-roast,
+body.is-mobile .block-language-brew-day .brew-record-roast,
 body.is-mobile .block-language-brews .brew-record-note,
 body.is-mobile .block-language-brew-day .brew-record-note,
+body.is-mobile .block-language-brew-day th:nth-child(2),
+body.is-mobile .block-language-brews th:nth-child(2),
 body.is-mobile .block-language-brew-day th:nth-child(4),
 body.is-mobile .block-language-brews th:nth-child(4) {
 	display: none;
