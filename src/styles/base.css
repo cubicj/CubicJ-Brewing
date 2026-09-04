@@ -1023,15 +1023,33 @@ body.is-mobile .cb-bean-weight {
 .block-language-brew-day .brew-records-header-link:hover {
 	text-decoration: underline;
 }
-body.is-mobile .block-language-brews .brew-record-roast,
-body.is-mobile .block-language-brew-day .brew-record-roast,
-body.is-mobile .block-language-brews .brew-record-note,
-body.is-mobile .block-language-brew-day .brew-record-note,
-body.is-mobile .block-language-brew-day th:nth-child(2),
-body.is-mobile .block-language-brews th:nth-child(2),
-body.is-mobile .block-language-brew-day th:nth-child(4),
-body.is-mobile .block-language-brews th:nth-child(4) {
-	display: none;
+.block-language-brews,
+.block-language-brew-day {
+	container-type: inline-size;
+}
+@container (max-width: 520px) {
+	.brew-record-table .brew-record-note,
+	.brew-record-table th:nth-child(4) {
+		display: none;
+	}
+}
+@container (max-width: 360px) {
+	.brew-record-table .brew-record-roast,
+	.brew-record-table th:nth-child(2) {
+		display: none;
+	}
+}
+@supports not (container-type: inline-size) {
+	body.is-mobile .block-language-brews .brew-record-roast,
+	body.is-mobile .block-language-brew-day .brew-record-roast,
+	body.is-mobile .block-language-brews .brew-record-note,
+	body.is-mobile .block-language-brew-day .brew-record-note,
+	body.is-mobile .block-language-brew-day th:nth-child(2),
+	body.is-mobile .block-language-brews th:nth-child(2),
+	body.is-mobile .block-language-brew-day th:nth-child(4),
+	body.is-mobile .block-language-brews th:nth-child(4) {
+		display: none;
+	}
 }
 
 /* Brew Profile Expand Button (sidebar) */
