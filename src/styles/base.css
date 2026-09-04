@@ -1025,8 +1025,8 @@ body.is-mobile .cb-bean-weight {
 }
 body.is-mobile .block-language-brews .brew-record-note,
 body.is-mobile .block-language-brew-day .brew-record-note,
-body.is-mobile .block-language-brew-day th:nth-child(3),
-body.is-mobile .block-language-brews th:nth-child(3) {
+body.is-mobile .block-language-brew-day th:nth-child(4),
+body.is-mobile .block-language-brews th:nth-child(4) {
 	display: none;
 }
 
