@@ -914,6 +914,20 @@ body.is-mobile .cb-bean-weight {
 	white-space: nowrap;
 	vertical-align: middle;
 }
+.block-language-brews .brew-record-date,
+.block-language-brew-day .brew-record-date {
+	width: 1%;
+	font-variant-numeric: tabular-nums;
+}
+.block-language-brews .brew-record-roast,
+.block-language-brew-day .brew-record-roast {
+	width: 1%;
+	font-variant-numeric: tabular-nums;
+}
+.block-language-brews .brew-record-method,
+.block-language-brew-day .brew-record-method {
+	width: 1%;
+}
 .block-language-brews .brew-record-date div:last-child,
 .block-language-brew-day .brew-record-date div:last-child {
 	color: var(--text-muted);
@@ -991,6 +1005,7 @@ body.is-mobile .cb-bean-weight {
 }
 .block-language-brews .brew-record-table td:last-child,
 .block-language-brew-day .brew-record-table td:last-child {
+	width: 1%;
 	text-align: center;
 }
 .block-language-brews .brew-record-chart-btn,
@@ -1031,6 +1046,9 @@ body.is-mobile .cb-bean-weight {
 	.brew-record-table .brew-record-note,
 	.brew-record-table th:nth-child(4) {
 		display: none;
+	}
+	.brew-record-table .brew-record-method {
+		width: auto;
 	}
 }
 @container (max-width: 360px) {

@@ -75,7 +75,7 @@ export function renderBrewRecordTable(
 		});
 		const method = record.method === 'espresso' ? getDrinkLabel(record.drink ?? 'shot') : getMethodLabel('filter');
 		const temp = getTempLabel(record.temp);
-		tr.createEl('td', { text: `${method}(${temp})` });
+		tr.createEl('td', { text: `${method}(${temp})`, cls: 'brew-record-method' });
 
 		const noteTd = tr.createEl('td', { cls: 'brew-record-note' });
 		noteTd.createSpan({ text: record.note || '-' });
