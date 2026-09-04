@@ -165,7 +165,7 @@ describe('BrewDayCodeBlock', () => {
 			makeFilter({ id: 'roast-set', roastDays: 11 }),
 			makeFilter({ id: 'roast-null', timestamp: '2026-07-01T09:00:00', roastDays: null }),
 		]);
-		const headers = el.querySelectorAll('.brew-record-table thead th');
+		const headers = el.querySelectorAll('.brew-day-record-group:first-child .brew-record-head-row th');
 		const roastCells = el.querySelectorAll('.brew-record-roast');
 
 		expect(headers).toHaveLength(5);

@@ -47,7 +47,7 @@ export function renderBrewRecordTable(
 	}
 
 	const table = el.createEl('table', { cls: 'brew-record-table' });
-	renderTableHeader(table);
+	renderHeaderRow(table.createEl('thead'));
 	const expandState: ExpandState = { current: null };
 	const tbody = table.createEl('tbody');
 	renderRecordRows(tbody, records, beanName, options, expandState);
@@ -62,7 +62,6 @@ export function renderBrewDayTable(
 	el.addClass('brew-records');
 
 	const table = el.createEl('table', { cls: 'brew-record-table' });
-	renderTableHeader(table);
 	const expandState: ExpandState = { current: null };
 
 	for (const group of groups) {
@@ -80,13 +79,13 @@ export function renderBrewDayTable(
 				attr: { href: group.beanPath, 'data-href': group.beanPath, target: '_blank', rel: 'noopener' },
 			});
 		}
+		renderHeaderRow(tbody);
 		renderRecordRows(tbody, group.records, group.beanName, options, expandState);
 	}
 }
 
-function renderTableHeader(table: HTMLTableElement): void {
-	const thead = table.createEl('thead');
-	const headerRow = thead.createEl('tr');
+function renderHeaderRow(section: HTMLTableSectionElement): void {
+	const headerRow = section.createEl('tr', { cls: 'brew-record-head-row' });
 	for (const col of [
 		t('record.date'),
 		t('record.roastDays'),

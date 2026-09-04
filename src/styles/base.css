@@ -891,16 +891,18 @@ body.is-mobile .cb-bean-weight {
 .block-language-brews .brew-record-table th,
 .block-language-brew-day .brew-record-table th {
 	text-align: left;
-	color: var(--text-muted);
-	font-weight: 500;
+	color: var(--table-header-color);
+	font-weight: var(--table-header-weight);
+	background: var(--table-header-background);
 	padding: 4px 8px;
-	border-bottom: 1px solid var(--background-modifier-border);
+	border-bottom: 1px solid var(--table-border-color);
 	white-space: nowrap;
 }
 .block-language-brews .brew-record-table td,
 .block-language-brew-day .brew-record-table td {
+	color: var(--table-text-color);
 	padding: 4px 8px;
-	border-bottom: 1px solid var(--background-modifier-border-hover);
+	border-bottom: 1px solid var(--table-border-color);
 	white-space: nowrap;
 	vertical-align: middle;
 }
@@ -908,27 +910,41 @@ body.is-mobile .cb-bean-weight {
 .block-language-brew-day .brew-record-table th,
 .block-language-brews .brew-record-table td,
 .block-language-brew-day .brew-record-table td {
-	border-top: 1px solid var(--background-modifier-border);
-	border-left: 1px solid var(--background-modifier-border);
-	border-right: 1px solid var(--background-modifier-border);
+	border-top: 1px solid var(--table-border-color);
+	border-left: 1px solid var(--table-border-color);
+	border-right: 1px solid var(--table-border-color);
 	min-width: 0;
 	max-width: none;
 }
-.block-language-brews .brew-record-table thead th,
-.block-language-brew-day .brew-record-table thead th {
+.block-language-brews .brew-record-head-row th,
+.block-language-brew-day .brew-record-head-row th {
 	border-top: none;
 	border-left: none;
 	border-right: none;
 }
-.block-language-brews .brew-record-table thead tr,
-.block-language-brew-day .brew-record-table thead tr,
+.block-language-brews .brew-record-table tr.brew-record-head-row,
+.block-language-brew-day .brew-record-table tr.brew-record-head-row {
+	background: var(--table-header-background);
+}
+.block-language-brews .brew-record-table tr.brew-record-head-row:hover,
+.block-language-brew-day .brew-record-table tr.brew-record-head-row:hover {
+	background: var(--table-header-background-hover);
+}
 .block-language-brews .brew-record-table tbody tr,
-.block-language-brew-day .brew-record-table tbody tr,
-.block-language-brews .brew-record-table thead tr:hover,
-.block-language-brew-day .brew-record-table thead tr:hover,
+.block-language-brew-day .brew-record-table tbody tr {
+	background: var(--table-background);
+}
+.block-language-brews .brew-record-table tbody tr:nth-child(odd),
+.block-language-brew-day .brew-record-table tbody tr:nth-child(odd) {
+	background: var(--table-row-alt-background);
+}
 .block-language-brews .brew-record-table tbody tr:hover,
 .block-language-brew-day .brew-record-table tbody tr:hover {
-	background: transparent;
+	background: var(--table-row-background-hover);
+}
+.block-language-brews .brew-record-table tbody tr:nth-child(odd):hover,
+.block-language-brew-day .brew-record-table tbody tr:nth-child(odd):hover {
+	background: var(--table-row-alt-background-hover);
 }
 .block-language-brews .brew-record-date,
 .block-language-brew-day .brew-record-date {
@@ -1047,16 +1063,24 @@ body.is-mobile .cb-bean-weight {
 	margin: 0 0 8px;
 	font-size: var(--font-ui-medium);
 }
+.block-language-brew-day .brew-record-table tbody tr.brew-day-group-row,
+.block-language-brew-day .brew-record-table tbody tr.brew-day-group-row:hover,
 .block-language-brew-day .brew-day-group-row th {
-	padding: 12px 0 8px;
+	background: transparent;
+}
+.block-language-brew-day .brew-day-group-row th {
+	padding: 24px 0 8px;
 	border: none;
 	text-align: left;
 	vertical-align: middle;
-	font-size: var(--font-ui-medium);
+	font-size: var(--font-ui-large);
 	font-weight: var(--h3-weight);
 	font-style: var(--h3-style);
 	color: var(--h3-color);
 	white-space: normal;
+}
+.block-language-brew-day .brew-day-record-group:first-child .brew-day-group-row th {
+	padding-top: 8px;
 }
 .block-language-brews,
 .block-language-brew-day {
