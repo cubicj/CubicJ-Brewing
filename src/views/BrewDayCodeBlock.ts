@@ -1,11 +1,11 @@
-import { Keymap, TFile, type App, type MarkdownPostProcessorContext } from 'obsidian';
+import type { App, MarkdownPostProcessorContext } from 'obsidian';
 import type { EquipmentSettings } from '../brew/types';
 import { t } from '../i18n/index';
 import type { BrewProfileStorage } from '../services/BrewProfileStorage';
 import type { BrewRecordService } from '../services/BrewRecordService';
 import { groupRecordsByBeanForDay, parseDailyNoteDateFromPath } from './brewDayRecords';
 import type { BeanWeightService } from '../services/BeanWeightService';
-import { renderBrewRecordTable } from './BrewRecordTable';
+import { renderBrewDayTable, type BrewDayTableGroup } from './BrewRecordTable';
 import { CodeBlockRefreshRegistry } from './CodeBlockRefreshRegistry';
 
 export class BrewDayCodeBlock {
@@ -61,24 +61,17 @@ export class BrewDayCodeBlock {
 		}
 
 		const beans = this.vaultData?.getAllBeans() ?? [];
-		for (const group of groups) {
-			const beanPath = beans.find((bean) => bean.name === group.bean)?.path;
-			const section = el.createDiv({ cls: 'brew-day-record-group' });
-			renderBrewRecordTable(section, group.records, group.bean, {
-				app: this.app,
-				recordService: this.recordService,
-				profileStorage: this.profileStorage,
-				getEquipment: this.getEquipment,
-				vaultData: this.vaultData,
-				headerText: group.bean,
-				onHeaderClick: beanPath === undefined ? undefined : (evt) => this.openBeanNote(beanPath, evt),
-			});
-		}
-	}
-
-	private openBeanNote(path: string, evt: MouseEvent): void {
-		const file = this.app.vault.getAbstractFileByPath(path);
-		if (!(file instanceof TFile)) return;
-		void this.app.workspace.getLeaf(Keymap.isModEvent(evt)).openFile(file);
+		const tableGroups: BrewDayTableGroup[] = groups.map((group) => ({
+			beanName: group.bean,
+			records: group.records,
+			beanPath: beans.find((bean) => bean.name === group.bean)?.path,
+		}));
+		renderBrewDayTable(el, tableGroups, {
+			app: this.app,
+			recordService: this.recordService,
+			profileStorage: this.profileStorage,
+			getEquipment: this.getEquipment,
+			vaultData: this.vaultData,
+		});
 	}
 }

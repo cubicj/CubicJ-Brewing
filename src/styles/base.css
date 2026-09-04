@@ -882,16 +882,6 @@ body.is-mobile .cb-bean-weight {
 	font-size: var(--font-ui-small);
 }
 
-.block-language-brew-day.brew-day-records {
-	display: flex;
-	flex-direction: column;
-	gap: 16px;
-}
-
-.block-language-brew-day .brew-day-record-group + .brew-day-record-group {
-	margin-top: 4px;
-}
-
 .block-language-brews .brew-record-table,
 .block-language-brew-day .brew-record-table {
 	width: 100%;
@@ -914,6 +904,32 @@ body.is-mobile .cb-bean-weight {
 	white-space: nowrap;
 	vertical-align: middle;
 }
+.block-language-brews .brew-record-table th,
+.block-language-brew-day .brew-record-table th,
+.block-language-brews .brew-record-table td,
+.block-language-brew-day .brew-record-table td {
+	border-top: 1px solid var(--background-modifier-border);
+	border-left: 1px solid var(--background-modifier-border);
+	border-right: 1px solid var(--background-modifier-border);
+	min-width: 0;
+	max-width: none;
+}
+.block-language-brews .brew-record-table thead th,
+.block-language-brew-day .brew-record-table thead th {
+	border-top: none;
+	border-left: none;
+	border-right: none;
+}
+.block-language-brews .brew-record-table thead tr,
+.block-language-brew-day .brew-record-table thead tr,
+.block-language-brews .brew-record-table tbody tr,
+.block-language-brew-day .brew-record-table tbody tr,
+.block-language-brews .brew-record-table thead tr:hover,
+.block-language-brew-day .brew-record-table thead tr:hover,
+.block-language-brews .brew-record-table tbody tr:hover,
+.block-language-brew-day .brew-record-table tbody tr:hover {
+	background: transparent;
+}
 .block-language-brews .brew-record-date,
 .block-language-brew-day .brew-record-date {
 	width: 1%;
@@ -933,8 +949,8 @@ body.is-mobile .cb-bean-weight {
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
 }
-.block-language-brews .brew-record-note,
-.block-language-brew-day .brew-record-note {
+.block-language-brews td.brew-record-note,
+.block-language-brew-day td.brew-record-note {
 	max-width: 300px;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -1031,12 +1047,16 @@ body.is-mobile .cb-bean-weight {
 	margin: 0 0 8px;
 	font-size: var(--font-ui-medium);
 }
-.block-language-brew-day .brew-records-header-link {
-	color: var(--text-accent);
-	cursor: pointer;
-}
-.block-language-brew-day .brew-records-header-link:hover {
-	text-decoration: underline;
+.block-language-brew-day .brew-day-group-row th {
+	padding: 12px 0 8px;
+	border: none;
+	text-align: left;
+	vertical-align: middle;
+	font-size: var(--font-ui-medium);
+	font-weight: var(--h3-weight);
+	font-style: var(--h3-style);
+	color: var(--h3-color);
+	white-space: normal;
 }
 .block-language-brews,
 .block-language-brew-day {

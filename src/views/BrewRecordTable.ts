@@ -14,9 +14,20 @@ export interface BrewRecordTableOptions {
 	profileStorage: BrewProfileStorage;
 	getEquipment: () => EquipmentSettings;
 	vaultData?: BeanWeightService;
-	headerText?: string;
-	emptyText?: string;
-	onHeaderClick?: (evt: MouseEvent) => void;
+}
+
+export interface BrewDayTableGroup {
+	beanName: string;
+	records: BrewRecord[];
+	beanPath?: string;
+}
+
+interface ExpandState {
+	current: {
+		tr: HTMLTableRowElement;
+		noteCell: HTMLTableCellElement;
+		id: string;
+	} | null;
 }
 
 export function renderBrewRecordTable(
@@ -28,18 +39,52 @@ export function renderBrewRecordTable(
 	el.empty();
 	el.addClass('brew-records');
 
-	const header = el.createEl('h3', { text: options.headerText ?? t('record.header'), cls: 'brew-records-header' });
-	if (options.onHeaderClick) {
-		header.addClass('brew-records-header-link');
-		header.addEventListener('click', options.onHeaderClick);
-	}
+	el.createEl('h3', { text: t('record.header'), cls: 'brew-records-header' });
 
 	if (records.length === 0) {
-		el.createDiv({ text: options.emptyText ?? t('record.empty'), cls: 'brew-records-empty' });
+		el.createDiv({ text: t('record.empty'), cls: 'brew-records-empty' });
 		return;
 	}
 
 	const table = el.createEl('table', { cls: 'brew-record-table' });
+	renderTableHeader(table);
+	const expandState: ExpandState = { current: null };
+	const tbody = table.createEl('tbody');
+	renderRecordRows(tbody, records, beanName, options, expandState);
+}
+
+export function renderBrewDayTable(
+	el: HTMLElement,
+	groups: BrewDayTableGroup[],
+	options: BrewRecordTableOptions,
+): void {
+	el.empty();
+	el.addClass('brew-records');
+
+	const table = el.createEl('table', { cls: 'brew-record-table' });
+	renderTableHeader(table);
+	const expandState: ExpandState = { current: null };
+
+	for (const group of groups) {
+		const tbody = table.createEl('tbody', { cls: 'brew-day-record-group' });
+		const headerRow = tbody.createEl('tr', { cls: 'brew-day-group-row' });
+		const header = headerRow.createEl('th', {
+			cls: 'brew-records-header',
+			text: group.beanPath === undefined ? group.beanName : undefined,
+		});
+		header.colSpan = 5;
+		if (group.beanPath !== undefined) {
+			header.createEl('a', {
+				text: group.beanName,
+				cls: 'internal-link',
+				attr: { href: group.beanPath, 'data-href': group.beanPath, target: '_blank', rel: 'noopener' },
+			});
+		}
+		renderRecordRows(tbody, group.records, group.beanName, options, expandState);
+	}
+}
+
+function renderTableHeader(table: HTMLTableElement): void {
 	const thead = table.createEl('thead');
 	const headerRow = thead.createEl('tr');
 	for (const col of [
@@ -51,18 +96,15 @@ export function renderBrewRecordTable(
 	]) {
 		headerRow.createEl('th', { text: col });
 	}
+}
 
-	let expandState: { tr: HTMLTableRowElement; id: string } | null = null;
-
-	const collapseExpand = () => {
-		if (!expandState) return;
-		const prev = el.querySelector('.brew-record-note.is-expanded');
-		prev?.removeClass('is-expanded');
-		expandState.tr.remove();
-		expandState = null;
-	};
-
-	const tbody = table.createEl('tbody');
+function renderRecordRows(
+	tbody: HTMLTableSectionElement,
+	records: BrewRecord[],
+	beanName: string,
+	options: BrewRecordTableOptions,
+	expandState: ExpandState,
+): void {
 	for (const record of records) {
 		const tr = tbody.createEl('tr');
 		const dateTd = tr.createEl('td', { cls: 'brew-record-date' });
@@ -80,11 +122,11 @@ export function renderBrewRecordTable(
 		const noteTd = tr.createEl('td', { cls: 'brew-record-note' });
 		noteTd.createSpan({ text: record.note || '-' });
 		noteTd.addEventListener('click', () => {
-			if (expandState?.id === record.id) {
-				collapseExpand();
+			if (expandState.current?.id === record.id) {
+				collapseExpand(expandState);
 				return;
 			}
-			collapseExpand();
+			collapseExpand(expandState);
 			noteTd.addClass('is-expanded');
 			const expandTr = createEl('tr');
 			expandTr.addClass('brew-record-expand');
@@ -92,7 +134,7 @@ export function renderBrewRecordTable(
 			const expandTd = expandTr.createEl('td');
 			expandTd.colSpan = 5;
 			renderNoteExpand(expandTd, record, options.recordService);
-			expandState = { tr: expandTr, id: record.id };
+			expandState.current = { tr: expandTr, noteCell: noteTd, id: record.id };
 		});
 
 		const actionTd = tr.createEl('td');
@@ -110,6 +152,13 @@ export function renderBrewRecordTable(
 			}).open();
 		});
 	}
+}
+
+function collapseExpand(expandState: ExpandState): void {
+	if (!expandState.current) return;
+	expandState.current.noteCell.removeClass('is-expanded');
+	expandState.current.tr.remove();
+	expandState.current = null;
 }
 
 function renderNoteExpand(container: HTMLElement, record: BrewRecord, recordService: BrewRecordService): void {

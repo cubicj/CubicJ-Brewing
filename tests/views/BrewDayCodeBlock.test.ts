@@ -66,24 +66,13 @@ async function renderRecords(
 }
 
 describe('BrewDayCodeBlock', () => {
-	const makeBeanDeps = () => {
-		const openFile = vi.fn();
-		const getLeaf = vi.fn(() => ({ openFile }));
-		const beanFile = { path: 'Beans/A Bean.md', extension: 'md' };
-		const app = {
-			vault: {
-				getAbstractFileByPath: vi.fn((path: string) => (path === 'Beans/A Bean.md' ? beanFile : null)),
-			},
-			workspace: { getLeaf },
-		} as unknown as App;
-		const vaultData = {
+	const makeVaultData = () =>
+		({
 			getAllBeans: () => [
 				{ path: 'Beans/A Bean.md', name: 'A Bean', roaster: '', status: 'active', roastDate: null, weight: null },
 			],
 			setWeight: vi.fn(),
-		} as unknown as BeanWeightService;
-		return { app, vaultData, openFile, getLeaf, beanFile };
-	};
+		}) as unknown as BeanWeightService;
 
 	it('refreshes detached blocks and keeps them tracked', async () => {
 		let records = [makeFilter({ bean: 'Old Bean' })];
@@ -152,7 +141,23 @@ describe('BrewDayCodeBlock', () => {
 		await Promise.resolve();
 
 		expect(el.querySelectorAll('.brew-day-record-group')).toHaveLength(1);
-		expect(el.querySelectorAll('.brew-record-table tbody tr')).toHaveLength(1);
+		expect(el.querySelectorAll('.brew-record-date')).toHaveLength(1);
+	});
+
+	it('renders all bean groups in one table with a header row per tbody', async () => {
+		const el = await renderRecords([
+			makeFilter({ bean: 'A Bean' }),
+			makeFilter({ id: 'record-2', bean: 'B Bean', timestamp: '2026-07-01T09:00:00' }),
+		]);
+		const tables = el.querySelectorAll('.brew-record-table');
+		const groups = el.querySelectorAll<HTMLTableSectionElement>('tbody.brew-day-record-group');
+
+		expect(tables).toHaveLength(1);
+		expect(groups).toHaveLength(2);
+		for (const group of Array.from(groups)) {
+			expect(group.firstElementChild?.matches('.brew-day-group-row')).toBe(true);
+			expect(group.firstElementChild?.querySelector('th[colspan="5"]')).not.toBeNull();
+		}
 	});
 
 	it('renders roast age between the date and method columns', async () => {
@@ -176,41 +181,36 @@ describe('BrewDayCodeBlock', () => {
 		expect(el.querySelector<HTMLTableCellElement>('.brew-record-expand td')?.colSpan).toBe(5);
 	});
 
-	it('opens the bean note when the group header is clicked', async () => {
-		const deps = makeBeanDeps();
-		const el = await renderRecords([makeFilter()], { app: deps.app, vaultData: deps.vaultData });
-		const header = el.querySelector<HTMLElement>('.brew-records-header');
+	it('keeps only one note expanded across bean groups', async () => {
+		const el = await renderRecords([
+			makeFilter({ note: 'First note' }),
+			makeFilter({ id: 'record-2', bean: 'B Bean', timestamp: '2026-07-01T09:00:00', note: 'Second note' }),
+		]);
+		const noteCells = el.querySelectorAll<HTMLElement>('.brew-record-note');
 
-		expect(header?.classList.contains('brew-records-header-link')).toBe(true);
-		header?.click();
+		noteCells[0]?.click();
+		noteCells[1]?.click();
 
-		expect(deps.getLeaf).toHaveBeenCalledWith(false);
-		expect(deps.openFile).toHaveBeenCalledWith(deps.beanFile);
+		expect(el.querySelectorAll('.brew-record-expand')).toHaveLength(1);
+		expect(noteCells[0]?.classList.contains('is-expanded')).toBe(false);
+		expect(noteCells[1]?.classList.contains('is-expanded')).toBe(true);
+		expect(noteCells[1]?.closest('tbody')?.querySelector('.brew-record-expand')).not.toBeNull();
 	});
 
-	it('opens the bean note in a new tab on mod-click', async () => {
-		const deps = makeBeanDeps();
-		const el = await renderRecords([makeFilter()], { app: deps.app, vaultData: deps.vaultData });
+	it('renders the bean name as an internal link when the bean note exists', async () => {
+		const el = await renderRecords([makeFilter()], { vaultData: makeVaultData() });
+		const link = el.querySelector<HTMLAnchorElement>('th.brew-records-header a.internal-link');
 
-		el.querySelector<HTMLElement>('.brew-records-header')?.dispatchEvent(
-			new MouseEvent('click', { ctrlKey: true, bubbles: true }),
-		);
-
-		expect(deps.getLeaf).toHaveBeenCalledWith('tab');
-		expect(deps.openFile).toHaveBeenCalledWith(deps.beanFile);
+		expect(link?.textContent).toBe('A Bean');
+		expect(link?.getAttribute('data-href')).toBe('Beans/A Bean.md');
+		expect(link?.getAttribute('href')).toBe('Beans/A Bean.md');
 	});
 
 	it('renders a plain header when no bean note matches', async () => {
-		const deps = makeBeanDeps();
-		const el = await renderRecords([makeFilter({ bean: 'Unknown Bean' })], {
-			app: deps.app,
-			vaultData: deps.vaultData,
-		});
-		const header = el.querySelector<HTMLElement>('.brew-records-header');
+		const el = await renderRecords([makeFilter({ bean: 'Unknown Bean' })], { vaultData: makeVaultData() });
+		const header = el.querySelector<HTMLElement>('th.brew-records-header');
 
-		expect(header?.classList.contains('brew-records-header-link')).toBe(false);
-		header?.click();
-
-		expect(deps.openFile).not.toHaveBeenCalled();
+		expect(header?.textContent).toBe('Unknown Bean');
+		expect(header?.querySelector('a')).toBeNull();
 	});
 });
