@@ -165,7 +165,7 @@ describe('BrewDayCodeBlock', () => {
 
 		expect(headers).toHaveLength(5);
 		expect(headers[1]?.textContent).toBe('record.roastDays');
-		expect(Array.from(roastCells, (cell) => cell.textContent)).toEqual(['11', '-']);
+		expect(Array.from(roastCells, (cell) => cell.textContent)).toEqual(['bean.roastDays', '-']);
 	});
 
 	it('spans the note expansion across all five columns', async () => {

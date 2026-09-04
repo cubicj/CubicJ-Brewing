@@ -70,7 +70,7 @@ export function renderBrewRecordTable(
 		dateTd.createDiv({ text: date });
 		dateTd.createDiv({ text: time });
 		tr.createEl('td', {
-			text: record.roastDays != null ? String(record.roastDays) : '-',
+			text: record.roastDays != null ? t('bean.roastDays', { n: record.roastDays }) : '-',
 			cls: 'brew-record-roast',
 		});
 		const method = record.method === 'espresso' ? getDrinkLabel(record.drink ?? 'shot') : getMethodLabel('filter');
