@@ -20,6 +20,7 @@ function createContext(): { ctx: CanvasRenderingContext2D; calls: string[] } {
 		save: () => calls.push('save'),
 		restore: () => calls.push('restore'),
 		beginPath: () => {},
+		closePath: () => {},
 		rect: () => {},
 		clip: () => calls.push('clip'),
 		moveTo: () => {},
@@ -93,6 +94,7 @@ const colors = {
 	grid: '#grid',
 	label: '#label',
 	line: '#line',
+	flow: '#flow',
 	crosshair: '#crosshair',
 	labelBg: '#label-bg',
 	labelText: '#label-text',
@@ -106,8 +108,10 @@ function createInput(ctx: CanvasRenderingContext2D): ProfileCanvasPaintInput {
 			start: 0,
 			end: 10,
 			maxWeight: 10,
+			maxFlow: 4,
 			toX: (t) => 10 + t * 8,
 			toY: (weight) => 60 - weight * 5,
+			toFlowY: (flow) => 60 - flow * 12.5,
 		},
 		detail: [
 			{ t: 0, w: 2 },
@@ -116,6 +120,10 @@ function createInput(ctx: CanvasRenderingContext2D): ProfileCanvasPaintInput {
 		trend: [
 			{ t: 0, w: 2 },
 			{ t: 10, w: 4 },
+		],
+		flow: [
+			{ t: 0, w: 0.2 },
+			{ t: 10, w: 0.2 },
 		],
 		crosshair: null,
 		colors,
@@ -139,6 +147,8 @@ describe('paintProfileCanvas', () => {
 			'stroke:#grid:1:1',
 			'stroke:#grid:1:1',
 			'stroke:#grid:1:1',
+			'path-fill:#flow',
+			'stroke:#flow:1.5:1',
 			'stroke:#line:1:0.35',
 			'stroke:#line:2:1',
 			'restore',
@@ -148,7 +158,46 @@ describe('paintProfileCanvas', () => {
 			'text:4:#label:right',
 			'text:6:#label:right',
 			'text:8:#label:right',
+			'text:1:#flow:left',
+			'text:2:#flow:left',
+			'text:3:#flow:left',
 		]);
+	});
+
+	it('skips the flow series when fewer than 2 flow points are visible', () => {
+		const { ctx, calls } = createContext();
+		const input = createInput(ctx);
+		input.flow = [{ t: 0, w: 0.2 }];
+
+		paintProfileCanvas(input);
+
+		expect(calls).not.toContain('path-fill:#flow');
+		expect(calls).not.toContain('stroke:#flow:1.5:1');
+		expect(calls).toContain('text:1:#flow:left');
+	});
+
+	it('formats fractional flow ticks with one decimal', () => {
+		const { ctx, calls } = createContext();
+		const input = createInput(ctx);
+		input.viewport!.maxFlow = 2;
+
+		paintProfileCanvas(input);
+
+		expect(calls).toContain('text:0.5:#flow:left');
+		expect(calls).toContain('text:1:#flow:left');
+		expect(calls).toContain('text:1.5:#flow:left');
+	});
+
+	it('skips the flow series when no flow points are visible', () => {
+		const { ctx, calls } = createContext();
+		const input = createInput(ctx);
+		input.flow = [];
+
+		paintProfileCanvas(input);
+
+		expect(calls).not.toContain('path-fill:#flow');
+		expect(calls).not.toContain('stroke:#flow:1.5:1');
+		expect(calls).toContain('text:1:#flow:left');
 	});
 
 	it('returns crosshair label animation intent without owning the frame loop', () => {
@@ -170,6 +219,8 @@ describe('paintProfileCanvas', () => {
 		expect(calls).toContain('dash:4,4');
 		expect(calls).toContain('dash:');
 		expect(calls).toContain('arc');
+		expect(calls.filter((call) => call === 'arc')).toHaveLength(2);
+		expect(calls).toContain('path-fill:#flow');
 		expect(calls).toContain('text:Weight: 5.0g:#label-text:left');
 		expect(calls).toContain('text:Flow: 1.0g/s:#label-text:left');
 		expect(calls).toContain('text:Time: 5s:#label-text:left');

@@ -2,6 +2,7 @@ import type { BrewProfilePoint } from '../brew/types';
 import { flowRateAt, interpolateWeight, niceStep } from './chartMath';
 
 const DETAIL_ALPHA = 0.35;
+const FLOW_FILL_ALPHA = 0.12;
 const TIME_GRID_STEP = 10;
 
 export interface ProfileCanvasMetrics {
@@ -20,8 +21,10 @@ export interface ProfileCanvasViewport {
 	start: number;
 	end: number;
 	maxWeight: number;
+	maxFlow: number;
 	toX: (t: number) => number;
 	toY: (weight: number) => number;
+	toFlowY: (flow: number) => number;
 }
 
 export interface ProfileCanvasColors {
@@ -29,6 +32,7 @@ export interface ProfileCanvasColors {
 	grid: string;
 	label: string;
 	line: string;
+	flow: string;
 	crosshair: string;
 	labelBg: string;
 	labelText: string;
@@ -53,6 +57,7 @@ export interface ProfileCanvasPaintInput {
 	viewport: ProfileCanvasViewport | null;
 	detail: BrewProfilePoint[];
 	trend: BrewProfilePoint[];
+	flow: BrewProfilePoint[];
 	crosshair: ProfileCanvasCrosshair | null;
 	colors: ProfileCanvasColors;
 }
@@ -63,7 +68,7 @@ export interface ProfileCanvasPaintResult {
 }
 
 export function paintProfileCanvas(input: ProfileCanvasPaintInput): ProfileCanvasPaintResult {
-	const { ctx, metrics: m, viewport, detail, trend, crosshair, colors } = input;
+	const { ctx, metrics: m, viewport, detail, trend, flow, crosshair, colors } = input;
 	const result = {
 		labelY: crosshair?.labelY ?? null,
 		needsAnimationFrame: false,
@@ -87,6 +92,7 @@ export function paintProfileCanvas(input: ProfileCanvasPaintInput): ProfileCanva
 	ctx.clip();
 
 	drawGrid(ctx, m, viewport, colors);
+	drawFlow(ctx, m.dpr, flow, viewport, colors.flow);
 	drawLine(ctx, m.dpr, detail, viewport.toX, viewport.toY, 1, DETAIL_ALPHA, colors.line);
 	drawTrend(ctx, m.dpr, trend, viewport.toX, viewport.toY, colors.line);
 
@@ -100,6 +106,7 @@ export function paintProfileCanvas(input: ProfileCanvasPaintInput): ProfileCanva
 
 	drawXAxis(ctx, m, viewport, colors.label);
 	drawYAxis(ctx, m, viewport, colors.label);
+	drawFlowAxis(ctx, m, viewport, colors.flow);
 	return result;
 }
 
@@ -127,13 +134,20 @@ function drawCrosshair(
 	ctx.stroke();
 	ctx.setLineDash([]);
 
+	const flow = flowRateAt(crosshair.trend, t);
+	if (flow !== undefined) {
+		ctx.beginPath();
+		ctx.arc(x, viewport.toFlowY(flow), 3 * m.dpr, 0, Math.PI * 2);
+		ctx.fillStyle = colors.flow;
+		ctx.fill();
+	}
+
 	const dotY = viewport.toY(weight);
 	ctx.beginPath();
 	ctx.arc(x, dotY, 3 * m.dpr, 0, Math.PI * 2);
 	ctx.fillStyle = colors.line;
 	ctx.fill();
 
-	const flow = flowRateAt(crosshair.trend, t);
 	return drawCrosshairLabel(ctx, m, x, dotY, weight, flow, t, crosshair, colors);
 }
 
@@ -243,6 +257,60 @@ function drawYAxis(
 	const weightStep = niceStep(viewport.maxWeight, 4);
 	for (let weight = weightStep; weight < viewport.maxWeight; weight += weightStep) {
 		ctx.fillText(`${Math.round(weight)}`, m.pl - 4 * m.dpr, viewport.toY(weight) + 3 * m.dpr);
+	}
+}
+
+function drawFlow(
+	ctx: CanvasRenderingContext2D,
+	dpr: number,
+	points: BrewProfilePoint[],
+	viewport: ProfileCanvasViewport,
+	color: string,
+): void {
+	if (points.length < 2) return;
+	const traceFlow = () => {
+		ctx.moveTo(viewport.toX(points[0].t), viewport.toFlowY(points[0].w));
+		for (let index = 1; index < points.length; index++) {
+			ctx.lineTo(viewport.toX(points[index].t), viewport.toFlowY(points[index].w));
+		}
+	};
+
+	ctx.beginPath();
+	traceFlow();
+	ctx.lineTo(viewport.toX(points[points.length - 1].t), viewport.toFlowY(0));
+	ctx.lineTo(viewport.toX(points[0].t), viewport.toFlowY(0));
+	ctx.closePath();
+	ctx.fillStyle = color;
+	ctx.globalAlpha = FLOW_FILL_ALPHA;
+	ctx.fill();
+	ctx.globalAlpha = 1;
+
+	ctx.beginPath();
+	traceFlow();
+	ctx.strokeStyle = color;
+	ctx.lineWidth = 1.5 * dpr;
+	ctx.lineJoin = 'round';
+	ctx.stroke();
+}
+
+function formatFlowTick(value: number): string {
+	const rounded = Math.round(value * 10) / 10;
+	return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
+function drawFlowAxis(
+	ctx: CanvasRenderingContext2D,
+	m: ProfileCanvasMetrics,
+	viewport: ProfileCanvasViewport,
+	color: string,
+): void {
+	ctx.fillStyle = color;
+	ctx.font = `${10 * m.dpr}px -apple-system, BlinkMacSystemFont, sans-serif`;
+	ctx.textAlign = 'left';
+
+	const flowStep = niceStep(viewport.maxFlow, 4);
+	for (let flow = flowStep; flow < viewport.maxFlow; flow += flowStep) {
+		ctx.fillText(formatFlowTick(flow), m.pl + m.plotW + 4 * m.dpr, viewport.toFlowY(flow) + 3 * m.dpr);
 	}
 }
 

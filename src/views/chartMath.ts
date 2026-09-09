@@ -47,3 +47,32 @@ export function flowRateAt(trend: BrewProfilePoint[], t: number, halfWindow = 1)
 	if (t1 <= t0) return undefined;
 	return Math.max(0, (interpolateWeight(trend, t1) - interpolateWeight(trend, t0)) / (t1 - t0));
 }
+
+function weightOnSegment(trend: BrewProfilePoint[], index: number, t: number): number {
+	const a = trend[index];
+	const b = trend[index + 1];
+	const dt = b.t - a.t;
+	if (dt <= 0) return a.w;
+	return a.w + ((t - a.t) / dt) * (b.w - a.w);
+}
+
+export function flowSeries(trend: BrewProfilePoint[], halfWindow = 1): BrewProfilePoint[] {
+	if (trend.length < 2) return [];
+	const last = trend.length - 1;
+	const tStart = trend[0].t;
+	const tEnd = trend[last].t;
+	const result: BrewProfilePoint[] = [];
+	let lo = 0;
+	let hi = 0;
+	for (const point of trend) {
+		const t0 = Math.max(tStart, point.t - halfWindow);
+		const t1 = Math.min(tEnd, point.t + halfWindow);
+		if (t1 <= t0) continue;
+		while (lo < last - 1 && trend[lo + 1].t < t0) lo++;
+		while (hi < last - 1 && trend[hi + 1].t < t1) hi++;
+		const w0 = t0 <= tStart ? trend[0].w : weightOnSegment(trend, lo, t0);
+		const w1 = t1 >= tEnd ? trend[last].w : weightOnSegment(trend, hi, t1);
+		result.push({ t: point.t, w: Math.max(0, (w1 - w0) / (t1 - t0)) });
+	}
+	return result;
+}

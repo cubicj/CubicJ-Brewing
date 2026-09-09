@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { niceStep, filterVisible, interpolateWeight, flowRateAt } from '../../src/views/chartMath';
+import { niceStep, filterVisible, interpolateWeight, flowRateAt, flowSeries } from '../../src/views/chartMath';
 import type { BrewProfilePoint } from '../../src/brew/types';
 
 const pt = (t: number, w: number): BrewProfilePoint => ({ t, w });
@@ -124,5 +124,93 @@ describe('flowRateAt', () => {
 
 	it('returns undefined when window falls outside data', () => {
 		expect(flowRateAt(trend, 30)).toBeUndefined();
+	});
+});
+
+describe('flowSeries', () => {
+	const linear = [
+		{ t: 0, w: 0 },
+		{ t: 1, w: 2 },
+		{ t: 2, w: 4 },
+		{ t: 3, w: 6 },
+		{ t: 4, w: 8 },
+	];
+
+	it('returns one point per trend point with the slope on linear data', () => {
+		const series = flowSeries(linear);
+		expect(series.map((p) => p.t)).toEqual([0, 1, 2, 3, 4]);
+		for (const p of series) expect(p.w).toBeCloseTo(2, 9);
+	});
+
+	it('matches flowRateAt at every trend timestamp on noisy data', () => {
+		const trend: BrewProfilePoint[] = [];
+		for (let i = 0; i < 200; i++) {
+			const t = i * 0.1;
+			trend.push({ t, w: 3 * t + 2 * Math.sin(t * 1.7) + (i % 7) * 0.05 });
+		}
+		const series = flowSeries(trend);
+		expect(series.length).toBe(trend.length);
+		series.forEach((p, i) => {
+			expect(p.t).toBe(trend[i].t);
+			expect(p.w).toBeCloseTo(flowRateAt(trend, trend[i].t)!, 9);
+		});
+	});
+
+	it('clamps negative slopes to 0', () => {
+		const series = flowSeries([
+			{ t: 0, w: 10 },
+			{ t: 1, w: 8 },
+			{ t: 2, w: 6 },
+		]);
+		expect(series.map((p) => p.w)).toEqual([0, 0, 0]);
+	});
+
+	it('returns an empty series for fewer than 2 points', () => {
+		expect(flowSeries([])).toEqual([]);
+		expect(flowSeries([{ t: 0, w: 1 }])).toEqual([]);
+	});
+
+	it('omits points whose clamped window is degenerate', () => {
+		const series = flowSeries(
+			[
+				{ t: 0, w: 0 },
+				{ t: 0, w: 0 },
+			],
+			1,
+		);
+		expect(series).toEqual([]);
+	});
+
+	it('matches flowRateAt with duplicate final timestamps and the default window', () => {
+		const trend = [
+			{ t: 0, w: 0 },
+			{ t: 1, w: 1 },
+			{ t: 1, w: 3 },
+		];
+		const series = flowSeries(trend);
+		expect(series).toEqual(trend.map((p) => ({ t: p.t, w: flowRateAt(trend, p.t) })));
+		expect(series.map((p) => p.w)).toEqual([3, 3, 3]);
+	});
+
+	it('matches flowRateAt with duplicate final timestamps and an oversized window', () => {
+		const trend = [
+			{ t: 0, w: 0 },
+			{ t: 1, w: 1 },
+			{ t: 1, w: 3 },
+		];
+		const series = flowSeries(trend, 5);
+		expect(series).toEqual(trend.map((p) => ({ t: p.t, w: flowRateAt(trend, p.t, 5) })));
+		expect(series.map((p) => p.w)).toEqual([3, 3, 3]);
+	});
+
+	it('matches flowRateAt with duplicate first timestamps and the default window', () => {
+		const trend = [
+			{ t: 0, w: 5 },
+			{ t: 0, w: 0 },
+			{ t: 1, w: 2 },
+		];
+		const series = flowSeries(trend);
+		expect(series).toEqual(trend.map((p) => ({ t: p.t, w: flowRateAt(trend, p.t) })));
+		expect(series.map((p) => p.w)).toEqual([0, 0, 0]);
 	});
 });

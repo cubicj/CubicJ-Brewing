@@ -2,7 +2,7 @@ import type { BrewProfilePoint } from '../brew/types';
 import type { BrewProfileRecorder } from './BrewProfileRecorder';
 import { processDetail, processTrend } from '../utils/signal';
 import { t as i18t } from '../i18n/index';
-import { filterVisible } from './chartMath';
+import { filterVisible, flowSeries } from './chartMath';
 import {
 	paintProfileCanvas,
 	type ProfileCanvasColors,
@@ -11,11 +11,12 @@ import {
 } from './ProfileCanvasPainter';
 
 const CHART_HEIGHT = 220;
-const PADDING = { top: 12, right: 12, bottom: 28, left: 40 };
+const PADDING = { top: 12, right: 36, bottom: 28, left: 40 };
 const BG_COLOR = '#0a0a0a';
 const GRID_COLOR = '#1a1a1a';
 const LABEL_COLOR = '#999';
 const LINE_COLOR = '#4a9eff';
+const FLOW_COLOR = '#ffa94d';
 const TIME_SCALE = 10;
 const SCROLL_SPEED = 0.05;
 const CROSSHAIR_COLOR = 'rgba(255, 255, 255, 0.3)';
@@ -40,6 +41,7 @@ export class BrewProfileChart {
 	private cachedSource: BrewProfilePoint[] | null = null;
 	private cachedDetail: BrewProfilePoint[] = [];
 	private cachedTrend: BrewProfilePoint[] = [];
+	private cachedFlow: BrewProfilePoint[] = [];
 
 	private crosshairT: number | null = null;
 	private crosshairMoveHandler: ((e: MouseEvent) => void) | null = null;
@@ -52,6 +54,7 @@ export class BrewProfileChart {
 		grid: GRID_COLOR,
 		label: LABEL_COLOR,
 		line: LINE_COLOR,
+		flow: FLOW_COLOR,
 		crosshair: CROSSHAIR_COLOR,
 		labelBg: 'rgba(0, 0, 0, 0.8)',
 		labelText: '#e8e8e8',
@@ -65,6 +68,7 @@ export class BrewProfileChart {
 			grid: cssVar('--background-modifier-border', GRID_COLOR),
 			label: cssVar('--text-muted', LABEL_COLOR),
 			line: LINE_COLOR,
+			flow: FLOW_COLOR,
 			crosshair: cssVar('--text-faint', CROSSHAIR_COLOR),
 			labelBg: cssVar('--background-secondary', 'rgba(0, 0, 0, 0.8)'),
 			labelText: cssVar('--text-normal', '#e8e8e8'),
@@ -330,6 +334,7 @@ export class BrewProfileChart {
 		this.cachedLen = points.length;
 		this.cachedDetail = processDetail(points);
 		this.cachedTrend = processTrend(points);
+		this.cachedFlow = flowSeries(this.cachedTrend);
 	}
 
 	private getMetrics(): ProfileCanvasMetrics {
@@ -351,23 +356,30 @@ export class BrewProfileChart {
 		let maxW = 10;
 		for (const p of this.cachedDetail) if (p.w > maxW) maxW = p.w;
 		maxW *= 1.1;
+		let flowMax = 0;
+		for (const p of this.cachedFlow) if (p.w > flowMax) flowMax = p.w;
+		const maxFlow = Math.max(1, flowMax * 1.15);
 
 		const toX = (t: number) => m.pl + ((t - this.viewStart) / dur) * m.plotW;
 		const toY = (w: number) => m.pt + m.plotH - (w / maxW) * m.plotH;
+		const toFlowY = (flow: number) => m.pt + m.plotH - (flow / maxFlow) * m.plotH;
 
 		return {
 			start: this.viewStart,
 			end: viewEnd,
 			maxWeight: maxW,
+			maxFlow,
 			toX,
 			toY,
+			toFlowY,
 		};
 	}
 
 	private getProcessedData(viewEnd: number) {
 		const visibleDetail = filterVisible(this.cachedDetail, this.viewStart, viewEnd);
 		const visibleTrend = filterVisible(this.cachedTrend, this.viewStart, viewEnd);
-		return { visibleDetail, visibleTrend };
+		const visibleFlow = filterVisible(this.cachedFlow, this.viewStart, viewEnd);
+		return { visibleDetail, visibleTrend, visibleFlow };
 	}
 
 	private render(points: BrewProfilePoint[]): void {
@@ -381,6 +393,7 @@ export class BrewProfileChart {
 				viewport: null,
 				detail: [],
 				trend: [],
+				flow: [],
 				crosshair: null,
 				colors: this.colors,
 			});
@@ -392,7 +405,7 @@ export class BrewProfileChart {
 			this.viewStart = Math.max(0, points[points.length - 1].t - this.viewDuration());
 		}
 		const viewport = this.computeScale(m);
-		const { visibleDetail, visibleTrend } = this.getProcessedData(viewport.end);
+		const { visibleDetail, visibleTrend, visibleFlow } = this.getProcessedData(viewport.end);
 		const crosshair =
 			this.crosshairT === null
 				? null
@@ -412,6 +425,7 @@ export class BrewProfileChart {
 			viewport,
 			detail: visibleDetail,
 			trend: visibleTrend,
+			flow: visibleFlow,
 			crosshair,
 			colors: this.colors,
 		});
