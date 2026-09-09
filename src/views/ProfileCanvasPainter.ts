@@ -2,7 +2,6 @@ import type { BrewProfilePoint } from '../brew/types';
 import { flowRateAt, interpolateWeight, niceStep } from './chartMath';
 
 const DETAIL_ALPHA = 0.35;
-const FLOW_FILL_ALPHA = 0.12;
 const TIME_GRID_STEP = 10;
 
 export interface ProfileCanvasMetrics {
@@ -272,25 +271,11 @@ function drawFlow(
 	color: string,
 ): void {
 	if (points.length < 2) return;
-	const traceFlow = () => {
-		ctx.moveTo(viewport.toX(points[0].t), viewport.toFlowY(points[0].w));
-		for (let index = 1; index < points.length; index++) {
-			ctx.lineTo(viewport.toX(points[index].t), viewport.toFlowY(points[index].w));
-		}
-	};
-
 	ctx.beginPath();
-	traceFlow();
-	ctx.lineTo(viewport.toX(points[points.length - 1].t), viewport.toFlowY(0));
-	ctx.lineTo(viewport.toX(points[0].t), viewport.toFlowY(0));
-	ctx.closePath();
-	ctx.fillStyle = color;
-	ctx.globalAlpha = FLOW_FILL_ALPHA;
-	ctx.fill();
-	ctx.globalAlpha = 1;
-
-	ctx.beginPath();
-	traceFlow();
+	ctx.moveTo(viewport.toX(points[0].t), viewport.toFlowY(points[0].w));
+	for (let index = 1; index < points.length; index++) {
+		ctx.lineTo(viewport.toX(points[index].t), viewport.toFlowY(points[index].w));
+	}
 	ctx.strokeStyle = color;
 	ctx.lineWidth = 1.5 * dpr;
 	ctx.lineJoin = 'round';

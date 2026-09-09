@@ -30,7 +30,6 @@ function createContext(): {
 		save: () => calls.push('save'),
 		restore: () => calls.push('restore'),
 		beginPath: () => {},
-		closePath: () => {},
 		rect: () => {},
 		clip: () => calls.push('clip'),
 		moveTo: () => {},
@@ -207,7 +206,6 @@ describe('paintProfileCanvas', () => {
 			'stroke:#grid:1:1',
 			'stroke:#grid:1:1',
 			'stroke:#grid:1:1',
-			'path-fill:#flow',
 			'stroke:#flow:1.5:1',
 			'stroke:#line:1:0.35',
 			'stroke:#line:2:1',
@@ -233,7 +231,6 @@ describe('paintProfileCanvas', () => {
 
 		paintProfileCanvas(input);
 
-		expect(calls).not.toContain('path-fill:#flow');
 		expect(calls).not.toContain('stroke:#flow:1.5:1');
 		expect(calls).toContain('text:1:#flow:left');
 	});
@@ -257,7 +254,6 @@ describe('paintProfileCanvas', () => {
 
 		paintProfileCanvas(input);
 
-		expect(calls).not.toContain('path-fill:#flow');
 		expect(calls).not.toContain('stroke:#flow:1.5:1');
 		expect(calls).toContain('text:1:#flow:left');
 	});
