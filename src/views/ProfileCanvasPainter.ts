@@ -15,6 +15,8 @@ export interface ProfileCanvasMetrics {
 	pb: number;
 	plotW: number;
 	plotH: number;
+	viewLeft: number;
+	viewRight: number;
 }
 
 export interface ProfileCanvasViewport {
@@ -105,8 +107,8 @@ export function paintProfileCanvas(input: ProfileCanvasPaintInput): ProfileCanva
 	ctx.restore();
 
 	drawXAxis(ctx, m, viewport, colors.label);
-	drawYAxis(ctx, m, viewport, colors.label);
-	drawFlowAxis(ctx, m, viewport, colors.flow);
+	drawYAxis(ctx, m, viewport, colors);
+	drawFlowAxis(ctx, m, viewport, colors);
 	return result;
 }
 
@@ -173,7 +175,7 @@ function drawCrosshairLabel(
 	const textHeight = lineHeight * lines.length + 4 * m.dpr;
 
 	let labelX = x + 8 * m.dpr;
-	if (labelX + textWidth > m.pl + m.plotW) labelX = x - textWidth - 4 * m.dpr;
+	if (labelX + textWidth > m.viewRight - m.pr) labelX = x - textWidth - 4 * m.dpr;
 	let targetY = dotY - textHeight - 6 * m.dpr;
 	if (targetY < m.pt) targetY = dotY + 6 * m.dpr;
 	let labelY: number;
@@ -248,15 +250,17 @@ function drawYAxis(
 	ctx: CanvasRenderingContext2D,
 	m: ProfileCanvasMetrics,
 	viewport: ProfileCanvasViewport,
-	labelColor: string,
+	colors: ProfileCanvasColors,
 ): void {
-	ctx.fillStyle = labelColor;
+	ctx.fillStyle = colors.bg;
+	ctx.fillRect(m.viewLeft, m.pt, m.pl, m.plotH);
+	ctx.fillStyle = colors.label;
 	ctx.font = `${10 * m.dpr}px -apple-system, BlinkMacSystemFont, sans-serif`;
 	ctx.textAlign = 'right';
 
 	const weightStep = niceStep(viewport.maxWeight, 4);
 	for (let weight = weightStep; weight < viewport.maxWeight; weight += weightStep) {
-		ctx.fillText(`${Math.round(weight)}`, m.pl - 4 * m.dpr, viewport.toY(weight) + 3 * m.dpr);
+		ctx.fillText(`${Math.round(weight)}`, m.viewLeft + m.pl - 4 * m.dpr, viewport.toY(weight) + 3 * m.dpr);
 	}
 }
 
@@ -302,15 +306,17 @@ function drawFlowAxis(
 	ctx: CanvasRenderingContext2D,
 	m: ProfileCanvasMetrics,
 	viewport: ProfileCanvasViewport,
-	color: string,
+	colors: ProfileCanvasColors,
 ): void {
-	ctx.fillStyle = color;
+	ctx.fillStyle = colors.bg;
+	ctx.fillRect(m.viewRight - m.pr, m.pt, m.pr, m.plotH);
+	ctx.fillStyle = colors.flow;
 	ctx.font = `${10 * m.dpr}px -apple-system, BlinkMacSystemFont, sans-serif`;
 	ctx.textAlign = 'left';
 
 	const flowStep = niceStep(viewport.maxFlow, 4);
 	for (let flow = flowStep; flow < viewport.maxFlow; flow += flowStep) {
-		ctx.fillText(formatFlowTick(flow), m.pl + m.plotW + 4 * m.dpr, viewport.toFlowY(flow) + 3 * m.dpr);
+		ctx.fillText(formatFlowTick(flow), m.viewRight - m.pr + 4 * m.dpr, viewport.toFlowY(flow) + 3 * m.dpr);
 	}
 }
 

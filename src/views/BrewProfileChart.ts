@@ -36,6 +36,7 @@ export class BrewProfileChart {
 	private scrollContainer: HTMLElement | null = null;
 	private scrollWheelHandler: ((e: WheelEvent) => void) | null = null;
 	private scrollKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+	private scrollRenderHandler: (() => void) | null = null;
 	private dragHandlers: { down: (e: MouseEvent) => void; move: (e: MouseEvent) => void; up: () => void } | null = null;
 
 	private cachedSource: BrewProfilePoint[] | null = null;
@@ -46,7 +47,7 @@ export class BrewProfileChart {
 	private crosshairT: number | null = null;
 	private crosshairMoveHandler: ((e: MouseEvent) => void) | null = null;
 	private crosshairLeaveHandler: (() => void) | null = null;
-	private crosshairRaf = 0;
+	private renderRaf = 0;
 	private labelY: number | null = null;
 
 	private colors: ProfileCanvasColors = {
@@ -99,6 +100,8 @@ export class BrewProfileChart {
 		this.attachKeyboard(container);
 		this.attachDragScroll(container);
 		this.attachCrosshairEvents(container);
+		this.scrollRenderHandler = () => this.scheduleRender();
+		container.addEventListener('scroll', this.scrollRenderHandler, { passive: true });
 	}
 
 	private attachWheel(container: HTMLElement): void {
@@ -152,10 +155,10 @@ export class BrewProfileChart {
 		this.dragHandlers = { down, move, up };
 	}
 
-	private scheduleCrosshairRender(): void {
-		if (this.crosshairRaf) return;
-		this.crosshairRaf = window.requestAnimationFrame(() => {
-			this.crosshairRaf = 0;
+	private scheduleRender(): void {
+		if (this.renderRaf) return;
+		this.renderRaf = window.requestAnimationFrame(() => {
+			this.renderRaf = 0;
 			if (this.staticPoints) this.render(this.staticPoints);
 		});
 	}
@@ -171,7 +174,7 @@ export class BrewProfileChart {
 			const dur = this.viewDuration();
 			const t = this.viewStart + ((mouseX - pl) / plotW) * dur;
 			this.crosshairT = t;
-			this.scheduleCrosshairRender();
+			this.scheduleRender();
 		};
 		this.canvas.addEventListener('mousemove', this.crosshairMoveHandler);
 
@@ -196,9 +199,9 @@ export class BrewProfileChart {
 		if (this.crosshairLeaveHandler) {
 			this.canvas.removeEventListener('mouseleave', this.crosshairLeaveHandler);
 		}
-		if (this.crosshairRaf) {
-			window.cancelAnimationFrame(this.crosshairRaf);
-			this.crosshairRaf = 0;
+		if (this.renderRaf) {
+			window.cancelAnimationFrame(this.renderRaf);
+			this.renderRaf = 0;
 		}
 		if (this.scrollContainer && this.dragHandlers) {
 			this.scrollContainer.removeEventListener('mousedown', this.dragHandlers.down);
@@ -206,12 +209,16 @@ export class BrewProfileChart {
 			this.scrollContainer.removeEventListener('mouseleave', this.dragHandlers.up);
 			this.scrollContainer.removeEventListener('mouseup', this.dragHandlers.up);
 		}
+		if (this.scrollContainer && this.scrollRenderHandler) {
+			this.scrollContainer.removeEventListener('scroll', this.scrollRenderHandler);
+		}
 		this.scrollContainer = null;
 		this.scrollWheelHandler = null;
 		this.scrollKeyHandler = null;
 		this.dragHandlers = null;
 		this.crosshairMoveHandler = null;
 		this.crosshairLeaveHandler = null;
+		this.scrollRenderHandler = null;
 	}
 
 	private syncWidth(): void {
@@ -347,7 +354,10 @@ export class BrewProfileChart {
 		const pb = PADDING.bottom * dpr;
 		const plotW = cw - pl - pr;
 		const plotH = ch - pt - pb;
-		return { dpr, cw, ch, pl, pr, pt, pb, plotW, plotH };
+		const container = this.scrollContainer;
+		const viewLeft = container ? container.scrollLeft * dpr : 0;
+		const viewRight = container ? Math.min(cw, (container.scrollLeft + container.clientWidth) * dpr) : cw;
+		return { dpr, cw, ch, pl, pr, pt, pb, plotW, plotH, viewLeft, viewRight };
 	}
 
 	private computeScale(m: ProfileCanvasMetrics): ProfileCanvasViewport {
@@ -431,7 +441,7 @@ export class BrewProfileChart {
 		});
 		if (crosshair) {
 			this.labelY = result.labelY;
-			if (result.needsAnimationFrame) this.scheduleCrosshairRender();
+			if (result.needsAnimationFrame) this.scheduleRender();
 		}
 	}
 }

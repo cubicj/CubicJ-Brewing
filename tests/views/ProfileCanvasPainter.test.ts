@@ -5,8 +5,15 @@ import {
 	type ProfileCanvasPaintInput,
 } from '../../src/views/ProfileCanvasPainter';
 
-function createContext(): { ctx: CanvasRenderingContext2D; calls: string[] } {
+function createContext(): {
+	ctx: CanvasRenderingContext2D;
+	calls: string[];
+	rects: number[][];
+	texts: { text: string; x: number }[];
+} {
 	const calls: string[] = [];
+	const rects: number[][] = [];
+	const texts: { text: string; x: number }[] = [];
 	let fillStyle = '';
 	let strokeStyle = '';
 	let lineWidth = 1;
@@ -16,7 +23,10 @@ function createContext(): { ctx: CanvasRenderingContext2D; calls: string[] } {
 	let textAlign: CanvasTextAlign = 'start';
 	const ctx = {
 		clearRect: () => calls.push('clear'),
-		fillRect: () => calls.push(`fill:${fillStyle}`),
+		fillRect: (x: number, y: number, w: number, h: number) => {
+			rects.push([x, y, w, h]);
+			calls.push(`fill:${fillStyle}`);
+		},
 		save: () => calls.push('save'),
 		restore: () => calls.push('restore'),
 		beginPath: () => {},
@@ -29,7 +39,10 @@ function createContext(): { ctx: CanvasRenderingContext2D; calls: string[] } {
 		arc: () => calls.push('arc'),
 		fill: () => calls.push(`path-fill:${fillStyle}`),
 		setLineDash: (segments: number[]) => calls.push(`dash:${segments.join(',')}`),
-		fillText: (text: string) => calls.push(`text:${text}:${fillStyle}:${textAlign}`),
+		fillText: (text: string, x: number) => {
+			texts.push({ text, x });
+			calls.push(`text:${text}:${fillStyle}:${textAlign}`);
+		},
 		measureText: (text: string) => ({ width: text.length * 5 }) as TextMetrics,
 		get fillStyle() {
 			return fillStyle;
@@ -74,7 +87,7 @@ function createContext(): { ctx: CanvasRenderingContext2D; calls: string[] } {
 			textAlign = value;
 		},
 	} as unknown as CanvasRenderingContext2D;
-	return { ctx, calls };
+	return { ctx, calls, rects, texts };
 }
 
 const metrics: ProfileCanvasMetrics = {
@@ -87,6 +100,8 @@ const metrics: ProfileCanvasMetrics = {
 	pb: 20,
 	plotW: 80,
 	plotH: 50,
+	viewLeft: 0,
+	viewRight: 100,
 };
 
 const colors = {
@@ -131,6 +146,51 @@ function createInput(ctx: CanvasRenderingContext2D): ProfileCanvasPaintInput {
 }
 
 describe('paintProfileCanvas', () => {
+	it('anchors both axes and their opaque strips to the visible window', () => {
+		const { ctx, rects, texts } = createContext();
+		const input = createInput(ctx);
+		input.metrics = { ...metrics, viewLeft: 20, viewRight: 80 };
+
+		paintProfileCanvas(input);
+
+		expect(rects).toContainEqual([20, 10, 10, 50]);
+		expect(rects).toContainEqual([70, 10, 10, 50]);
+		expect(texts.find((entry) => entry.text === '2')?.x).toBe(26);
+		expect(texts.find((entry) => entry.text === '1')?.x).toBe(74);
+	});
+
+	it('draws axis strips at the canvas edges when the whole canvas is visible', () => {
+		const { ctx, rects, texts } = createContext();
+
+		paintProfileCanvas(createInput(ctx));
+
+		expect(rects).toContainEqual([0, 10, 10, 50]);
+		expect(rects).toContainEqual([90, 10, 10, 50]);
+		expect(texts.find((entry) => entry.text === '2')?.x).toBe(6);
+		expect(texts.find((entry) => entry.text === '1')?.x).toBe(94);
+	});
+
+	it('flips the crosshair label at the visible right edge', () => {
+		const { ctx, texts } = createContext();
+		const input = createInput(ctx);
+		input.metrics = { ...metrics, viewLeft: 0, viewRight: 60 };
+		input.crosshair = {
+			t: 1,
+			trend: [
+				{ t: 0, w: 0 },
+				{ t: 10, w: 10 },
+			],
+			labelY: null,
+			labels: { weight: 'W', flow: 'F', time: 'T' },
+		};
+
+		paintProfileCanvas(input);
+
+		const label = texts.find((entry) => entry.text.startsWith('W: '));
+		expect(label).toBeDefined();
+		expect(label!.x).toBeLessThan(18);
+	});
+
 	it('preserves the background, clipped plot, series, and axes draw order', () => {
 		const { ctx, calls } = createContext();
 
@@ -154,10 +214,12 @@ describe('paintProfileCanvas', () => {
 			'restore',
 			'text:0s:#label:center',
 			'text:10s:#label:center',
+			'fill:#background',
 			'text:2:#label:right',
 			'text:4:#label:right',
 			'text:6:#label:right',
 			'text:8:#label:right',
+			'fill:#background',
 			'text:1:#flow:left',
 			'text:2:#flow:left',
 			'text:3:#flow:left',
