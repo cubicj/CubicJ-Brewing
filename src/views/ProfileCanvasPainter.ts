@@ -39,7 +39,7 @@ export interface ProfileCanvasColors {
 	labelText: string;
 }
 
-interface ProfileCanvasLabels {
+export interface ProfileCanvasLabels {
 	weight: string;
 	flow: string;
 	time: string;
@@ -49,7 +49,6 @@ interface ProfileCanvasCrosshair {
 	t: number;
 	trend: BrewProfilePoint[];
 	labelY: number | null;
-	labels: ProfileCanvasLabels;
 }
 
 export interface ProfileCanvasPaintInput {
@@ -60,6 +59,7 @@ export interface ProfileCanvasPaintInput {
 	trend: BrewProfilePoint[];
 	flow: BrewProfilePoint[];
 	crosshair: ProfileCanvasCrosshair | null;
+	labels: ProfileCanvasLabels;
 	colors: ProfileCanvasColors;
 }
 
@@ -69,7 +69,7 @@ export interface ProfileCanvasPaintResult {
 }
 
 export function paintProfileCanvas(input: ProfileCanvasPaintInput): ProfileCanvasPaintResult {
-	const { ctx, metrics: m, viewport, detail, trend, flow, crosshair, colors } = input;
+	const { ctx, metrics: m, viewport, detail, trend, flow, crosshair, labels, colors } = input;
 	const result = {
 		labelY: crosshair?.labelY ?? null,
 		needsAnimationFrame: false,
@@ -98,7 +98,7 @@ export function paintProfileCanvas(input: ProfileCanvasPaintInput): ProfileCanva
 	drawTrend(ctx, m.dpr, trend, viewport.toX, viewport.toY, colors.line);
 
 	if (crosshair) {
-		const crosshairResult = drawCrosshair(ctx, m, viewport, crosshair, colors);
+		const crosshairResult = drawCrosshair(ctx, m, viewport, crosshair, labels, colors);
 		result.labelY = crosshairResult.labelY;
 		result.needsAnimationFrame = crosshairResult.needsAnimationFrame;
 	}
@@ -108,6 +108,7 @@ export function paintProfileCanvas(input: ProfileCanvasPaintInput): ProfileCanva
 	drawXAxis(ctx, m, viewport, colors.label);
 	drawYAxis(ctx, m, viewport, colors);
 	drawFlowAxis(ctx, m, viewport, colors);
+	drawLegend(ctx, m, labels, colors);
 	return result;
 }
 
@@ -116,6 +117,7 @@ function drawCrosshair(
 	m: ProfileCanvasMetrics,
 	viewport: ProfileCanvasViewport,
 	crosshair: ProfileCanvasCrosshair,
+	labels: ProfileCanvasLabels,
 	colors: ProfileCanvasColors,
 ): ProfileCanvasPaintResult {
 	const result = { labelY: crosshair.labelY, needsAnimationFrame: false };
@@ -149,7 +151,7 @@ function drawCrosshair(
 	ctx.fillStyle = colors.line;
 	ctx.fill();
 
-	return drawCrosshairLabel(ctx, m, x, dotY, weight, flow, t, crosshair, colors);
+	return drawCrosshairLabel(ctx, m, x, dotY, weight, flow, t, crosshair, labels, colors);
 }
 
 function drawCrosshairLabel(
@@ -161,13 +163,14 @@ function drawCrosshairLabel(
 	flow: number | undefined,
 	t: number,
 	crosshair: ProfileCanvasCrosshair,
+	labels: ProfileCanvasLabels,
 	colors: ProfileCanvasColors,
 ): ProfileCanvasPaintResult {
 	const tSec = Math.round(t);
 	const tLabel = tSec >= 60 ? `${Math.floor(tSec / 60)}m ${tSec % 60}s` : `${tSec}s`;
-	const lines = [`${crosshair.labels.weight}: ${weight.toFixed(1)}g`];
-	if (flow !== undefined) lines.push(`${crosshair.labels.flow}: ${flow.toFixed(1)}g/s`);
-	lines.push(`${crosshair.labels.time}: ${tLabel}`);
+	const lines = [`${labels.weight}: ${weight.toFixed(1)}g`];
+	if (flow !== undefined) lines.push(`${labels.flow}: ${flow.toFixed(1)}g/s`);
+	lines.push(`${labels.time}: ${tLabel}`);
 	ctx.font = `${11 * m.dpr}px -apple-system, BlinkMacSystemFont, sans-serif`;
 	const textWidth = Math.max(...lines.map((line) => ctx.measureText(line).width)) + 8 * m.dpr;
 	const lineHeight = 16 * m.dpr;
@@ -280,6 +283,35 @@ function drawFlow(
 	ctx.lineWidth = 1.5 * dpr;
 	ctx.lineJoin = 'round';
 	ctx.stroke();
+}
+
+function drawLegend(
+	ctx: CanvasRenderingContext2D,
+	m: ProfileCanvasMetrics,
+	labels: ProfileCanvasLabels,
+	colors: ProfileCanvasColors,
+): void {
+	const entries = [
+		{ text: `${labels.weight} (g)`, color: colors.line },
+		{ text: `${labels.flow} (g/s)`, color: colors.flow },
+	];
+	const top = m.pt + 6 * m.dpr;
+	const swatchWidth = 12 * m.dpr;
+	ctx.font = `${10 * m.dpr}px -apple-system, BlinkMacSystemFont, sans-serif`;
+	ctx.textAlign = 'left';
+	ctx.lineWidth = 2 * m.dpr;
+	let x = m.viewLeft + m.pl + 6 * m.dpr;
+	for (const entry of entries) {
+		ctx.beginPath();
+		ctx.moveTo(x, top + 5 * m.dpr);
+		ctx.lineTo(x + swatchWidth, top + 5 * m.dpr);
+		ctx.strokeStyle = entry.color;
+		ctx.stroke();
+		const textX = x + swatchWidth + 4 * m.dpr;
+		ctx.fillStyle = colors.label;
+		ctx.fillText(entry.text, textX, top + 9 * m.dpr);
+		x = textX + ctx.measureText(entry.text).width + 12 * m.dpr;
+	}
 }
 
 function formatFlowTick(value: number): string {

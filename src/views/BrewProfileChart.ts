@@ -6,6 +6,7 @@ import { filterVisible, flowSeries } from './chartMath';
 import {
 	paintProfileCanvas,
 	type ProfileCanvasColors,
+	type ProfileCanvasLabels,
 	type ProfileCanvasMetrics,
 	type ProfileCanvasViewport,
 } from './ProfileCanvasPainter';
@@ -392,9 +393,18 @@ export class BrewProfileChart {
 		return { visibleDetail, visibleTrend, visibleFlow };
 	}
 
+	private chartLabels(): ProfileCanvasLabels {
+		return {
+			weight: i18t('chart.weight'),
+			flow: i18t('chart.flow'),
+			time: i18t('chart.time'),
+		};
+	}
+
 	private render(points: BrewProfilePoint[]): void {
 		const m = this.getMetrics();
 		this.resolveColors();
+		const labels = this.chartLabels();
 
 		if (points.length === 0) {
 			paintProfileCanvas({
@@ -405,6 +415,7 @@ export class BrewProfileChart {
 				trend: [],
 				flow: [],
 				crosshair: null,
+				labels,
 				colors: this.colors,
 			});
 			return;
@@ -423,11 +434,6 @@ export class BrewProfileChart {
 						t: this.crosshairT,
 						trend: this.cachedTrend,
 						labelY: this.labelY,
-						labels: {
-							weight: i18t('chart.weight'),
-							flow: i18t('chart.flow'),
-							time: i18t('chart.time'),
-						},
 					};
 		const result = paintProfileCanvas({
 			ctx: this.ctx,
@@ -437,6 +443,7 @@ export class BrewProfileChart {
 			trend: visibleTrend,
 			flow: visibleFlow,
 			crosshair,
+			labels,
 			colors: this.colors,
 		});
 		if (crosshair) {

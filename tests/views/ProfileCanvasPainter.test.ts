@@ -140,6 +140,7 @@ function createInput(ctx: CanvasRenderingContext2D): ProfileCanvasPaintInput {
 			{ t: 10, w: 0.2 },
 		],
 		crosshair: null,
+		labels: { weight: 'Weight', flow: 'Flow', time: 'Time' },
 		colors,
 	};
 }
@@ -156,6 +157,7 @@ describe('paintProfileCanvas', () => {
 		expect(rects).toContainEqual([70, 10, 10, 50]);
 		expect(texts.find((entry) => entry.text === '2')?.x).toBe(26);
 		expect(texts.find((entry) => entry.text === '1')?.x).toBe(74);
+		expect(texts.find((entry) => entry.text === 'Weight (g)')?.x).toBe(52);
 	});
 
 	it('draws axis strips at the canvas edges when the whole canvas is visible', () => {
@@ -180,8 +182,8 @@ describe('paintProfileCanvas', () => {
 				{ t: 10, w: 10 },
 			],
 			labelY: null,
-			labels: { weight: 'W', flow: 'F', time: 'T' },
 		};
+		input.labels = { weight: 'W', flow: 'F', time: 'T' };
 
 		paintProfileCanvas(input);
 
@@ -221,6 +223,10 @@ describe('paintProfileCanvas', () => {
 			'text:1:#flow:left',
 			'text:2:#flow:left',
 			'text:3:#flow:left',
+			'stroke:#line:2:1',
+			'text:Weight (g):#label:left',
+			'stroke:#flow:2:1',
+			'text:Flow (g/s):#label:left',
 		]);
 	});
 
@@ -268,7 +274,6 @@ describe('paintProfileCanvas', () => {
 				{ t: 10, w: 10 },
 			],
 			labelY: 0,
-			labels: { weight: 'Weight', flow: 'Flow', time: 'Time' },
 		};
 
 		const result = paintProfileCanvas(input);
