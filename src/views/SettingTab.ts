@@ -116,16 +116,6 @@ export class BrewingSettingTab extends PluginSettingTab {
 					filter: (file) => file.extension === 'md',
 				},
 			},
-			{
-				name: t('settings.github'),
-				desc: t('settings.githubDesc'),
-				render: (setting) => this.addLinkButton(setting, 'https://github.com/cubicj/CubicJ-Brewing'),
-			},
-			{
-				name: t('settings.wiki'),
-				desc: t('settings.wikiDesc'),
-				render: (setting) => this.addLinkButton(setting, this.getWikiUrl()),
-			},
 		];
 
 		const installer = this.plugin.nobleInstaller;
@@ -136,6 +126,23 @@ export class BrewingSettingTab extends PluginSettingTab {
 				render: (setting) => this.renderNobleSetting(setting, installer, () => this.updateDefinitions()),
 			});
 		}
+
+		definitions.push({
+			type: 'group',
+			heading: t('settings.links'),
+			items: [
+				{
+					name: t('settings.github'),
+					desc: t('settings.githubDesc'),
+					render: (setting) => this.addLinkButton(setting, 'https://github.com/cubicj/CubicJ-Brewing'),
+				},
+				{
+					name: t('settings.wiki'),
+					desc: t('settings.wikiDesc'),
+					render: (setting) => this.addLinkButton(setting, this.getWikiUrl()),
+				},
+			],
+		});
 
 		return definitions;
 	}
@@ -217,6 +224,16 @@ export class BrewingSettingTab extends PluginSettingTab {
 				});
 			});
 
+		const installer = this.plugin.nobleInstaller;
+		if (installer) {
+			const nobleSetting = new Setting(containerEl)
+				.setName(t('settings.noble'))
+				.setDesc(t('settings.nobleChecking'));
+			this.renderNobleSetting(nobleSetting, installer, () => this.updateDefinitions());
+		}
+
+		new Setting(containerEl).setName(t('settings.links')).setHeading();
+
 		new Setting(containerEl)
 			.setName(t('settings.github'))
 			.setDesc(t('settings.githubDesc'))
@@ -226,14 +243,6 @@ export class BrewingSettingTab extends PluginSettingTab {
 			.setName(t('settings.wiki'))
 			.setDesc(t('settings.wikiDesc'))
 			.then((setting) => this.addLinkButton(setting, this.getWikiUrl()));
-
-		const installer = this.plugin.nobleInstaller;
-		if (installer) {
-			const nobleSetting = new Setting(containerEl)
-				.setName(t('settings.noble'))
-				.setDesc(t('settings.nobleChecking'));
-			this.renderNobleSetting(nobleSetting, installer, () => this.updateDefinitions());
-		}
 	}
 
 	private addOpenViewButton(setting: Setting): void {

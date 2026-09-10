@@ -94,6 +94,7 @@
 	"settings.language": "언어",
 	"settings.languageDesc": "플러그인 UI 언어",
 	"settings.restartRequired": "언어 변경을 위해 옵시디언을 재시작하세요.",
+	"settings.links": "링크",
 	"settings.github": "GitHub",
 	"settings.githubDesc": "소스 코드와 이슈 제보",
 	"settings.wiki": "사용 설명서",

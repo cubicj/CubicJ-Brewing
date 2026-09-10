@@ -94,6 +94,7 @@
 	"settings.language": "Language",
 	"settings.languageDesc": "Plugin UI language.",
 	"settings.restartRequired": "Restart Obsidian to apply language change.",
+	"settings.links": "Links",
 	"settings.github": "GitHub",
 	"settings.githubDesc": "Source code and issue reports.",
 	"settings.wiki": "User guide",
