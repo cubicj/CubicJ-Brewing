@@ -1,4 +1,4 @@
-import type { App } from 'obsidian';
+import type { App, EventRef } from 'obsidian';
 import type { BeanInfo } from '../../brew/types';
 import { t } from '../../i18n/index';
 import type { VaultDataService } from '../../services/VaultDataService';
@@ -18,11 +18,15 @@ export interface BeanManagePanelDeps {
 
 export class BeanManagePanel {
 	private weightPopoverHandle: WeightPopoverHandle | null = null;
+	private container: HTMLElement | null = null;
+	private metadataRef: EventRef | null = null;
 
 	constructor(private deps: BeanManagePanelDeps) {}
 
 	render(container: HTMLElement): void {
 		this.closeWeightPopover();
+		this.container = container;
+		this.listenForBeanChanges();
 		container.empty();
 		const headerEl = container.createDiv({ cls: 'cb-bean-header' });
 
@@ -82,6 +86,19 @@ export class BeanManagePanel {
 
 	dispose(): void {
 		this.closeWeightPopover();
+		if (this.metadataRef) this.deps.app.metadataCache.offref(this.metadataRef);
+		this.metadataRef = null;
+		this.container = null;
+	}
+
+	private listenForBeanChanges(): void {
+		if (this.metadataRef) return;
+		const { metadataCache } = this.deps.app;
+		this.metadataRef = metadataCache.on('changed', (file) => {
+			if (!this.container) return;
+			if (metadataCache.getFileCache(file)?.frontmatter?.type !== 'bean') return;
+			this.render(this.container);
+		});
 	}
 
 	private closeWeightPopover(): void {

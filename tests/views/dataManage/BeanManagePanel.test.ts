@@ -27,15 +27,51 @@ function vaultData(beans: BeanInfo[]): VaultDataService {
 	} as unknown as VaultDataService;
 }
 
+class MetadataCacheStub {
+	private listeners = new Set<(file: unknown) => void>();
+	private types = new Map<string, string>();
+
+	on(name: string, callback: (file: unknown) => void): { callback: (file: unknown) => void } {
+		if (name === 'changed') this.listeners.add(callback);
+		return { callback };
+	}
+
+	offref(ref: { callback: (file: unknown) => void }): void {
+		this.listeners.delete(ref.callback);
+	}
+
+	getFileCache(file: { path: string }): { frontmatter: { type: string } } | null {
+		const type = this.types.get(file.path);
+		return type ? { frontmatter: { type } } : null;
+	}
+
+	fire(file: { path: string }, type: string): void {
+		this.types.set(file.path, type);
+		for (const listener of this.listeners) listener(file);
+	}
+
+	listenerCount(): number {
+		return this.listeners.size;
+	}
+}
+
 function appWithFiles(paths: string[]): App {
 	return {
 		vault: { getFileByPath: (path: string) => (paths.includes(path) ? { path, extension: 'md' } : null) },
+		metadataCache: new MetadataCacheStub(),
+	} as unknown as App;
+}
+
+function appWithCache(cache: MetadataCacheStub): App {
+	return {
+		vault: { getFileByPath: () => null },
+		metadataCache: cache,
 	} as unknown as App;
 }
 
 function makeDeps(overrides: Partial<BeanManagePanelDeps> = {}): BeanManagePanelDeps {
 	return {
-		app: appWithFiles([]),
+		app: appWithCache(new MetadataCacheStub()),
 		vaultData: vaultData([]),
 		close: vi.fn(),
 		openLink: vi.fn(),
@@ -183,5 +219,60 @@ describe('BeanManagePanel', () => {
 		expect(deps.refreshCodeBlocks).toHaveBeenCalledTimes(1);
 		expect(container.querySelector('.cb-bean-weight-value')?.textContent).toBe('80g');
 		panel.dispose();
+	});
+
+	it('re-renders with the new weight when the bean metadata change arrives after the save resolves', async () => {
+		const container = createContainer();
+		document.body.appendChild(container);
+		const cache = new MetadataCacheStub();
+		let stored = [bean('Active', 'active')];
+		const deps = makeDeps({
+			app: appWithCache(cache),
+			vaultData: {
+				...vaultData([]),
+				getAllBeans: vi.fn(() => stored.map((b) => ({ ...b }))),
+			} as unknown as VaultDataService,
+		});
+		const panel = new BeanManagePanel(deps);
+		panel.render(container);
+		container.querySelector<HTMLElement>('.cb-bean-weight')!.click();
+
+		const popover = document.querySelector<HTMLElement>('.bean-weight-popover')!;
+		popover.querySelector<HTMLInputElement>('.bwp-input')!.value = '80';
+		Array.from(popover.querySelectorAll<HTMLButtonElement>('.bwp-action'))
+			.find((el) => el.textContent === 'bean.settings')!
+			.click();
+		await new Promise((resolve) => setTimeout(resolve, 0));
+
+		stored = [{ ...bean('Active', 'active'), weight: 80 }];
+		cache.fire({ path: 'Active.md' }, 'bean');
+
+		expect(container.querySelector('.cb-bean-weight-value')?.textContent).toBe('80g');
+		panel.dispose();
+	});
+
+	it('ignores non-bean metadata changes and stops listening after dispose', () => {
+		const container = createContainer();
+		const cache = new MetadataCacheStub();
+		const getAllBeans = vi.fn(() => [bean('Active', 'active')]);
+		const panel = new BeanManagePanel(
+			makeDeps({
+				app: appWithCache(cache),
+				vaultData: { ...vaultData([]), getAllBeans } as unknown as VaultDataService,
+			}),
+		);
+		panel.render(container);
+		panel.render(container);
+		expect(cache.listenerCount()).toBe(1);
+		const renders = getAllBeans.mock.calls.length;
+
+		cache.fire({ path: 'Note.md' }, 'recipe');
+		expect(getAllBeans).toHaveBeenCalledTimes(renders);
+
+		panel.dispose();
+		cache.fire({ path: 'Active.md' }, 'bean');
+
+		expect(getAllBeans).toHaveBeenCalledTimes(renders);
+		expect(cache.listenerCount()).toBe(0);
 	});
 });
